@@ -3,8 +3,10 @@ import { NextResponse } from "next/server";
 /**
  * Machine-readable onboarding for agents.
  * GET /llms.txt
+ *
+ * Content is not exported — Next.js route modules may only export HTTP handlers.
  */
-export const LLMS_TXT = `# ANYKPI
+const LLMS_TXT = `# ANYKPI
 
 > Self-hosted dashboard + REST API + CLI + MCP. Same resources humans see in the dashboard, agents fetch via API. Founder metrics: users, retention, PMF signals, WBR.
 

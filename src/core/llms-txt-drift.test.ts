@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { GET as getOpenApi } from "@/app/api/openapi/route";
 import { POST as postMcp } from "@/app/api/mcp/route";
-import { GET as getLlms, LLMS_TXT } from "@/app/llms.txt/route";
+import { GET as getLlms } from "@/app/llms.txt/route";
 
 const root = resolve(__dirname, "../..");
 
@@ -22,10 +22,19 @@ function namedRoutes(text: string): string[] {
  * MCP tool ids: backtick-quoted snake_case in the MCP section only,
  * so field names like view_url elsewhere are not treated as tools.
  */
+function sectionBody(text: string, heading: string): string {
+  const start = text.indexOf(`## ${heading}`);
+  expect(start, `expected a ## ${heading} section`).toBeGreaterThan(-1);
+  const fromHeading = text.slice(start);
+  const next = fromHeading.slice(`## ${heading}`.length).search(/\n## /);
+  return next === -1
+    ? fromHeading
+    : fromHeading.slice(0, `## ${heading}`.length + next);
+}
+
 function namedTools(text: string): string[] {
-  const section = text.match(/^## MCP\b[\s\S]*?(?=^## |\n$)/m);
-  expect(section, "expected an ## MCP section that lists tools").toBeTruthy();
-  const matches = [...section![0].matchAll(/`([a-z]+_[a-z0-9_]+)`/g)];
+  const section = sectionBody(text, "MCP");
+  const matches = [...section.matchAll(/`([a-z]+_[a-z0-9_]+)`/g)];
   return unique(matches.map((m) => m[1]));
 }
 
@@ -72,13 +81,18 @@ async function mcpToolNames(): Promise<Set<string>> {
   ]);
 }
 
+async function llmsTxt(): Promise<string> {
+  const response = await getLlms();
+  expect(response.status).toBe(200);
+  return response.text();
+}
+
 describe("GET /llms.txt", () => {
   it("returns concise text/plain instructions", async () => {
     const response = await getLlms();
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toMatch(/text\/plain/);
     const body = await response.text();
-    expect(body).toBe(LLMS_TXT);
     expect(body.length).toBeGreaterThan(400);
     expect(body.length).toBeLessThan(8000);
     expect(body).toContain("ANYKPI");
@@ -97,8 +111,9 @@ describe("llms.txt does not drift from OpenAPI or MCP tools", () => {
     expect(paths.size).toBeGreaterThan(0);
     expect(tools.size).toBeGreaterThan(0);
 
-    const routes = namedRoutes(LLMS_TXT);
-    const mcpTools = namedTools(LLMS_TXT);
+    const text = await llmsTxt();
+    const routes = namedRoutes(text);
+    const mcpTools = namedTools(text);
 
     expect(routes.length).toBeGreaterThan(0);
     expect(mcpTools.length).toBeGreaterThan(0);
