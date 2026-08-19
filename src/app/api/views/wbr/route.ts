@@ -33,27 +33,31 @@ export async function GET(request: NextRequest) {
     .all();
 
   const metrics = metricDefs.map((def) => {
-    const weekPoints = metricPoints
+    const allWeeks = metricPoints
       .filter((p) => p.metricId === def.metricId && p.grain === "week")
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, 12);
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-    const monthPoints = metricPoints
+    const allMonths = metricPoints
       .filter((p) => p.metricId === def.metricId && p.grain === "month")
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, 12);
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-    const current = weekPoints[0]?.value || 0;
-    const lastWeek = weekPoints[1]?.value || current;
-    const lastYear = weekPoints[11]?.value || current;
+    const weeks = allWeeks.slice(0, 6).reverse().map(p => Math.round((p.value || 0) * 100) / 100);
+    const prevWeeks = allWeeks.slice(52, 58).reverse().map(p => Math.round((p.value || 0) * 100) / 100);
+    const months = allMonths.slice(0, 12).reverse().map(p => Math.round((p.value || 0) * 100) / 100);
+    const prevMonths = allMonths.slice(12, 24).reverse().map(p => Math.round((p.value || 0) * 100) / 100);
 
-    const wow = lastWeek !== 0 ? ((current - lastWeek) / lastWeek) * 100 : 0;
-    const yoy = lastYear !== 0 ? ((current - lastYear) / lastYear) * 100 : 0;
+    const current = weeks[weeks.length - 1] || 0;
+    const lastWeek = weeks[weeks.length - 2] || current;
+    const lastYear = prevWeeks[prevWeeks.length - 1] || current;
 
-    const recentValues = weekPoints.slice(0, 3).map((p) => p.value || 0);
+    const wow = lastWeek !== 0 ? Math.round(((current - lastWeek) / lastWeek) * 100 * 10) / 10 : 0;
+    const yoy = lastYear !== 0 ? Math.round(((current - lastYear) / lastYear) * 100 * 10) / 10 : 0;
     
     // Use stored status from generator
     const status = def.status as "on" | "watch" | "off" || "on";
+    
+    // Determine decimal places from unit
+    const dp = def.unit === "%" || def.unit === "$" ? 1 : 0;
 
     return {
       id: def.metricId,
@@ -69,9 +73,14 @@ export async function GET(request: NextRequest) {
       status,
       statusReason: def.statusReason,
       unit: def.unit,
-      goodDir: def.goodDir,
-      weeks: weekPoints.reverse().map(p => Math.round((p.value || 0) * 100) / 100),
-      months: monthPoints.reverse().map(p => Math.round((p.value || 0) * 100) / 100),
+      goodDir: def.goodDir === "up" ? 1 : -1,
+      dp,
+      weeks,
+      prevWeeks,
+      months,
+      prevMonths,
+      drivers: [],
+      note: null,
       source: "read model",
       syncAge: "live"
     };
