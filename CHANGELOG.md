@@ -39,6 +39,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   for connector tests (ANY-44).
 - Tagged `v*` releases build and pack `@anykpi/cli`. Publish runs only when
   the `NPM_TOKEN` secret is present; otherwise the workflow logs a skip.
+- Tagged `v*` releases also push `linux/amd64` and `linux/arm64` images to
+  `ghcr.io/dillon-wyrld/anykpi` (`latest` plus the version tag).
 - CLI smoke coverage: every published `--help` command against a local
   instance, and `track` is visible via `/api/v1/users`.
 - Unit-test net for every on-screen view number (ANY-40): DotPlot-derived

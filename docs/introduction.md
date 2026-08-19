@@ -156,7 +156,7 @@ pnpm dev          # http://localhost:3000
 
 **One Docker command:**
 ```bash
-docker run -p 3000:3000 -v anykpi-data:/app/data anykpi/anykpi
+docker run -p 3000:3000 -v anykpi-data:/data ghcr.io/dillon-wyrld/anykpi
 ```
 
 ## Stack

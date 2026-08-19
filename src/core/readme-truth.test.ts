@@ -25,6 +25,12 @@ describe("out-of-the-box docs tell the truth", () => {
     expect(existsSync(resolve(root, "docs/assets/tour.gif"))).toBe(true);
   });
 
+  it("README documents the prebuilt GHCR image", () => {
+    expect(readme).toContain("ghcr.io/dillon-wyrld/anykpi");
+    expect(readme).toContain("docker run -p 3000:3000");
+    expect(readme).toContain("-v anykpi-data:/data");
+  });
+
   it("README hosted-version copy points at the quickstart and Discussions", () => {
     expect(readme).not.toMatch(/anykpi\.com/);
     expect(readme).not.toMatch(/ANYTIME KPI/);

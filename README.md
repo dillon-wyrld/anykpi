@@ -126,12 +126,13 @@ The agent can do this unattended via MCP tools.
 ### Docker
 
 ```bash
-docker build -t anykpi .
 docker run -p 3000:3000 \
   -e ANYKPI_API_KEY=your-secret \
   -v anykpi-data:/data \
-  anykpi
+  ghcr.io/dillon-wyrld/anykpi
 ```
+
+`-p 3000:3000` publishes the dashboard; `-v anykpi-data:/data` persists SQLite. Omit the volume for an ephemeral demo. Images are tagged `latest` and the release version (`linux/amd64`, `linux/arm64`). To build locally instead: `docker build -t anykpi .` and run the same flags against `anykpi`.
 
 `view_url` values use the request `Host` / `X-Forwarded-*` origin. Set `PUBLIC_BASE_URL` only if you need to pin them.
 
