@@ -21,15 +21,13 @@ export const users = sqliteTable("users", {
 export const activity = sqliteTable("activity", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   personId: text("person_id").notNull(),
-  date: integer("date", { mode: "timestamp" }).notNull(),
-  coreCount: integer("core_count").default(0),
-  searchCount: integer("search_count").default(0),
-  shareCount: integer("share_count").default(0),
-  payCount: integer("pay_count").default(0),
-  minutes: integer("minutes").default(0),
+  timestamp: integer("timestamp", { mode: "timestamp" }).notNull(),
+  eventName: text("event_name").notNull(),
+  eventClass: text("event_class").notNull(), // core, search, share, pay
+  platform: text("platform"),
   workspaceId: text("workspace_id").notNull().default("demo"),
 }, (table) => ({
-  personDateIdx: index("activity_person_date_idx").on(table.personId, table.date),
+  personTimestampIdx: index("activity_person_timestamp_idx").on(table.personId, table.timestamp),
   workspaceIdx: index("activity_workspace_idx").on(table.workspaceId),
 }));
 
@@ -37,7 +35,9 @@ export const accounts = sqliteTable("accounts", {
   accountId: text("account_id").primaryKey(),
   name: text("name").notNull(),
   entity: text("entity"),
-  activationState: text("activation_state"),
+  seats: integer("seats").default(0),
+  activated: integer("activated").default(0),
+  mrr: real("mrr").default(0),
   renewalDate: integer("renewal_date", { mode: "timestamp" }),
   workspaceId: text("workspace_id").notNull().default("demo"),
 }, (table) => ({
@@ -56,46 +56,48 @@ export const seats = sqliteTable("seats", {
 }));
 
 export const metricDefs = sqliteTable("metric_defs", {
-  id: text("id").primaryKey(),
+  metricId: text("metric_id").primaryKey(),
   name: text("name").notNull(),
   section: text("section").notNull(),
+  sectionOrder: text("section_order").notNull(),
+  owner: text("owner").notNull(),
   type: text("type").notNull(),
-  goodDirection: text("good_direction"),
   unit: text("unit"),
-  decimals: integer("decimals").default(0),
   target: real("target"),
-  sourceSpec: text("source_spec"),
-  order: integer("order").notNull(),
+  goodDir: text("good_dir").notNull(), // "up" or "down"
+  status: text("status").notNull(), // "ok", "watch", "off"
+  statusReason: text("status_reason"),
   workspaceId: text("workspace_id").notNull().default("demo"),
 }, (table) => ({
-  workspaceOrderIdx: index("metric_defs_workspace_order_idx").on(table.workspaceId, table.order),
+  workspaceIdx: index("metric_defs_workspace_idx").on(table.workspaceId),
 }));
 
 export const metricPoints = sqliteTable("metric_points", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   metricId: text("metric_id").notNull(),
-  grain: text("grain").notNull(),
-  period: text("period").notNull(),
+  timestamp: integer("timestamp", { mode: "timestamp" }).notNull(),
   value: real("value"),
+  grain: text("grain").notNull(), // "week" or "month"
   workspaceId: text("workspace_id").notNull().default("demo"),
 }, (table) => ({
-  metricPeriodIdx: index("metric_points_metric_period_idx").on(table.metricId, table.period),
+  metricTimestampIdx: index("metric_points_metric_timestamp_idx").on(table.metricId, table.timestamp),
   workspaceIdx: index("metric_points_workspace_idx").on(table.workspaceId),
 }));
 
 export const calEvents = sqliteTable("cal_events", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   source: text("source").notNull(),
-  type: text("type").notNull(),
-  date: integer("date", { mode: "timestamp" }).notNull(),
+  sourceName: text("source_name").notNull(),
+  sourceColor: text("source_color").notNull(),
+  type: text("type").notNull(), // launch, ritual, milestone, comms
+  emoji: text("emoji").notNull(),
   title: text("title").notNull(),
-  amount: real("amount"),
-  badge: text("badge"),
-  url: text("url"),
-  externalId: text("external_id"),
+  badge: text("badge").notNull(),
+  eventDate: integer("event_date", { mode: "timestamp" }).notNull(),
+  isFuture: integer("is_future", { mode: "boolean" }).default(false),
   workspaceId: text("workspace_id").notNull().default("demo"),
 }, (table) => ({
-  dateIdx: index("cal_events_date_idx").on(table.date),
+  dateIdx: index("cal_events_date_idx").on(table.eventDate),
   workspaceIdx: index("cal_events_workspace_idx").on(table.workspaceId),
 }));
 
@@ -113,11 +115,12 @@ export const annotations = sqliteTable("annotations", {
 }));
 
 export const syncState = sqliteTable("sync_state", {
-  connector: text("connector").primaryKey(),
-  lastSyncedAt: integer("last_synced_at", { mode: "timestamp" }),
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  source: text("source").notNull(),
+  sourceName: text("source_name").notNull(),
+  lastSync: integer("last_sync", { mode: "timestamp" }),
   status: text("status").notNull(),
   error: text("error"),
-  stats: text("stats"),
   workspaceId: text("workspace_id").notNull().default("demo"),
 }, (table) => ({
   workspaceIdx: index("sync_state_workspace_idx").on(table.workspaceId),
