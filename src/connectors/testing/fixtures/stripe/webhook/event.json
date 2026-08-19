@@ -1,0 +1,32 @@
+{
+  "id": "evt_fixture_sub_created",
+  "object": "event",
+  "type": "customer.subscription.created",
+  "created": 1712102400,
+  "data": {
+    "object": {
+      "id": "sub_webhook",
+      "object": "subscription",
+      "customer": "cus_webhook",
+      "status": "active",
+      "created": 1712102400,
+      "start_date": 1712102400,
+      "currency": "usd",
+      "items": {
+        "data": [
+          {
+            "id": "si_webhook",
+            "quantity": 1,
+            "price": {
+              "id": "price_plus",
+              "unit_amount": 2400,
+              "currency": "usd",
+              "nickname": "plus",
+              "recurring": { "interval": "month", "interval_count": 1 }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

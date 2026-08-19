@@ -1,6 +1,6 @@
 /**
  * Resolve connector credentials from stored config, with env as a
- * deprecated read-only fallback for the three shipped connectors.
+ * deprecated read-only fallback when stored config is missing a field.
  *
  * Stored config (from /connect or `anykpi connect`) wins per field.
  * Do not log the returned object.
@@ -39,6 +39,11 @@ export function envFallback(source: string): SourceConfig {
       return pickDefined({
         apiKey: process.env.AMPLITUDE_API_KEY,
         secretKey: process.env.AMPLITUDE_SECRET_KEY,
+      });
+    case "stripe":
+      return pickDefined({
+        apiKey: process.env.STRIPE_API_KEY,
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
       });
     default:
       return {};

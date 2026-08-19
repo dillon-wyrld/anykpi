@@ -1,0 +1,86 @@
+{
+  "source": "stripe",
+  "description": "Two subscription pages — backfill paginates to completion",
+  "fixtures": [
+    {
+      "name": "subscriptions-page-1",
+      "request": {
+        "method": "GET",
+        "urlPattern": "/v1/subscriptions\\?limit=100&status=all$"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "object": "list",
+          "has_more": true,
+          "data": [
+            {
+              "id": "sub_aaa",
+              "object": "subscription",
+              "customer": "cus_aaa",
+              "status": "active",
+              "created": 1711929600,
+              "start_date": 1711929600,
+              "currency": "usd",
+              "items": {
+                "data": [
+                  {
+                    "id": "si_aaa",
+                    "quantity": 1,
+                    "price": {
+                      "id": "price_plus",
+                      "unit_amount": 2000,
+                      "currency": "usd",
+                      "nickname": "plus",
+                      "recurring": { "interval": "month", "interval_count": 1 }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "subscriptions-page-2",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "starting_after=sub_aaa"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "object": "list",
+          "has_more": false,
+          "data": [
+            {
+              "id": "sub_bbb",
+              "object": "subscription",
+              "customer": "cus_bbb",
+              "status": "active",
+              "created": 1712016000,
+              "start_date": 1712016000,
+              "currency": "usd",
+              "items": {
+                "data": [
+                  {
+                    "id": "si_bbb",
+                    "quantity": 1,
+                    "price": {
+                      "id": "price_starter",
+                      "unit_amount": 800,
+                      "currency": "usd",
+                      "nickname": "starter",
+                      "recurring": { "interval": "month", "interval_count": 1 }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

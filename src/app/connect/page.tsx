@@ -14,6 +14,8 @@ export default function ConnectPage() {
   const [mixpanelSecret, setMixpanelSecret] = useState("");
   const [amplitudeKey, setAmplitudeKey] = useState("");
   const [amplitudeSecret, setAmplitudeSecret] = useState("");
+  const [stripeKey, setStripeKey] = useState("");
+  const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [adminKey, setAdminKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
@@ -48,7 +50,7 @@ export default function ConnectPage() {
   };
 
   const connectSource = async (
-    source: "posthog" | "mixpanel" | "amplitude",
+    source: "posthog" | "mixpanel" | "amplitude" | "stripe",
     credentials: Record<string, string>
   ) => {
     setConnecting(source);
@@ -126,13 +128,6 @@ export default function ConnectPage() {
   ];
 
   const otherTools = [
-    {
-      id: "stripe",
-      name: "Stripe",
-      description: "Payments and subscriptions for WBR finance metrics",
-      status: "dark",
-      badge: "💳",
-    },
     {
       id: "revenuecat",
       name: "RevenueCat",
@@ -434,6 +429,77 @@ export default function ConnectPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </section>
+
+            <section>
+              <h2 className="font-display text-xl font-semibold mb-4">Revenue</h2>
+              <div className="grid gap-4">
+                <div className="bg-panel border border-border rounded-lg p-6">
+                  <div className="flex items-start gap-4">
+                    <span className="text-3xl">💳</span>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-base mb-1">Stripe</h3>
+                      <p className="text-sm text-sub mb-3">
+                        Restricted read-only key for subscription backfill. Webhook
+                        signing secret keeps MRR minutes-fresh.
+                      </p>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                            Restricted key (read-only)
+                          </label>
+                          <input
+                            type="password"
+                            value={stripeKey}
+                            onChange={(e) => setStripeKey(e.target.value)}
+                            placeholder="rk_..."
+                            className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                            Webhook signing secret
+                          </label>
+                          <input
+                            type="password"
+                            value={stripeWebhookSecret}
+                            onChange={(e) => setStripeWebhookSecret(e.target.value)}
+                            placeholder="whsec_..."
+                            className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          disabled={connecting === "stripe"}
+                          onClick={() =>
+                            connectSource("stripe", {
+                              apiKey: stripeKey,
+                              ...(stripeWebhookSecret
+                                ? { webhookSecret: stripeWebhookSecret }
+                                : {}),
+                            })
+                          }
+                          className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90 disabled:opacity-60"
+                        >
+                          Connect Stripe
+                        </button>
+                        {statusFor("stripe")?.ok && (
+                          <p className="text-sm text-sub">
+                            {statusFor("stripe")?.rotated
+                              ? "Stripe credentials updated."
+                              : "Stripe connected."}
+                          </p>
+                        )}
+                        {statusFor("stripe") && !statusFor("stripe")?.ok && (
+                          <p className="text-sm text-sub">
+                            {statusFor("stripe")?.error}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
 

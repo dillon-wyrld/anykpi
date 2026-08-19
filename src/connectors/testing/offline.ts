@@ -21,6 +21,11 @@ export async function clearWorkspace(workspaceId: string) {
   await db.delete(schema.users).where(eq(schema.users.workspaceId, workspaceId));
   await db.delete(schema.syncState).where(eq(schema.syncState.workspaceId, workspaceId));
   await db.delete(schema.sources).where(eq(schema.sources.workspaceId, workspaceId));
+  await db.delete(schema.mrrSnapshots).where(eq(schema.mrrSnapshots.workspaceId, workspaceId));
+  await db
+    .delete(schema.subscriptionEvents)
+    .where(eq(schema.subscriptionEvents.workspaceId, workspaceId));
+  await db.delete(schema.personRevenue).where(eq(schema.personRevenue.workspaceId, workspaceId));
 }
 
 export async function withOfflineSuite(

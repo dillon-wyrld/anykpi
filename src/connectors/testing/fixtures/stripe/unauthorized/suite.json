@@ -1,0 +1,22 @@
+{
+  "source": "stripe",
+  "description": "401 on subscriptions list",
+  "fixtures": [
+    {
+      "name": "subscriptions-unauthorized",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/v1/subscriptions"
+      },
+      "response": {
+        "status": 401,
+        "body": {
+          "error": {
+            "type": "invalid_request_error",
+            "message": "Invalid API Key"
+          }
+        }
+      }
+    }
+  ]
+}

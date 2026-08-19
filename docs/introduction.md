@@ -15,7 +15,7 @@ Founders who need:
 Two paths, both agent-installable:
 
 ### Path 1: Connect Existing Tools
-Shipped: PostHog, Mixpanel, Amplitude. Roadmap: Stripe, calendar/ICS, GitHub — tools you already pay for. ANYKPI syncs summaries into local read models and never writes back.
+Shipped: PostHog, Mixpanel, Amplitude, Stripe. Roadmap: calendar/ICS, GitHub — tools you already pay for. ANYKPI syncs summaries into local read models and never writes back.
 
 ```bash
 # Via UI
@@ -101,7 +101,8 @@ anykpi users --cluster='🔥 Power daily'
 anykpi cohorts --json
 anykpi wbr --section=Finance
 anykpi calendar --source=stripe
-anykpi sync --source=posthog
+anykpi connect stripe --api-key rk_... --secret-key whsec_...
+anykpi sync --source=stripe
 
 # Ingest
 anykpi identify user123 --name="Jane Doe" --email="jane@example.com"
