@@ -50,13 +50,12 @@ test.describe('Demo Workspace - Canonical Dataset', () => {
     
     await page.goto('http://localhost:3000/dashboard?workspace=demo&view=cohorts');
     
-    // Wait for the page to load by checking for grain buttons which render before data
-    await page.waitForSelector('button:has-text("Week")', { timeout: 10000 });
+    // Wait for the cohorts view to render - check for the heading
+    await page.waitForSelector('text=Cohort retention', { timeout: 10000 });
     
-    // Now wait for insights to render
-    await page.waitForSelector('text=The smile test', { timeout: 50000 });
-    
+    // Log a slice of content to verify what's on the page
     const content = await page.content();
+    console.log('Page content slice:', content.slice(0, 2000));
     
     // Pinned facts from actual Cohorts component UI
     // The smile test insight card
