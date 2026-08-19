@@ -322,15 +322,43 @@ export const IngestEventRequestSchema = z.object({
   workspaceId: z.string().default('live'),
 });
 
+/** Per-source slug used by connect and webhook-in (`/api/ingest/webhook/:source`). */
+export const SourceSlugSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z][a-z0-9_-]*$/);
+
+/**
+ * Generic webhook-in body. Destinations may send `distinct_id` / `event`
+ * (PostHog-style) or `userId` / `eventName` (canonical / Zapier).
+ */
+export const IngestWebhookRequestSchema = z
+  .object({
+    userId: z.string().optional(),
+    distinct_id: z.string().optional(),
+    eventName: z.string().optional(),
+    event: z.union([z.string(), z.record(z.unknown())]).optional(),
+    properties: z.record(z.unknown()).optional(),
+    timestamp: z.string().optional(),
+    workspaceId: z.string().optional(),
+  })
+  .passthrough();
+
+export const IngestWebhookResponseSchema = z.object({
+  success: z.literal(true),
+  accepted: z.number().int().nonnegative(),
+});
+
 export const ConnectSourceRequestSchema = z.object({
-  source: z.enum(['posthog', 'mixpanel', 'amplitude', 'stripe']),
+  source: SourceSlugSchema,
   credentials: z.record(z.string()),
   workspaceId: z.string().default('live'),
 });
 
 /** Persist result. Credentials are never echoed. */
 export const ConnectSourceResponseSchema = z.object({
-  source: z.enum(['posthog', 'mixpanel', 'amplitude', 'stripe']),
+  source: SourceSlugSchema,
   workspaceId: z.string(),
   connected: z.literal(true),
   rotated: z.boolean(),
@@ -430,6 +458,9 @@ export type SyncTriggerResponse = z.infer<typeof SyncTriggerResponseSchema>;
 export type QueryUsersRequest = z.infer<typeof QueryUsersRequestSchema>;
 export type IngestIdentifyRequest = z.infer<typeof IngestIdentifyRequestSchema>;
 export type IngestEventRequest = z.infer<typeof IngestEventRequestSchema>;
+export type IngestWebhookRequest = z.infer<typeof IngestWebhookRequestSchema>;
+export type IngestWebhookResponse = z.infer<typeof IngestWebhookResponseSchema>;
+export type SourceSlug = z.infer<typeof SourceSlugSchema>;
 export type ConnectSourceRequest = z.infer<typeof ConnectSourceRequestSchema>;
 export type ConnectSourceResponse = z.infer<typeof ConnectSourceResponseSchema>;
 export type APIKeyCreateRequest = z.infer<typeof APIKeyCreateRequestSchema>;

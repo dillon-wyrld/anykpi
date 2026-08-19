@@ -33,6 +33,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- `POST /api/ingest/webhook/:source` accepts signed destination payloads
+  (HMAC-SHA256). The per-source secret is stored via ANY-46 and rotates
+  on re-submit. Recipes: `docs/webhooks.md` (ANY-13).
 - PMF+ web research (ANY-25): enrich one selected person from a public
   source, only after the founder approves the outgoing fields listed
   verbatim. Loading the view never calls fetch. Results cache locally in

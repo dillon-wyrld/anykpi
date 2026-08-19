@@ -104,6 +104,22 @@ export async function loadSourceConfig(
   }
 }
 
+const HMAC_KEYS = ["hmacSecret", "webhookSecret", "secretKey"] as const;
+
+/** HMAC secret for webhook-in. Never log the return value. */
+export function webhookSecretFromConfig(
+  config: SourceConfig | null
+): string | null {
+  if (!config) return null;
+  for (const key of HMAC_KEYS) {
+    const value = config[key];
+    if (typeof value === "string" && value.length > 0) {
+      return value;
+    }
+  }
+  return null;
+}
+
 /** Raw stored bytes for a source row. Used by tests to assert ciphertext at rest. */
 export async function loadSourceCiphertext(
   workspaceId: string,

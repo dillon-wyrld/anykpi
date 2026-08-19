@@ -16,6 +16,8 @@ export default function ConnectPage() {
   const [amplitudeSecret, setAmplitudeSecret] = useState("");
   const [stripeKey, setStripeKey] = useState("");
   const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
+  const [webhookSource, setWebhookSource] = useState("webhook");
+  const [webhookSecret, setWebhookSecret] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [adminKey, setAdminKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
@@ -50,7 +52,7 @@ export default function ConnectPage() {
   };
 
   const connectSource = async (
-    source: "posthog" | "mixpanel" | "amplitude" | "stripe",
+    source: string,
     credentials: Record<string, string>
   ) => {
     setConnecting(source);
@@ -499,6 +501,64 @@ export default function ConnectPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="font-display text-xl font-semibold mb-4">Realtime webhook</h2>
+              <div className="bg-panel border border-border rounded-lg p-6">
+                <p className="text-sm text-sub mb-3">
+                  Per-source HMAC for <code>POST /api/ingest/webhook/:source</code>.
+                  Re-submit to rotate. Recipes: <code>docs/webhooks.md</code>.
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                      Source slug
+                    </label>
+                    <input
+                      type="text"
+                      value={webhookSource}
+                      onChange={(e) => setWebhookSource(e.target.value)}
+                      placeholder="webhook"
+                      className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                      HMAC secret
+                    </label>
+                    <input
+                      type="password"
+                      value={webhookSecret}
+                      onChange={(e) => setWebhookSecret(e.target.value)}
+                      placeholder="Rotatable signing secret"
+                      className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={connecting === webhookSource}
+                    onClick={() =>
+                      connectSource(webhookSource, { hmacSecret: webhookSecret })
+                    }
+                    className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90 disabled:opacity-60"
+                  >
+                    Save webhook secret
+                  </button>
+                  {statusFor(webhookSource)?.ok && (
+                    <p className="text-sm text-sub">
+                      {statusFor(webhookSource)?.rotated
+                        ? "Webhook secret rotated."
+                        : "Webhook secret saved."}
+                    </p>
+                  )}
+                  {statusFor(webhookSource) && !statusFor(webhookSource)?.ok && (
+                    <p className="text-sm text-sub">
+                      {statusFor(webhookSource)?.error}
+                    </p>
+                  )}
                 </div>
               </div>
             </section>

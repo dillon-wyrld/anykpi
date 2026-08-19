@@ -26,6 +26,8 @@ anykpi identify user123 --name="Jane Doe"
 anykpi track user123 song_played
 ```
 
+Destinations can also push signed events to `POST /api/ingest/webhook/:source` — see [webhook recipes](webhooks.md).
+
 ### Path 2: Add ANYKPI to Your Product
 Don't have PostHog/Mixpanel/Amplitude? Add the ANYKPI SDK. Events land in the same read models the connectors write.
 
@@ -86,6 +88,7 @@ Returns:
 - `POST /api/v1/keys` — Generate API key
 - `POST /api/ingest/identify` — Identify user
 - `POST /api/ingest/event` — Track event
+- `POST /api/ingest/webhook/:source` — Realtime push (HMAC; [recipes](webhooks.md))
 
 **API Docs:** http://localhost:3000/api-docs (OpenAPI spec from Zod contracts)
 

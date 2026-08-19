@@ -18,6 +18,8 @@ import {
   ErrorResponseSchema,
   IngestIdentifyRequestSchema,
   IngestEventRequestSchema,
+  IngestWebhookRequestSchema,
+  IngestWebhookResponseSchema,
 } from '@/core/contracts';
 
 /**
@@ -389,6 +391,70 @@ export async function GET(request: NextRequest) {
             },
             400: {
               description: 'Invalid request',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/ingest/webhook/{source}': {
+        post: {
+          security: [],
+          tags: ['Ingest'],
+          summary: 'Ingest a signed webhook event',
+          description:
+            'Realtime push path. HMAC-SHA256 of the raw body with the per-source secret stored via POST /api/v1/connect. Re-submitting rotates the secret. Bad signature returns 401. No API key.',
+          parameters: [
+            {
+              name: 'source',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'Source slug matching the stored HMAC row'
+            },
+            {
+              name: 'workspace',
+              in: 'query',
+              schema: { type: 'string', default: 'live' }
+            },
+            {
+              name: 'X-Webhook-Signature',
+              in: 'header',
+              required: true,
+              schema: { type: 'string' },
+              description: 'sha256=<hex> HMAC of the raw JSON body'
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(IngestWebhookRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Event accepted',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(IngestWebhookResponseSchema)
+                }
+              }
+            },
+            400: {
+              description: 'Invalid body',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Missing or invalid HMAC signature',
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(ErrorResponseSchema)

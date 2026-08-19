@@ -11,6 +11,7 @@ export ANYKPI_API_KEY='your-secret'
 Send it as `Authorization: Bearer <key>` or `x-api-key: <key>`.
 
 - Ingest (`POST /api/ingest/event`, `POST /api/ingest/identify`), key minting (`POST /api/v1/keys`), MCP `tools/call` (except demo read-only tools), and all non-demo reads require a valid key.
+- Webhook ingest (`POST /api/ingest/webhook/:source`) is authenticated by a per-source HMAC-SHA256 secret stored via `POST /api/v1/connect`. A bad or missing signature returns 401. Re-submitting the secret rotates it immediately.
 - Presented keys are SHA-256 hashed and compared timing-safe against `api_keys.hashedKey`. `ANYKPI_API_KEY` is the operator/admin key (also valid) and may choose a workspace. Other keys write to their bound workspace.
 - The `demo` workspace is public-read (seeded fictional people). Writes still require a key.
 - In production (`NODE_ENV=production`), if `ANYKPI_API_KEY` is unset and no valid hashed key is presented, writes and non-demo reads return 503. The process will not run open.
