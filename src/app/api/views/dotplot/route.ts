@@ -56,8 +56,11 @@ export async function GET(request: NextRequest) {
       name: user.name,
       emoji: user.emoji,
       platform: user.platform,
+      country: user.country,
+      archetype: user.archetype,
       signupOffset,
       activity,
+      cohortMonth: Math.floor(signupOffset / 28),
     };
   });
 
