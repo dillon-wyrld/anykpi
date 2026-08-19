@@ -20,6 +20,7 @@ import {
   parseMilestoneIdentity,
   persistWorkspaceMilestones,
   SIGNUP_THRESHOLDS,
+  utcMidnight,
   type DetectedMilestone,
 } from "./milestones";
 import { upsertConfig } from "./upsert";
@@ -91,15 +92,15 @@ describe("detectMilestones — pinned rules", () => {
     expect(nth[0]?.occurredAt).toEqual(users[99].signupDate);
     expect(nth[0]?.key).toBe(milestoneKey(WS, "nth_signup", "100"));
 
-    const allThree = detectMilestones({
+    const thousand = detectMilestones({
       workspaceId: WS,
-      users: people(10_000),
+      users: people(1_000),
       activity: [],
       asOf: AS_OF,
     }).filter((m) => m.kind === "nth_signup");
-    expect(allThree.map((m) => m.subject)).toEqual(
-      SIGNUP_THRESHOLDS.map(String)
-    );
+    expect(thousand.map((m) => m.subject)).toEqual(["100", "1000"]);
+    expect(SIGNUP_THRESHOLDS).toEqual([100, 1_000, 10_000]);
+    expect(formatNthSignupTitle(10_000)).toBe("10,000th signup");
   });
 
   it("emits a new longest streak from consecutive active days", () => {
@@ -117,7 +118,7 @@ describe("detectMilestones — pinned rules", () => {
     expect(streak?.subject).toBe("5");
     expect(streak?.title).toBe("New longest streak of 5 days");
     expect(streak?.rule).toBe("New longest streak");
-    expect(streak?.occurredAt).toEqual(daysAgo(6));
+    expect(streak?.occurredAt).toEqual(utcMidnight(daysAgo(6)));
   });
 
   it("emits the company birthday on the latest earned anniversary", () => {
