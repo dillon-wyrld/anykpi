@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import type { ResearchResult } from "@/core/contracts";
 import {
   buildPmfOutreachMessage,
   demoPmfRuns,
   generatePmfQueue,
   pmfCardFields,
   pmfProgressPct,
+  pmfRunFromResearch,
   pmfRunTotals,
 } from "./pmf";
 
@@ -77,6 +79,49 @@ describe("demo PMF card fields", () => {
     expect(
       run.groupRollup!.segments.reduce((s, seg) => s + seg.count, 0)
     ).toBe(run.people.length);
+  });
+});
+
+describe("research card", () => {
+  it("maps a cached public-source result onto one person card", () => {
+    const result: ResearchResult = {
+      personId: "p-river",
+      name: "River",
+      workspace: "demo",
+      queriedAt: "2026-08-19T12:00:00.000Z",
+      query: "River GB",
+      outgoing: [
+        { field: "name", value: "River" },
+        { field: "country", value: "GB" },
+      ],
+      claims: [
+        {
+          title: "River — a public page",
+          source: "example.test",
+          url: "https://example.test/wiki/River",
+          confidence: "medium",
+        },
+      ],
+      verified: true,
+      cached: true,
+      source: "public encyclopedia",
+    };
+    const run = pmfRunFromResearch(result, { emoji: "🌊", platform: "web" });
+    expect(run.people).toHaveLength(1);
+    expect(run.people[0]).toMatchObject({
+      personId: "p-river",
+      name: "River",
+      country: "GB",
+      platform: "web",
+      verified: true,
+    });
+    expect(pmfCardFields(run.people[0])).toMatchObject({
+      name: "River",
+      country: "GB",
+      claimCount: 1,
+      linkCount: 1,
+    });
+    expect(run.people[0].signal).toContain("cached locally");
   });
 });
 

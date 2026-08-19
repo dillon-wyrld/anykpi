@@ -79,6 +79,7 @@ pnpm test:e2e
 
 - Never weaken authentication. Only `demo` is public-read.
 - Calendar is read-only. Nothing sends on its own. No telemetry.
+- PMF+ web research runs only from an explicit per-user approve action. No background egress. Results cache in `research-cache.json` beside the database.
 - Validate inputs with Zod contracts in `src/core/contracts.ts`.
 - TypeScript strict mode is on.
 - Public copy: no internal briefs, no comparison to other products by name, no personal names.

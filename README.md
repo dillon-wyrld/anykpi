@@ -176,7 +176,7 @@ Data lives in the SQLite file at `DATABASE_PATH` (default `./data/anykpi.db`, or
 - [ ] ICS calendar, GitHub releases
 - [ ] Milestone detector (1000th signup, company birthday, streaks)
 - [ ] Semantic user clustering
-- [ ] PMF+ web research
+- [x] PMF+ web research
 
 ## Contributing
 

@@ -2,6 +2,8 @@
  * PMF+ card fields and outreach copy — every number on the PMF screen.
  */
 
+import type { ResearchResult } from "@/core/contracts";
+
 export type PmfConfidence = "high" | "medium" | "low";
 export type PmfDraftState = "waiting" | "edited" | "approved";
 
@@ -143,6 +145,59 @@ export function generatePmfQueue(
     message: buildPmfOutreachMessage(person, opts),
     state: "waiting" as const,
   }));
+}
+
+export function pmfRunFromResearch(
+  result: ResearchResult,
+  extras: { emoji?: string | null; platform?: string | null } = {}
+): PmfRun {
+  const links = result.claims
+    .filter((claim) => claim.url)
+    .map((claim) => ({ type: claim.source, value: claim.url as string }));
+
+  return {
+    id: `research_${result.workspace}_${result.personId}`,
+    title: result.cached
+      ? `${result.name} (cached)`
+      : `${result.name}`,
+    emoji: extras.emoji || "✨",
+    status: "done",
+    progress: 1,
+    totalPeople: 1,
+    isGroup: false,
+    people: [
+      {
+        personId: result.personId,
+        name: result.name,
+        emoji: extras.emoji || "✨",
+        platform: extras.platform || "",
+        country: result.outgoing.find((field) => field.field === "country")?.value || "",
+        income: "",
+        verified: result.verified,
+        interests: [],
+        links,
+        claims: result.claims.map((claim) => ({
+          title: claim.title,
+          source: claim.source,
+          confidence: claim.confidence,
+          content: Boolean(claim.url),
+        })),
+        behavior: "",
+        signal: result.cached
+          ? "cached locally — no new query left this machine"
+          : "researched from a public source after the outgoing fields were approved",
+        read: result.verified
+          ? "public pages matched the approved fields. treat every claim as a lead, not a fact."
+          : "couldn't verify — no matching public pages for the approved fields",
+        play: "read the sources, then decide if a conversation is worth it",
+        questions: [
+          "Does any of this public work connect to how you use this?",
+          "If it disappeared tomorrow, what would you miss?",
+        ],
+      },
+    ],
+    queue: [],
+  };
 }
 
 export function demoPmfRuns(): PmfRun[] {

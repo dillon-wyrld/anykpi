@@ -33,6 +33,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- PMF+ web research (ANY-25): enrich one selected person from a public
+  source, only after the founder approves the outgoing fields listed
+  verbatim. Loading the view never calls fetch. Results cache locally in
+  `research-cache.json` beside the database — no schema change.
 - Stripe connector (ANY-09): paginated subscription backfill into the
   revenue read models, plus `POST /api/webhooks/stripe` for
   signature-verified live MRR updates. Restricted key is stored via
