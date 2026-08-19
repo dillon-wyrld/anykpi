@@ -129,7 +129,7 @@ export function createProgram(): Command {
 
   program
     .command("connect <source>")
-    .description("Store connector credentials on the instance")
+    .description("Store source credentials")
     .option("--workspace <workspace>", "Workspace")
     .option("--api-key <key>", "Source API key")
     .option("--project-id <id>", "Source project ID")
