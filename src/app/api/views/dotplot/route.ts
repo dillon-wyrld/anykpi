@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       emoji: user.emoji,
       platform: user.platform,
       country: user.country,
-      archetype: user.archetype,
+      cluster: user.cluster,
       signupOffset,
       activity,
       cohortMonth: Math.floor(signupOffset / 28),
