@@ -34,6 +34,7 @@ describe("published CLI surface", () => {
     expect(fromHelp).toEqual([...PUBLISHED_COMMANDS]);
     expect(registered).toEqual([...PUBLISHED_COMMANDS]);
     expect(fromHelp).toContain("login");
+    expect(fromHelp).toContain("keys");
     expect(fromHelp).toContain("overview");
     expect(fromHelp).toContain("users");
     expect(fromHelp).toContain("cohorts");
@@ -50,5 +51,13 @@ describe("published CLI surface", () => {
   it("exposes login as key", () => {
     const login = createProgram().commands.find((command) => command.name() === "login");
     expect(login?.aliases()).toContain("key");
+  });
+
+  it("advertises keys downgrade as one command", () => {
+    const keys = createProgram().commands.find((command) => command.name() === "keys");
+    expect(keys).toBeDefined();
+    const help = keys?.helpInformation() ?? "";
+    expect(help).toMatch(/downgrade/);
+    expect(keys?.registeredArguments.some((arg) => arg.name() === "action")).toBe(true);
   });
 });

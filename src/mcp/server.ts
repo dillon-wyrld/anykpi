@@ -8,6 +8,7 @@ import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { upsertConfig } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
+import { authorize } from "@/core/auth";
 import { buildViewUrl, queryUsersPayload } from "@/core/view-state";
 import {
   CohortCompareError,
@@ -429,6 +430,24 @@ export function createMCPServer() {
         }
 
         case "configure_value_events": {
+          const presented = process.env.ANYKPI_API_KEY;
+          const writeAuth = await authorize(
+            {
+              headers: {
+                get(name: string) {
+                  return name.toLowerCase() === "x-api-key" ? presented ?? null : null;
+                },
+              },
+            },
+            { write: true, workspace }
+          );
+          if (!writeAuth.ok) {
+            return {
+              content: [{ type: "text", text: writeAuth.error }],
+              isError: true,
+            };
+          }
+
           const mapping = (args as any)?.mapping || {};
 
           await upsertConfig({

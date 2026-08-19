@@ -15,6 +15,18 @@ export const MCP_READ_ONLY_TOOLS = new Set([
 
 export type RequestLike = { headers: { get(name: string): string | null } };
 
+export const API_KEY_SCOPES = ["read", "write", "admin"] as const;
+export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
+
+/** New keys default to read. Existing rows migrate to write + legacy. */
+export const DEFAULT_NEW_KEY_SCOPE: ApiKeyScope = "read";
+export const MIGRATED_KEY_SCOPE: ApiKeyScope = "write";
+
+export const READ_KEY_WRITE_ERROR =
+  "This API key can only read. Use a write or admin key to change data.";
+
+export const MINT_ADMIN_KEY_ERROR = "Only an admin key can mint an admin key.";
+
 export type AuthorizeOptions = {
   /** Workspace the client asked for. Unauthenticated GET is demo-only. */
   workspace?: string | null;
@@ -32,9 +44,12 @@ export type AuthOk = {
   /** Bound workspace for hashed keys. */
   keyWorkspace?: string;
   canChooseWorkspace: boolean;
+  scope: ApiKeyScope;
+  keyId?: string;
+  legacy?: boolean;
 };
 
-export type AuthDenied = { ok: false; status: 401 | 503; error: string };
+export type AuthDenied = { ok: false; status: 401 | 403 | 503; error: string };
 export type AuthResult = AuthOk | AuthDenied;
 
 function header(request: RequestLike, name: string): string | null {
@@ -97,7 +112,26 @@ export function matchesEnvAdminKey(provided: string): boolean {
   return timingSafeEqualString(provided, configured);
 }
 
-type StoredKey = { hashedKey: string; workspaceId: string };
+export function parseApiKeyScope(value: string | null | undefined): ApiKeyScope {
+  if (value === "read" || value === "write" || value === "admin") return value;
+  return MIGRATED_KEY_SCOPE;
+}
+
+export function scopeAllowsWrite(scope: ApiKeyScope): boolean {
+  return scope === "write" || scope === "admin";
+}
+
+export function isApiKeyScope(value: string): value is ApiKeyScope {
+  return (API_KEY_SCOPES as readonly string[]).includes(value);
+}
+
+type StoredKey = {
+  id: string;
+  hashedKey: string;
+  workspaceId: string;
+  scope: ApiKeyScope;
+  legacy: boolean;
+};
 
 async function loadStoredKeys(): Promise<StoredKey[]> {
   try {
@@ -105,17 +139,37 @@ async function loadStoredKeys(): Promise<StoredKey[]> {
     const schema = await import("./schema");
     const rows = await db
       .select({
+        id: schema.apiKeys.id,
         hashedKey: schema.apiKeys.hashedKey,
         workspaceId: schema.apiKeys.workspaceId,
+        scope: schema.apiKeys.scope,
+        legacy: schema.apiKeys.legacy,
       })
       .from(schema.apiKeys)
       .all();
     return rows.map((row) => ({
+      id: row.id,
       hashedKey: row.hashedKey,
       workspaceId: row.workspaceId || LIVE_WORKSPACE,
+      scope: parseApiKeyScope(row.scope),
+      legacy: row.legacy === true,
     }));
   } catch {
     return [];
+  }
+}
+
+async function touchLastUsed(id: string): Promise<void> {
+  try {
+    const { db } = await import("./db");
+    const schema = await import("./schema");
+    const { eq } = await import("drizzle-orm");
+    await db
+      .update(schema.apiKeys)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(schema.apiKeys.id, id));
+  } catch {
+    // last-used is best-effort and must not fail the request
   }
 }
 
@@ -156,16 +210,22 @@ async function verifyPresentedKey(provided: string): Promise<AuthOk | null> {
       ok: true,
       actor: "env",
       canChooseWorkspace: true,
+      scope: "admin",
     };
   }
 
   const stored = await matchStoredKey(provided);
   if (stored) {
+    await touchLastUsed(stored.id);
+    const admin = stored.scope === "admin";
     return {
       ok: true,
       actor: "hashed",
       keyWorkspace: stored.workspaceId || LIVE_WORKSPACE,
-      canChooseWorkspace: false,
+      canChooseWorkspace: admin,
+      scope: stored.scope,
+      keyId: stored.id,
+      legacy: stored.legacy,
     };
   }
 
@@ -183,14 +243,14 @@ export async function authorize(
   options: AuthorizeOptions = {}
 ): Promise<AuthResult> {
   if (options.allowAnonymous) {
-    return { ok: true, actor: "anonymous", canChooseWorkspace: false };
+    return { ok: true, actor: "anonymous", canChooseWorkspace: false, scope: "read" };
   }
 
   const isWrite = options.write === true;
   const isDemoRead = !isWrite && options.workspace === DEMO_WORKSPACE;
 
   if (isDemoRead) {
-    return { ok: true, actor: "anonymous", canChooseWorkspace: false };
+    return { ok: true, actor: "anonymous", canChooseWorkspace: false, scope: "read" };
   }
 
   const provided = extractApiKey(request);
@@ -205,6 +265,9 @@ export async function authorize(
 
   const verified = await verifyPresentedKey(provided);
   if (verified) {
+    if (isWrite && !scopeAllowsWrite(verified.scope)) {
+      return { ok: false, status: 403, error: READ_KEY_WRITE_ERROR };
+    }
     return verified;
   }
 

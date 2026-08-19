@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { nanoid } from "nanoid";
+import { useState } from "react";
 
 /**
  * Agents Page
@@ -13,9 +12,19 @@ export default function AgentsPage() {
   const [apiKey, setApiKey] = useState<string>("");
   const [adminKey, setAdminKey] = useState<string>("");
   const [keyName, setKeyName] = useState<string>("Agent Key");
+  const [keyScope, setKeyScope] = useState<"read" | "write" | "admin">("read");
   const [generatedKey, setGeneratedKey] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState<string>("");
+  const [keyRows, setKeyRows] = useState<
+    Array<{
+      id: string;
+      name: string;
+      scope: string;
+      legacy: boolean;
+      lastUsedAt?: string | null;
+    }>
+  >([]);
 
   const apiUrl = typeof window !== 'undefined' 
     ? `${window.location.protocol}//${window.location.host}` 
@@ -30,13 +39,22 @@ export default function AgentsPage() {
           'Content-Type': 'application/json',
           ...(adminKey ? { Authorization: `Bearer ${adminKey}` } : {}),
         },
-        body: JSON.stringify({ name: keyName }),
+        body: JSON.stringify({ name: keyName, scope: keyScope }),
       });
       
       const data = await response.json();
       if (data.key) {
         setGeneratedKey(data.key);
         setApiKey(data.key);
+      }
+      if (adminKey) {
+        const listed = await fetch("/api/v1/keys", {
+          headers: { Authorization: `Bearer ${adminKey}` },
+        });
+        const meta = await listed.json();
+        if (Array.isArray(meta.keys)) {
+          setKeyRows(meta.keys);
+        }
       }
     } catch {
       // Do not log keys or request bodies
@@ -121,6 +139,24 @@ anykpi cohorts --json`;
             </div>
 
             <div>
+              <label className="block text-sm font-medium mb-2">Scope</label>
+              <select
+                value={keyScope}
+                onChange={(e) =>
+                  setKeyScope(e.target.value as "read" | "write" | "admin")
+                }
+                className="w-full px-3 py-2 border border-border rounded-lg bg-bg focus:outline-none focus:ring-2 focus:ring-accent"
+              >
+                <option value="read">read (default)</option>
+                <option value="write">write</option>
+                <option value="admin">admin</option>
+              </select>
+              <p className="text-xs text-sub mt-1">
+                New keys default to read. Write is required for ingest, connect, and sync.
+              </p>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium mb-2">Existing ANYKPI_API_KEY</label>
               <input
                 type="password"
@@ -153,6 +189,38 @@ anykpi cohorts --json`;
                 <code className="block font-mono text-sm text-text break-all">
                   {generatedKey}
                 </code>
+              </div>
+            )}
+
+            {keyRows.length > 0 && (
+              <div className="border border-border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="bg-bg text-sub text-left">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Name</th>
+                      <th className="px-3 py-2 font-medium">Scope</th>
+                      <th className="px-3 py-2 font-medium">Last used</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {keyRows.map((row) => (
+                      <tr key={row.id} className="border-t border-border">
+                        <td className="px-3 py-2">
+                          {row.name}
+                          {row.legacy ? (
+                            <span className="ml-2 text-xs text-sub">legacy</span>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-2 font-mono">{row.scope}</td>
+                        <td className="px-3 py-2 text-sub">
+                          {row.lastUsedAt
+                            ? new Date(row.lastUsedAt).toLocaleString()
+                            : "never"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

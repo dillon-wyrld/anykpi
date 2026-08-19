@@ -8,6 +8,7 @@ import { configFile, loadConfig, saveConfig } from "./config";
 
 export const PUBLISHED_COMMANDS = [
   "login",
+  "keys",
   "workspaces",
   "connect",
   "import",
@@ -41,6 +42,7 @@ export function createProgram(): Command {
     .option("--key <key>", "Existing ANYKPI_API_KEY (or set the env var)")
     .option("--name <name>", "API key name (skip the prompt)")
     .option("--workspace <workspace>", "Workspace to bind the minted key to", "demo")
+    .option("--scope <scope>", "Key scope: read (default), write, or admin", "read")
     .action(async (options) => {
       const spinner = ora("Connecting to ANYKPI...").start();
 
@@ -76,16 +78,22 @@ export function createProgram(): Command {
           headers["x-api-key"] = adminKey;
         }
 
+        const scope = String(options.scope || "read").toLowerCase();
+        if (scope !== "read" && scope !== "write" && scope !== "admin") {
+          throw new Error("scope must be read, write, or admin");
+        }
+
         const response = await fetch(`${options.url}/api/v1/keys`, {
           method: "POST",
           headers,
-          body: JSON.stringify({ name, workspace: options.workspace }),
+          body: JSON.stringify({ name, workspace: options.workspace, scope }),
         });
 
         const data = (await response.json()) as {
           error?: string;
           key?: string;
           id?: string;
+          scope?: string;
         };
 
         if (!response.ok) {
@@ -101,6 +109,7 @@ export function createProgram(): Command {
         spinner.succeed("API key created and saved");
         console.log();
         console.log(chalk.green("✓"), "Key ID:", chalk.bold(data.id));
+        console.log(chalk.green("✓"), "Scope:", chalk.bold(data.scope || scope));
         console.log(chalk.green("✓"), "Saved to:", chalk.dim(configFile()));
         console.log();
         console.log(
@@ -733,6 +742,107 @@ export function createProgram(): Command {
           console.log("  ", mark, chalk.bold(result.source), chalk.dim(detail));
         }
 
+        console.log();
+      } catch (error) {
+        spinner.fail((error as Error).message);
+        throw error;
+      }
+    });
+
+  program
+    .command("keys")
+    .description("List API keys, or downgrade legacy write keys to read")
+    .argument("[action]", "Pass downgrade to convert legacy write keys to read")
+    .option("--id <id>", "Downgrade one key id")
+    .option("--json", "Output as JSON")
+    .action(async (action: string | undefined, options) => {
+      if (action && action !== "downgrade") {
+        throw new Error("Unknown keys action. Use `anykpi keys` or `anykpi keys downgrade`.");
+      }
+
+      const spinner = ora(
+        action === "downgrade" ? "Downgrading legacy keys..." : "Listing API keys..."
+      ).start();
+
+      try {
+        if (action === "downgrade") {
+          const data = (await apiRequest("/api/v1/keys/downgrade", {
+            method: "POST",
+            body: JSON.stringify(options.id ? { id: options.id } : {}),
+          })) as { downgraded?: string[] };
+
+          spinner.stop();
+
+          if (options.json) {
+            console.log(JSON.stringify(data, null, 2));
+            return;
+          }
+
+          const ids = data.downgraded ?? [];
+          console.log();
+          if (ids.length === 0) {
+            console.log(chalk.dim("No legacy keys to downgrade."));
+          } else {
+            console.log(
+              chalk.green("✓"),
+              "Downgraded",
+              chalk.bold(String(ids.length)),
+              ids.length === 1 ? "legacy key to read" : "legacy keys to read"
+            );
+            for (const id of ids) {
+              console.log("  ", chalk.dim(id));
+            }
+          }
+          console.log();
+          return;
+        }
+
+        const data = (await apiRequest("/api/v1/keys")) as {
+          keys: Array<{
+            id: string;
+            name: string;
+            scope: string;
+            legacy: boolean;
+            lastUsedAt?: string | null;
+            createdAt: string;
+          }>;
+        };
+
+        spinner.stop();
+
+        if (options.json) {
+          console.log(JSON.stringify(data, null, 2));
+          return;
+        }
+
+        console.log();
+        console.log(chalk.bold(String(data.keys.length)), "keys");
+        console.log();
+
+        for (const key of data.keys) {
+          const lastUsed = key.lastUsedAt
+            ? new Date(key.lastUsedAt).toLocaleString()
+            : "never";
+          const flags = key.legacy ? chalk.yellow("legacy") : "";
+          console.log("  ", chalk.bold(key.name), chalk.dim(key.id));
+          console.log(
+            "      ",
+            "scope:",
+            chalk.bold(key.scope),
+            flags,
+            "· last used:",
+            lastUsed
+          );
+        }
+
+        if (data.keys.some((key) => key.legacy)) {
+          console.log();
+          console.log(
+            chalk.dim("Legacy keys still have write. Run"),
+            chalk.bold("anykpi keys downgrade"),
+            chalk.dim("to convert them to read.")
+          );
+        }
         console.log();
       } catch (error) {
         spinner.fail((error as Error).message);

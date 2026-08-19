@@ -7,6 +7,7 @@
  *
  * Commands:
  * - login / key     Generate API key
+ * - keys            List keys or downgrade legacy write keys
  * - workspaces      List workspaces
  * - connect         Store connector credentials
  * - identify        Identify a user

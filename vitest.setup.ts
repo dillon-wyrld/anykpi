@@ -43,7 +43,9 @@ sqlite.exec(`
     name TEXT NOT NULL,
     workspace_id TEXT NOT NULL DEFAULT 'live',
     created_at INTEGER NOT NULL,
-    last_used_at INTEGER
+    last_used_at INTEGER,
+    scope TEXT NOT NULL DEFAULT 'write',
+    legacy INTEGER NOT NULL DEFAULT 1
   );
   CREATE TABLE IF NOT EXISTS sync_state (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

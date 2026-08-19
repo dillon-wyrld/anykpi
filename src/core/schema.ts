@@ -146,6 +146,13 @@ export const apiKeys = sqliteTable("api_keys", {
   workspaceId: text("workspace_id").notNull().default("live"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   lastUsedAt: integer("last_used_at", { mode: "timestamp" }),
+  /**
+   * Existing rows migrate to write (see 0005). New keys are inserted as
+   * read unless the caller asks for write or admin.
+   */
+  scope: text("scope").notNull().default("write"),
+  /** True for keys that existed before named scopes shipped. */
+  legacy: integer("legacy", { mode: "boolean" }).notNull().default(true),
 });
 
 export const config = sqliteTable("config", {

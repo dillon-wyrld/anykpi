@@ -463,15 +463,29 @@ export const ImportResponseSchema = z.object({
   errors: z.array(ImportRowErrorSchema),
 });
 
+export const ApiKeyScopeSchema = z.enum(['read', 'write', 'admin']);
+
 export const APIKeyCreateRequestSchema = z.object({
   name: z.string(),
+  scope: ApiKeyScopeSchema.default('read'),
 });
 
 export const APIKeyResponseSchema = z.object({
   id: z.string(),
   key: z.string().optional(), // Only returned on creation
   name: z.string(),
+  scope: ApiKeyScopeSchema,
+  legacy: z.boolean(),
+  lastUsedAt: z.string().datetime().nullable().optional(),
   createdAt: z.string().datetime(),
+});
+
+export const APIKeyDowngradeRequestSchema = z.object({
+  id: z.string().optional(),
+});
+
+export const APIKeyDowngradeResponseSchema = z.object({
+  downgraded: z.array(z.string()),
 });
 
 // ========== Error Response ==========
@@ -528,8 +542,11 @@ export type ImportRowError = z.infer<typeof ImportRowErrorSchema>;
 export type ImportRequest = z.infer<typeof ImportRequestSchema>;
 export type ImportPreviewResponse = z.infer<typeof ImportPreviewResponseSchema>;
 export type ImportResponse = z.infer<typeof ImportResponseSchema>;
+export type ApiKeyScope = z.infer<typeof ApiKeyScopeSchema>;
 export type APIKeyCreateRequest = z.infer<typeof APIKeyCreateRequestSchema>;
 export type APIKeyResponse = z.infer<typeof APIKeyResponseSchema>;
+export type APIKeyDowngradeRequest = z.infer<typeof APIKeyDowngradeRequestSchema>;
+export type APIKeyDowngradeResponse = z.infer<typeof APIKeyDowngradeResponseSchema>;
 export type ResearchOutgoingField = z.infer<typeof ResearchOutgoingFieldSchema>;
 export type ResearchCandidate = z.infer<typeof ResearchCandidateSchema>;
 export type ResearchClaim = z.infer<typeof ResearchClaimSchema>;

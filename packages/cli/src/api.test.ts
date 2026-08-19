@@ -295,4 +295,79 @@ describe("CLI ingest client", () => {
       },
     });
   });
+
+  it("keys lists metadata and keys downgrade POSTs /api/v1/keys/downgrade", async () => {
+    isolatedHome();
+    process.env.ANYKPI_API_KEY = "test-key";
+    process.env.ANYKPI_API_URL = "http://instance.test";
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          keys: [
+            {
+              id: "ak_legacy",
+              name: "old",
+              scope: "write",
+              legacy: true,
+              lastUsedAt: null,
+              createdAt: "2026-01-01T00:00:00.000Z",
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ downgraded: ["ak_legacy"] }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const program = createProgram();
+    program.exitOverride();
+
+    await program.parseAsync(["keys", "--json"], { from: "user" });
+    await program.parseAsync(["keys", "downgrade", "--json"], { from: "user" });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("http://instance.test/api/v1/keys");
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("http://instance.test/api/v1/keys/downgrade");
+    expect((fetchMock.mock.calls[1]?.[1] as RequestInit).method).toBe("POST");
+  });
+
+  it("login mints with the requested scope and defaults to read", async () => {
+    isolatedHome();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: "ak_new",
+        key: "ak_new.secret",
+        scope: "read",
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const program = createProgram();
+    program.exitOverride();
+
+    await program.parseAsync(
+      [
+        "login",
+        "--url",
+        "http://instance.test",
+        "--key",
+        "admin-key",
+        "--name",
+        "agent",
+        "--workspace",
+        "live",
+      ],
+      { from: "user" }
+    );
+
+    expect(JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body))).toEqual({
+      name: "agent",
+      workspace: "live",
+      scope: "read",
+    });
+  });
 });

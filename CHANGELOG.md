@@ -33,6 +33,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- API key scopes (`read` / `write` / `admin`) and last-used tracking
+  (ANY-29). New keys default to read. The env `ANYKPI_API_KEY` is admin.
+  Existing keys migrate to write and show as `legacy` until
+  `anykpi keys downgrade`. A read key on a write returns 403 with a
+  plain-language error. `configure_value_events` requires write scope.
 - Incremental connector sync (ANY-18): PostHog, Mixpanel, and Amplitude
   paginate to completion, persist a per-source cursor in the ANY-44
   sync_state slot, and dedup on `(workspaceId, externalId)` so a re-run

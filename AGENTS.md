@@ -31,7 +31,8 @@ Demo workspace is public-read. Live workspaces and all writes require a key (`Au
 - `GET /api/v1/freshness` — last ingest + per-source last-sync stamps
 - `POST /api/v1/connect` — store per-source credentials (encrypted at rest; source `csv` stores import mapping)
 - `POST /api/v1/import` — CSV import for users and events (uses the sources store; column-mapping preview)
-- `GET /api/v1/keys` / `POST /api/v1/keys` — list metadata / mint a key
+- `GET /api/v1/keys` / `POST /api/v1/keys` — list metadata (scope, last used, legacy) / mint a key (default read)
+- `POST /api/v1/keys/downgrade` — convert legacy write keys to read
 - `POST /api/v1/ingest/identify` / `POST /api/v1/ingest/event` — identify and track
 - `POST /api/ingest/webhook/:source` — realtime push; HMAC secret stored via connect
 
@@ -40,11 +41,11 @@ Demo workspace is public-read. Live workspaces and all writes require a key (`Au
 HTTP `POST /api/mcp`. stdio: `src/mcp/server.ts`. `tools/list` is open. `tools/call` follows REST auth.
 
 - `get_overview`, `query_users`, `get_cohorts`, `get_wbr`, `get_calendar`
-- stdio also: `install_sdk`, `configure_value_events` (write)
+- stdio also: `install_sdk`, `configure_value_events` (requires write scope)
 
 ## CLI
 
-`npx @anykpi/cli` (`packages/cli`): `login` (alias `key`), `workspaces`, `connect`, `import`, `identify`, `track`, `overview`, `users`, `cohorts`, `wbr`, `calendar`, `sync`. `login` requires an operator key. `connect` stores source config only (`anykpi connect csv` saves import mapping). `import` loads a users or events CSV.
+`npx @anykpi/cli` (`packages/cli`): `login` (alias `key`), `keys`, `workspaces`, `connect`, `import`, `identify`, `track`, `overview`, `users`, `cohorts`, `wbr`, `calendar`, `sync`. `login` requires an operator key and mints read by default (`--scope write` for ingest). `anykpi keys downgrade` converts legacy write keys to read. `connect` stores source config only (`anykpi connect csv` saves import mapping). `import` loads a users or events CSV.
 
 ## Connectors
 

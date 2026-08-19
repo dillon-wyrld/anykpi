@@ -39,6 +39,16 @@ function ensureApiKeyWorkspaceColumn() {
         "ALTER TABLE api_keys ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'live'"
       );
     }
+    if (!cols.some((c) => c.name === "scope")) {
+      sqlite.exec(
+        "ALTER TABLE api_keys ADD COLUMN scope TEXT NOT NULL DEFAULT 'write'"
+      );
+    }
+    if (!cols.some((c) => c.name === "legacy")) {
+      sqlite.exec(
+        "ALTER TABLE api_keys ADD COLUMN legacy INTEGER NOT NULL DEFAULT 1"
+      );
+    }
   } catch {
     // Table may not exist until db:init / drizzle push
   }
