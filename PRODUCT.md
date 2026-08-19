@@ -1,16 +1,34 @@
 # ANYKPI
 
-The growth dashboard a founder actually opens every morning — and the first one agents can read too.
+**Unified insights for modern day builders.**
 
-This is a **production open-source product**, not a demo app. The bar is [Midday](https://github.com/midday-ai/midday), [T3 Code](https://t3.codes/), and [Pi](https://pi.dev/): a machine that runs on what you already have.
+Self-hosted dashboard + REST API + CLI + MCP. Connect your tools or add ANYKPI to your product. Same resources humans see in the dashboard, agents can fetch via API.
 
-## What it is
+## Positioning: Midday's Product Shape
 
-1. Connect your tools and agents.
-2. Founder mode — people, not averages.
-3. Hosted waitlist if you want cloud, ANYKPI events, and multiplayer later.
+ANYKPI is **Midday's completeness** (app + API + CLI + MCP + docs + one-command install), **not Midday's features** (not banking, invoicing, time tracking).
 
-You already pay for analytics, money, calendar, releases, and agents. ANYKPI syncs summaries into local read models and never writes back. Humans and agents look at the same views. Every agent answer carries the view that proves it.
+**Like Midday:**
+- Dashboard humans use
+- REST API with real OpenAPI (same resources humans see)
+- MCP + CLI (`npx @anykpi/cli`) — anything you do in the app, an agent can do
+- Docs that read like a product, not a repo
+- One step: connect (bank for Midday, analytics tools for ANYKPI)
+
+**Different domain:**
+- Midday: operational finance (bank, invoices, receipts, time)
+- ANYKPI: founder metrics (users, retention, PMF signals, WBR)
+
+## What It Is
+
+1. **Connect data** (one step):
+   - **Path 1**: Connect existing tools (PostHog, Mixpanel, Amplitude)
+   - **Path 2**: Add ANYKPI to your product (SDK/snippet)
+2. **Founder mode** — people, not averages
+3. **Agent-native** — humans and agents see the same views
+4. **Self-hosted** — person-level data never leaves your machine
+
+Hosted waitlist (cloud + multiplayer) is extra, not the path.
 
 ## Demo is a workspace, not the product
 
@@ -30,23 +48,54 @@ When a connector authenticates, that workspace fills with their people. Views do
 
 ## Stack (approved)
 
-Next.js App Router + TS strict + Tailwind + shadcn. SQLite via Drizzle (Postgres later). Hand-rolled SVG/canvas ported from `spec/prototype.html`. MCP at `/api/mcp`. One Docker container or `npx anykpi`. MIT.
+- **App**: Next.js App Router + TS strict + Tailwind + shadcn
+- **DB**: SQLite via Drizzle (Postgres via DATABASE_URL)
+- **Charts**: Hand-rolled SVG ported from `spec/prototype.html`
+- **API**: REST at `/api/v1` + OpenAPI from Zod contracts
+- **MCP**: `/api/mcp` (same resources as REST)
+- **CLI**: `npx @anykpi/cli` (login, workspace, connect, ingest, query)
+- **Install**: One Docker container or `pnpm install && pnpm db:init && pnpm dev`
+- **License**: MIT
 
-Read models, connectors, and MCP: `spec/architecture.md`.
-UI/UX spec: `spec/prototype.html` (the prototype is the view spec, not the app).
-Product brief: `spec/brief.html`.
+**Specs:**
+- Read models, connectors, MCP: `spec/architecture.md`
+- UI/UX: `spec/prototype.html` (the prototype is the view spec)
+- Product brief: `spec/brief.html`
+- Platform docs: `docs/introduction.md`
 
-## First production cut
+## Complete Platform (Midday-Shaped)
 
-Ship the machine:
+Ship the full backbone:
 
-- One-command install
+### Dashboard (Humans)
+- Five views: Dot Plot, Cohorts, WBR, Calendar, PMF+
 - Workspaces: `demo` (default) and `live`
-- Connect front door: 
-  - **Path 1**: PostHog, Mixpanel, or Amplitude connector (real sync)
-  - **Path 2**: ANYKPI SDK (event ingestion, agent-installable snippet)
-  - Agents: real MCP URL + key
-- Five views reading only from read models
-- View-state URLs that are the shareable answer
-- Hosted waitlist link (extra, not the primary event path)
-- Playwright against the demo workspace
+- Connect page: both paths (existing tools + SDK)
+- View-state URLs (shareable proof)
+
+### REST API (Any Client)
+- `/api/v1/*` endpoints: overview, users, cohorts, wbr, calendar, sync
+- OpenAPI spec from Zod contracts
+- `/api-docs` page (Scalar viewer)
+- Every response includes `view_url`
+
+### CLI (Scripts + Agents)
+- `npx @anykpi/cli` or `pnpm anykpi` locally
+- Commands: login, workspace, connect, identify, track, overview, users, cohorts, wbr, calendar
+- Structured JSON output (`--json` flag)
+- Zero config files, agent-friendly
+
+### MCP (Agents)
+- `/api/mcp` with tools: get_overview, query_users, get_cohorts, get_wbr, get_calendar
+- Same resources as REST API
+- Every tool returns `view_url`
+
+### Docs + Agents Page
+- `docs/introduction.md` — who, what, connect, views, agents, API
+- `/agents` page — MCP setup + CLI + REST examples
+- README points at docs
+
+### Install
+- `pnpm install && pnpm db:init && pnpm dev`
+- Docker: one command with persistent volume
+- CI green (typecheck, unit tests, Playwright)
