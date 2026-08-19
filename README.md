@@ -4,7 +4,7 @@
 
 Self-hosted dashboard + REST API + CLI + MCP. Connect your tools or add ANYKPI to your product. Same resources humans see in the dashboard, agents can fetch via API.
 
-**Midday's completeness** (app + API + CLI + MCP + docs), **not Midday's features**. Founder metrics domain: users, retention, PMF signals, WBR.
+Founder metrics: users, retention, PMF signals, WBR.
 
 ![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
