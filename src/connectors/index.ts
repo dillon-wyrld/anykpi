@@ -24,8 +24,8 @@
  * Config contract:
  * - The registry loads decrypted source config and passes it as
  *   `opts.config`. Connectors must not log it.
- * - Env vars (POSTHOG_*, MIXPANEL_*, AMPLITUDE_*) are a deprecated
- *   read-only fallback when stored config is missing a field.
+ * - Env vars (POSTHOG_*, MIXPANEL_*, AMPLITUDE_*, STRIPE_*, REVENUECAT_*)
+ *   are a deprecated read-only fallback when stored config is missing a field.
  */
 
 import { and, eq } from "drizzle-orm";
@@ -40,6 +40,7 @@ import { syncAmplitude } from "./amplitude";
 import { withSourceLock } from "./lock";
 import { syncMixpanel } from "./mixpanel";
 import { syncPostHog } from "./posthog";
+import { syncRevenueCat } from "./revenuecat";
 import { syncStripe } from "./stripe";
 import type { SyncOpts } from "./types";
 
@@ -51,6 +52,7 @@ export { SyncResultSchema, ConnectorHealthSchema } from "@/core/contracts";
 export { syncAmplitude } from "./amplitude";
 export { syncMixpanel } from "./mixpanel";
 export { syncPostHog } from "./posthog";
+export { syncRevenueCat } from "./revenuecat";
 export { syncStripe } from "./stripe";
 
 export interface Connector {
@@ -83,12 +85,19 @@ export const stripeConnector: Connector = {
   sync: syncStripe,
 };
 
+export const revenuecatConnector: Connector = {
+  source: "revenuecat",
+  name: "RevenueCat",
+  sync: syncRevenueCat,
+};
+
 /** Registry keyed by `Connector.source`. */
 export const registry: Record<string, Connector> = {
   posthog: posthogConnector,
   mixpanel: mixpanelConnector,
   amplitude: amplitudeConnector,
   stripe: stripeConnector,
+  revenuecat: revenuecatConnector,
 };
 
 export function listConnectors(): Connector[] {

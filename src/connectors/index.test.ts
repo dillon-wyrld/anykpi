@@ -40,20 +40,24 @@ describe("connector registry", () => {
       "amplitude",
       "mixpanel",
       "posthog",
+      "revenuecat",
       "stripe",
     ]);
     expect(listConnectors().map((c) => c.source).sort()).toEqual([
       "amplitude",
       "mixpanel",
       "posthog",
+      "revenuecat",
       "stripe",
     ]);
     expect(registry.posthog.name).toBe("PostHog");
     expect(registry.mixpanel.name).toBe("Mixpanel");
     expect(registry.amplitude.name).toBe("Amplitude");
     expect(registry.stripe.name).toBe("Stripe");
+    expect(registry.revenuecat.name).toBe("RevenueCat");
     expect(getConnector("posthog")).toBe(registry.posthog);
     expect(getConnector("stripe")).toBe(registry.stripe);
+    expect(getConnector("revenuecat")).toBe(registry.revenuecat);
   });
 
   it("rejects unknown sources", async () => {

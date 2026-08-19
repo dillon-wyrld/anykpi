@@ -1,0 +1,188 @@
+{
+  "source": "revenuecat",
+  "description": "Two customer pages — trial + conversion, then churn",
+  "fixtures": [
+    {
+      "name": "customers-page-1",
+      "request": {
+        "method": "GET",
+        "urlPattern": "/v2/projects/proj_fixture/customers\\?limit=100$"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "object": "list",
+          "next_page": "/v2/projects/proj_fixture/customers?starting_after=cus_converted&limit=100",
+          "url": "/v2/projects/proj_fixture/customers",
+          "items": [
+            { "object": "customer", "id": "cus_trial" },
+            { "object": "customer", "id": "cus_converted" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "subscriptions-trial",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/customers/cus_trial/subscriptions"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "object": "list",
+          "next_page": null,
+          "items": [
+            {
+              "object": "subscription",
+              "id": "sub_trial",
+              "customer_id": "cus_trial",
+              "product_id": "prod_plus",
+              "status": "trialing",
+              "starts_at": 1711929600000,
+              "current_period_starts_at": 1711929600000,
+              "ends_at": null,
+              "gives_access": true,
+              "total_revenue_in_usd": { "currency": "USD", "gross": 0 },
+              "entitlements": {
+                "items": [
+                  {
+                    "display_name": "Plus",
+                    "products": {
+                      "items": [
+                        {
+                          "id": "prod_plus",
+                          "display_name": "plus",
+                          "store_identifier": "plus_monthly",
+                          "subscription": { "duration": "P1M" },
+                          "indicative_price": {
+                            "currency": "USD",
+                            "amount_micros": 12000000
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "subscriptions-converted",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/customers/cus_converted/subscriptions"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "object": "list",
+          "next_page": null,
+          "items": [
+            {
+              "object": "subscription",
+              "id": "sub_converted",
+              "customer_id": "cus_converted",
+              "product_id": "prod_plus",
+              "status": "active",
+              "starts_at": 1712016000000,
+              "current_period_starts_at": 1712016000000,
+              "ends_at": null,
+              "gives_access": true,
+              "total_revenue_in_usd": { "currency": "USD", "gross": 12 },
+              "entitlements": {
+                "items": [
+                  {
+                    "display_name": "Plus",
+                    "products": {
+                      "items": [
+                        {
+                          "id": "prod_plus",
+                          "display_name": "plus",
+                          "store_identifier": "plus_monthly",
+                          "subscription": { "duration": "P1M" },
+                          "indicative_price": {
+                            "currency": "USD",
+                            "amount_micros": 12000000
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "customers-page-2",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "starting_after=cus_converted"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "object": "list",
+          "next_page": null,
+          "url": "/v2/projects/proj_fixture/customers",
+          "items": [{ "object": "customer", "id": "cus_churned" }]
+        }
+      }
+    },
+    {
+      "name": "subscriptions-churned",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/customers/cus_churned/subscriptions"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "object": "list",
+          "next_page": null,
+          "items": [
+            {
+              "object": "subscription",
+              "id": "sub_churned",
+              "customer_id": "cus_churned",
+              "product_id": "prod_starter",
+              "status": "expired",
+              "starts_at": 1709251200000,
+              "current_period_starts_at": 1711843200000,
+              "ends_at": 1711929600000,
+              "gives_access": false,
+              "total_revenue_in_usd": { "currency": "USD", "gross": 24 },
+              "entitlements": {
+                "items": [
+                  {
+                    "display_name": "Starter",
+                    "products": {
+                      "items": [
+                        {
+                          "id": "prod_starter",
+                          "display_name": "starter",
+                          "store_identifier": "starter_monthly",
+                          "subscription": { "duration": "P1M" },
+                          "indicative_price": {
+                            "currency": "USD",
+                            "amount_micros": 8000000
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

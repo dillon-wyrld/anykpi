@@ -33,6 +33,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- RevenueCat connector (ANY-14): paginated customer / subscription
+  backfill into the same revenue read models as Stripe (trials,
+  conversions, and churn). Secret key is stored via `/connect` or
+  `anykpi connect revenuecat`. Offline fixture tests only.
 - `POST /api/ingest/webhook/:source` accepts signed destination payloads
   (HMAC-SHA256). The per-source secret is stored via ANY-46 and rotates
   on re-submit. Recipes: `docs/webhooks.md` (ANY-13).

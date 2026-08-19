@@ -45,6 +45,11 @@ export function envFallback(source: string): SourceConfig {
         apiKey: process.env.STRIPE_API_KEY,
         webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
       });
+    case "revenuecat":
+      return pickDefined({
+        apiKey: process.env.REVENUECAT_API_KEY,
+        projectId: process.env.REVENUECAT_PROJECT_ID,
+      });
     default:
       return {};
   }

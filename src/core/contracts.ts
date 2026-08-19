@@ -336,6 +336,7 @@ export const ConnectSourceIdSchema = z.enum([
   'mixpanel',
   'amplitude',
   'stripe',
+  'revenuecat',
   'csv',
 ]);
 
