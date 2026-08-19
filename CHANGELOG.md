@@ -75,6 +75,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   per-person revenue join, and balance/runway. Demo seed fills them;
   WBR shows those lanes with week-over-week deltas; cohorts and
   `get_cohorts` can filter to payers. Person charge detail stays summarized.
+- Milestone detector (ANY-21): Nth signup (100 / 1,000 / 10,000), a new
+  longest streak, company birthday, and first cohort smile. Detection is
+  idempotent on `(workspaceId, kind, subject)` and lands as one-shot
+  calendar rows. Demo seed includes at least one.
 
 ### Changed
 - Removed internal design notes and competitor/brand references from the public

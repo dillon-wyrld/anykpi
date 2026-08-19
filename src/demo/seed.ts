@@ -12,6 +12,7 @@
  * - Initech account has 3/10 activation
  * - Latest cohorts show smile (PMF signal)
  * - Calendar has zero authoring controls
+ * - Milestone detector earns at least one one-shot calendar row
  */
 
 import { db } from "../core/db";
@@ -28,6 +29,11 @@ import {
   NAMED
 } from "./generators";
 import { buildDemoRevenue, preferPayerIds } from "./revenue";
+import {
+  foundedAtConfigKey,
+  persistWorkspaceMilestones,
+} from "../core/milestones";
+import { upsertConfig } from "../core/upsert";
 
 const WORKSPACE = "demo";
 
@@ -303,6 +309,22 @@ export async function seedDemo() {
   }
   
   console.log(`Seeded ${calEvents.length} calendar events from ${Object.keys(CALENDAR_SOURCES).length} sources`);
+
+  const founded = new Date(today.getTime() - 365 * DAY_MS);
+  await upsertConfig({
+    key: foundedAtConfigKey(WORKSPACE),
+    value: founded.toISOString(),
+    workspaceId: WORKSPACE,
+  });
+  const { detected: milestones } = await persistWorkspaceMilestones(WORKSPACE, today);
+  if (milestones.length === 0) {
+    throw new Error("Demo seed must include at least one detected milestone");
+  }
+  console.log(
+    `Detected ${milestones.length} milestone${milestones.length === 1 ? "" : "s"}: ${milestones
+      .map((m) => m.title)
+      .join(", ")}`
+  );
   
   // Add sync state
   const now = new Date();
@@ -326,6 +348,9 @@ export async function seedDemo() {
   console.log(`  - Initech: ${initechAccount[0]?.activated}/${initechAccount[0]?.seats} activation`);
   console.log(`  - Cohorts built with seed 777`);
   console.log(`  - Calendar has ${calEvents.length} events, zero authoring controls`);
+  console.log(
+    `  - Milestones: ${milestones.map((m) => `${m.rule} (${m.title})`).join("; ")}`
+  );
   
   // Check for smile
   const latestCohort = cohorts[cohorts.length - 1];

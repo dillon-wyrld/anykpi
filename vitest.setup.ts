@@ -146,5 +146,18 @@ sqlite.exec(`
   );
   CREATE UNIQUE INDEX IF NOT EXISTS sources_workspace_source_uidx
     ON sources (workspace_id, source);
+  CREATE TABLE IF NOT EXISTS cal_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source TEXT NOT NULL,
+    source_name TEXT NOT NULL,
+    source_color TEXT NOT NULL,
+    type TEXT NOT NULL,
+    emoji TEXT NOT NULL,
+    title TEXT NOT NULL,
+    badge TEXT NOT NULL,
+    event_date INTEGER NOT NULL,
+    is_future INTEGER DEFAULT 0,
+    workspace_id TEXT NOT NULL DEFAULT 'demo'
+  );
 `);
 sqlite.close();

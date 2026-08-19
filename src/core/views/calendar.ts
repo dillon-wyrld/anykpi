@@ -2,6 +2,15 @@ import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
 import { formatSyncAge } from "@/core/views/calendar-math";
+import {
+  detectWorkspaceMilestones,
+  eventMilestoneKey,
+  MILESTONE_SOURCE,
+  MILESTONE_SOURCE_COLOR,
+  MILESTONE_SOURCE_NAME,
+  milestoneToCalValues,
+  syntheticMilestoneId,
+} from "@/core/milestones";
 
 export { classifyCalendarDate, formatSyncAge } from "@/core/views/calendar-math";
 
@@ -21,25 +30,58 @@ export async function loadCalendarView(workspace: string) {
 
   const syncMap = new Map(syncStates.map((s) => [s.source, s]));
   const now = new Date();
+  const anykpiSync = syncMap.get(MILESTONE_SOURCE);
 
-  return {
-    events: events.map((e) => {
-      const sync = syncMap.get(e.source);
+  const mapped = events.map((e) => {
+    const sync = syncMap.get(e.source);
 
-      return {
-        id: e.id,
-        source: e.source,
-        sourceName: e.sourceName,
-        sourceColor: e.sourceColor,
-        sourceGlyph: e.emoji,
-        type: e.type,
-        date: e.eventDate.toISOString(),
-        title: e.title,
-        badge: e.badge,
-        detail: `${e.type} event from ${e.sourceName}`,
-        syncAge: formatSyncAge(sync?.lastSync, now),
-        isFuture: e.isFuture,
-      };
-    }),
-  };
+    return {
+      id: e.id,
+      source: e.source,
+      sourceName: e.sourceName,
+      sourceColor: e.sourceColor,
+      sourceGlyph: e.emoji,
+      type: e.type,
+      date: e.eventDate.toISOString(),
+      title: e.title,
+      badge: e.badge,
+      detail:
+        e.source === MILESTONE_SOURCE && e.type === "milestone"
+          ? e.badge
+          : `${e.type} event from ${e.sourceName}`,
+      syncAge: formatSyncAge(sync?.lastSync, now),
+      isFuture: e.isFuture,
+    };
+  });
+
+  const seen = new Set(
+    events
+      .map((event) => eventMilestoneKey(event, workspace))
+      .filter((key): key is string => key !== null)
+  );
+
+  const detected = await detectWorkspaceMilestones(workspace, now);
+  for (const milestone of detected) {
+    if (seen.has(milestone.key)) continue;
+    seen.add(milestone.key);
+    const row = milestoneToCalValues(milestone, now);
+    mapped.push({
+      id: syntheticMilestoneId(milestone.key),
+      source: MILESTONE_SOURCE,
+      sourceName: MILESTONE_SOURCE_NAME,
+      sourceColor: MILESTONE_SOURCE_COLOR,
+      sourceGlyph: milestone.emoji,
+      type: row.type,
+      date: milestone.occurredAt.toISOString(),
+      title: milestone.title,
+      badge: milestone.rule,
+      detail: milestone.rule,
+      syncAge: formatSyncAge(anykpiSync?.lastSync, now),
+      isFuture: row.isFuture,
+    });
+  }
+
+  mapped.sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+
+  return { events: mapped };
 }
