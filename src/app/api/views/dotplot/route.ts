@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
     .where(
       and(
         eq(schema.activity.workspaceId, workspace),
-        gte(schema.activity.date, baseDate),
-        lte(schema.activity.date, endDate)
+        gte(schema.activity.timestamp, baseDate),
+        lte(schema.activity.timestamp, endDate)
       )
     )
     .all();
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   const activityMap = new Map<string, Set<number>>();
   activityRecords.forEach((record) => {
     const dayOffset = Math.floor(
-      (record.date.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24)
+      (record.timestamp.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24)
     );
     if (!activityMap.has(record.personId)) {
       activityMap.set(record.personId, new Set());

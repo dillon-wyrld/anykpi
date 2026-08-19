@@ -112,18 +112,16 @@ export async function syncPostHog(config: PostHogConfig): Promise<void> {
     await db
       .insert(schema.syncState)
       .values({
-        connector: "posthog",
-        lastSyncedAt: new Date(),
+        source: "posthog",
+        sourceName: "PostHog",
+        lastSync: new Date(),
         status: "success",
-        stats: JSON.stringify({
-          users: personsData.results?.length || 0,
-        }),
         workspaceId,
       })
       .onConflictDoUpdate({
-        target: schema.syncState.connector,
+        target: schema.syncState.source,
         set: {
-          lastSyncedAt: new Date(),
+          lastSync: new Date(),
           status: "success",
           stats: JSON.stringify({
             users: personsData.results?.length || 0,
@@ -137,16 +135,17 @@ export async function syncPostHog(config: PostHogConfig): Promise<void> {
     await db
       .insert(schema.syncState)
       .values({
-        connector: "posthog",
-        lastSyncedAt: new Date(),
+        source: "posthog",
+        sourceName: "PostHog",
+        lastSync: new Date(),
         status: "error",
         error: error instanceof Error ? error.message : "Unknown error",
         workspaceId,
       })
       .onConflictDoUpdate({
-        target: schema.syncState.connector,
+        target: schema.syncState.source,
         set: {
-          lastSyncedAt: new Date(),
+          lastSync: new Date(),
           status: "error",
           error: error instanceof Error ? error.message : "Unknown error",
         },

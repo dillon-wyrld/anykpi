@@ -54,18 +54,17 @@ export async function syncMixpanel(config: MixpanelConfig): Promise<void> {
     await db
       .insert(schema.syncState)
       .values({
-        connector: "mixpanel",
-        lastSyncedAt: new Date(),
+        source: "mixpanel",
+        sourceName: "Mixpanel",
+        lastSync: new Date(),
         status: "success",
-        stats: JSON.stringify({ users: usersData.results?.length || 0 }),
         workspaceId,
       })
       .onConflictDoUpdate({
-        target: schema.syncState.connector,
+        target: schema.syncState.source,
         set: {
-          lastSyncedAt: new Date(),
+          lastSync: new Date(),
           status: "success",
-          stats: JSON.stringify({ users: usersData.results?.length || 0 }),
         },
       })
       .run();
@@ -75,16 +74,17 @@ export async function syncMixpanel(config: MixpanelConfig): Promise<void> {
     await db
       .insert(schema.syncState)
       .values({
-        connector: "mixpanel",
-        lastSyncedAt: new Date(),
+        source: "mixpanel",
+        sourceName: "Mixpanel",
+        lastSync: new Date(),
         status: "error",
         error: error instanceof Error ? error.message : "Unknown error",
         workspaceId,
       })
       .onConflictDoUpdate({
-        target: schema.syncState.connector,
+        target: schema.syncState.source,
         set: {
-          lastSyncedAt: new Date(),
+          lastSync: new Date(),
           status: "error",
           error: error instanceof Error ? error.message : "Unknown error",
         },

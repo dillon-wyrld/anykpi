@@ -142,7 +142,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
                   )}
 
                   {(() => {
-                    const strips: JSX.Element[] = [];
+                    const strips: React.ReactElement[] = [];
                     let d = 0;
                     while (d < DAYS) {
                       if (user.activity[d]) {

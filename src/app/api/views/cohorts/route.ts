@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       (user.signupDate.getTime() - new Date("2024-01-01").getTime()) / (7 * 24 * 60 * 60 * 1000)
     );
     const activityWeek = Math.floor(
-      (activity.date.getTime() - new Date("2024-01-01").getTime()) / (7 * 24 * 60 * 60 * 1000)
+      (activity.timestamp.getTime() - new Date("2024-01-01").getTime()) / (7 * 24 * 60 * 60 * 1000)
     );
     const weekOffset = activityWeek - signupWeek;
 
