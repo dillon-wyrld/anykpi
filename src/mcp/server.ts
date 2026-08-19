@@ -188,9 +188,10 @@ export function createMCPServer() {
                     ),
                     totalUsers: users.length,
                     syncHealth: syncStates.map((s) => ({
-                      connector: s.connector,
+                      source: s.source,
+                      sourceName: s.sourceName,
                       status: s.status,
-                      lastSynced: s.lastSyncedAt,
+                      lastSynced: s.lastSync,
                     })),
                     viewUrl: buildViewUrl(`${BASE_URL}/dashboard`, {
                       view: "dotplot",
@@ -205,27 +206,22 @@ export function createMCPServer() {
         }
 
         case "query_users": {
-          let query = db.select().from(schema.users).where(eq(schema.users.workspaceId, workspace));
-
+          const conditions = [eq(schema.users.workspaceId, workspace)];
+          
           if ((args as any)?.platform) {
-            query = query.where(
-              and(
-                eq(schema.users.workspaceId, workspace),
-                eq(schema.users.platform, (args as any).platform)
-              )
-            ) as any;
+            conditions.push(eq(schema.users.platform, (args as any).platform));
           }
-
+          
           if ((args as any)?.country) {
-            query = query.where(
-              and(
-                eq(schema.users.workspaceId, workspace),
-                eq(schema.users.country, (args as any).country)
-              )
-            ) as any;
+            conditions.push(eq(schema.users.country, (args as any).country));
           }
 
-          const users = await query.limit((args as any)?.limit || 100).all();
+          const users = await db
+            .select()
+            .from(schema.users)
+            .where(and(...conditions))
+            .limit((args as any)?.limit || 100)
+            .all();
 
           const filters = [];
           if ((args as any)?.platform) {

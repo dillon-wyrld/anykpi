@@ -84,8 +84,15 @@ export async function GET(request: NextRequest) {
         return signupCount > 0 ? Math.round((retained / signupCount) * 100) : 0;
       });
 
+      // Extract week number from cohortKey (e.g. "2024-W05")
+      const weekMatch = cohortKey.match(/W(\d+)/);
+      const weekNum = weekMatch ? parseInt(weekMatch[1]) : 1;
+      const cohortDate = new Date(2024, 0, 1 + (weekNum - 1) * 7);
+
       return {
         cohort: cohortKey,
+        cohortDate: cohortDate.toISOString().split('T')[0],
+        size: signupCount,
         weeks,
         smileDetected: detectSmile(weeks),
       };

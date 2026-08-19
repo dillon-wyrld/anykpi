@@ -140,7 +140,7 @@ export default function Calendar({ workspace }: CalendarProps) {
             })
           )}
         </div>
-
+        </div>
       </div>
     </div>
   );

@@ -162,7 +162,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
                     fontSize="7.5"
                     fill="var(--faint)"
                     letterSpacing="0.06em"
-                    textTransform="uppercase"
+                    style={{ textTransform: 'uppercase' }}
                   >
                     {user.platform}
                   </text>
