@@ -1,0 +1,10 @@
+{
+  "wbr": {
+    "exceptions": {
+      "consecutiveMissesForOff": 2,
+      "consecutiveMissesForWatch": 1,
+      "inputThinWinStdDevs": 1,
+      "wrongWayLookbackWeeks": 3
+    }
+  }
+}

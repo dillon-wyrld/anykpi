@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { WBR_METRICS } from "@/demo/generators";
 import {
+  DEFAULT_WBR_EXCEPTION_RULES,
   seriesPctChange,
   seriesWowYoy,
   sheetPct,
@@ -11,6 +12,7 @@ import {
   wbrStat,
   wfmt,
   wsign,
+  type WbrExceptionRules,
   type WbrMetricLike,
 } from "./wbr-math";
 
@@ -70,6 +72,44 @@ describe("wbrStat — exception engine", () => {
     );
     expect(stat.k).toBe("watch");
     expect(stat.why).toContain("turning the wrong way");
+  });
+
+  it("states the rule that fired in plain words on every exception", () => {
+    const off = wbrStat(metric({ weeks: [50, 52, 48, 46, 45, 44], target: 50 }));
+    expect(off.rule).toBe("2 or more consecutive weeks off target");
+    expect(off.why.startsWith("Rule: 2 or more consecutive weeks off target.")).toBe(true);
+
+    const first = wbrStat(
+      metric({ weeks: [50, 52, 51, 53, 52, 48], target: 50, type: "input" })
+    );
+    expect(first.rule).toBe("first week off target");
+    expect(first.why.startsWith("Rule: first week off target.")).toBe(true);
+
+    const wrongWay = wbrStat(
+      metric({ weeks: [60, 58, 56, 54, 52, 50], target: 45, type: "input" })
+    );
+    expect(wrongWay.rule).toContain("turning the wrong way");
+    expect(wrongWay.why).toMatch(/^Rule: /);
+  });
+
+  it("honours configured consecutive-miss thresholds", () => {
+    const stricter: WbrExceptionRules = {
+      ...DEFAULT_WBR_EXCEPTION_RULES,
+      consecutiveMissesForOff: 4,
+    };
+    const twoMisses = wbrStat(
+      metric({ weeks: [50, 52, 51, 50, 48, 46], target: 50 }),
+      stricter
+    );
+    expect(twoMisses.k).toBe("watch");
+    expect(twoMisses.why).toContain("Not yet the off threshold (4 weeks)");
+
+    const fourMisses = wbrStat(
+      metric({ weeks: [50, 52, 48, 46, 45, 44], target: 50 }),
+      stricter
+    );
+    expect(fourMisses.k).toBe("off");
+    expect(fourMisses.rule).toBe("4 or more consecutive weeks off target");
   });
 });
 
@@ -214,5 +254,11 @@ describe("ANY-45 — revenue lanes reuse the same WoW helper", () => {
     );
     expect(box.lw).toBe(656);
     expect(box.wow).toBe(Math.round(((656 - 553) / 553) * 100));
+
+    const stat = wbrStat(
+      metric({ weeks: mrrWeeks, prevWeeks: mrrPrev, target: 600, unit: "$" })
+    );
+    expect(stat.k).toBe("ok");
+    expect(stat.rule).toBeNull();
   });
 });

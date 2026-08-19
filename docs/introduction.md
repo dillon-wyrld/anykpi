@@ -42,7 +42,7 @@ Don't have PostHog/Mixpanel/Amplitude? Add the ANYKPI SDK. Events land in the sa
 
 1. **Dot Plot** — Every user, every day. Streaks and silences read instantly.
 2. **Cohorts** — Retention curves with smile detection (PMF signal).
-3. **Weekly Business Review** — 6 weeks, 12 months YOY, exceptions auto-surfaced.
+3. **Weekly Business Review** — 6 weeks, 12 months YOY, exceptions auto-surfaced. Thresholds live in `anykpi.config.json` beside the database; see [WBR exception rules](#wbr-exception-rules).
 4. **Calendar** — Read-only timeline from connected sources.
 5. **PMF+** — Research users, draft outreach (queued, never auto-sent).
 
@@ -182,6 +182,19 @@ docker run -p 3000:3000 -v anykpi-data:/data ghcr.io/dillon-wyrld/anykpi
 - Demo ships forever as a workspace
 - Nothing sends on its own (PMF+ drafts wait)
 - No telemetry (person-level data never leaves machine)
+
+## WBR exception rules
+
+Thresholds live in `anykpi.config.json` beside the SQLite file (the same directory as `DATABASE_PATH`). There is no settings UI — copy `anykpi.config.example.json` next to the database and edit it. The file is Zod-validated at boot; an invalid value fails startup and prints the offending path (for example `wbr.exceptions.consecutiveMissesForOff`). Missing file uses the defaults below.
+
+| Key | Default | What it means |
+|---|---|---|
+| `wbr.exceptions.consecutiveMissesForOff` | `2` | Consecutive weeks off target before a metric is **off** |
+| `wbr.exceptions.consecutiveMissesForWatch` | `1` | Consecutive weeks off target before a metric is **watch** (must be ≤ off) |
+| `wbr.exceptions.inputThinWinStdDevs` | `1` | Inputs on the right side of target by less than this × weekly standard deviation stay **watch** |
+| `wbr.exceptions.wrongWayLookbackWeeks` | `3` | Inputs still on target but turning the wrong way across this many weeks are **watch** |
+
+Every exception row states, in plain words, the rule that fired (`Rule: 2 or more consecutive weeks off target.`).
 
 ## Postgres later
 

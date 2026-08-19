@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  DEFAULT_WBR_EXCEPTION_RULES,
   sheetPct,
   sheetRoll,
   sheetTint,
@@ -10,6 +11,7 @@ import {
   wbrStat,
   wfmt,
   wsign,
+  type WbrExceptionRules,
 } from "@/core/views/wbr-math";
 
 interface Metric {
@@ -90,6 +92,9 @@ export default function WBR({ workspace }: WBRProps) {
   });
 
   const [metrics, setMetrics] = useState<Metric[]>([]);
+  const [exceptionRules, setExceptionRules] = useState<WbrExceptionRules>(
+    DEFAULT_WBR_EXCEPTION_RULES
+  );
   const [metricsWithStats, setMetricsWithStats] = useState<(Metric & { i: number; stat: ReturnType<typeof wbrStat> })[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -100,6 +105,7 @@ export default function WBR({ workspace }: WBRProps) {
       .then((res) => res.json())
       .then((data) => {
         setMetrics(data.metrics || []);
+        if (data.exceptionRules) setExceptionRules(data.exceptionRules);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -109,10 +115,10 @@ export default function WBR({ workspace }: WBRProps) {
     const enriched = metrics.map((m, i) => ({
       ...m,
       i,
-      stat: wbrStat(m),
+      stat: wbrStat(m, exceptionRules),
     }));
     setMetricsWithStats(enriched);
-  }, [metrics]);
+  }, [metrics, exceptionRules]);
 
   useEffect(() => {
     // Skip the URL sync on initial mount to avoid loops
