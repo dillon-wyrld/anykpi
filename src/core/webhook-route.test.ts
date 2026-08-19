@@ -8,6 +8,7 @@ import { GET as getUsers } from "@/app/api/v1/users/route";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { and, eq } from "drizzle-orm";
+import { loadSourceCiphertext } from "@/core/sources";
 import { signWebhookBody } from "@/core/webhook";
 
 const ADMIN = "webhook-route-admin";
@@ -107,6 +108,12 @@ async function storeHmac(source: string, hmacSecret: string) {
   expect([200, 201]).toContain(res.status);
   const body = await res.json();
   expect(JSON.stringify(body)).not.toContain(hmacSecret);
+
+  const ciphertext = await loadSourceCiphertext(WS, source);
+  expect(ciphertext).toMatch(/^v1:/);
+  expect(ciphertext).not.toContain(hmacSecret);
+  expect(ciphertext).not.toContain("hmacSecret");
+
   return body as { rotated: boolean };
 }
 
