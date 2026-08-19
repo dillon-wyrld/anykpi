@@ -1,6 +1,7 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import type { SyncResult } from "@/core/contracts";
+import { upsertSyncState } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
 
 export async function syncPostHog(
@@ -109,23 +110,13 @@ export async function syncPostHog(
       rowsSynced += 1;
     }
 
-    // Update sync state
-    await db
-      .insert(schema.syncState)
-      .values({
-        source: "posthog",
-        sourceName: "PostHog",
-        lastSync: new Date(),
-        status: "success",
-        workspaceId,
-      })
-      .onConflictDoUpdate({
-        target: schema.syncState.source,
-        set: {
-          lastSync: new Date(),
-          status: "success",
-        },
-      });
+    await upsertSyncState({
+      source: "posthog",
+      sourceName: "PostHog",
+      lastSync: new Date(),
+      status: "success",
+      workspaceId,
+    });
 
     console.log("PostHog sync complete");
     // Full-snapshot connector: ignore cursor, no incremental watermark yet.
@@ -133,24 +124,14 @@ export async function syncPostHog(
   } catch (error) {
     console.error("PostHog sync failed");
 
-    await db
-      .insert(schema.syncState)
-      .values({
-        source: "posthog",
-        sourceName: "PostHog",
-        lastSync: new Date(),
-        status: "error",
-        error: "sync failed",
-        workspaceId,
-      })
-      .onConflictDoUpdate({
-        target: schema.syncState.source,
-        set: {
-          lastSync: new Date(),
-          status: "error",
-          error: "sync failed",
-        },
-      });
+    await upsertSyncState({
+      source: "posthog",
+      sourceName: "PostHog",
+      lastSync: new Date(),
+      status: "error",
+      error: "sync failed",
+      workspaceId,
+    });
 
     throw error;
   }

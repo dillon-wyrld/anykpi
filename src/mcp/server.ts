@@ -6,6 +6,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
+import { upsertConfig } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
 import { buildViewUrl } from "@/core/view-state";
 
@@ -390,20 +391,11 @@ export function createMCPServer() {
         case "configure_value_events": {
           const mapping = (args as any)?.mapping || {};
 
-          await db
-            .insert(schema.config)
-            .values({
-              key: "value_events",
-              value: JSON.stringify(mapping),
-              workspaceId: workspace,
-            })
-            .onConflictDoUpdate({
-              target: [schema.config.key, schema.config.workspaceId],
-              set: {
-                value: JSON.stringify(mapping),
-              },
-            })
-            .run();
+          await upsertConfig({
+            key: "value_events",
+            value: JSON.stringify(mapping),
+            workspaceId: workspace,
+          });
 
           return {
             content: [
