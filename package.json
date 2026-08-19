@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest",
+    "test:unit": "vitest run",
     "test:e2e": "playwright test",
     "db:init": "tsx scripts/init-db.ts",
     "db:generate": "drizzle-kit generate",
