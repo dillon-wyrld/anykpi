@@ -1,0 +1,557 @@
+<title>ANYKPI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+/* ---------- tokens: complete light palette on bare :root ---------- */
+:root{
+  --bg:#fbfbfb;
+  --panel:#ffffff;
+  --panel-2:#f6f6f8;
+  --border:#e4e4e7;
+  --rule:#ededf0;
+  --text:#18181b;
+  --sub:#6b6f76;
+  --faint:#9b9ba4;
+  --accent:#5e6ad2;
+  --accent-soft:#eef0fb;
+  --accent-line:#c9cef0;
+  --green:#26a465;
+  --green-soft:#e8f6ee;
+  --amber:#d97917;
+  --shadow:0 1px 2px rgba(24,24,27,.04), 0 8px 24px -12px rgba(24,24,27,.10);
+  --hatch:#f0f0f4;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d0d10;
+    --panel:#141418;
+    --panel-2:#1a1a1f;
+    --border:#27272e;
+    --rule:#212127;
+    --text:#eaeaef;
+    --sub:#9c9ca6;
+    --faint:#6e6e78;
+    --accent:#8f97ea;
+    --accent-soft:#1b1c30;
+    --accent-line:#3a3d63;
+    --green:#43c184;
+    --green-soft:#122318;
+    --amber:#e8952f;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+    --hatch:#1e1e25;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d0d10;
+  --panel:#141418;
+  --panel-2:#1a1a1f;
+  --border:#27272e;
+  --rule:#212127;
+  --text:#eaeaef;
+  --sub:#9c9ca6;
+  --faint:#6e6e78;
+  --accent:#8f97ea;
+  --accent-soft:#1b1c30;
+  --accent-line:#3a3d63;
+  --green:#43c184;
+  --green-soft:#122318;
+  --amber:#e8952f;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  --hatch:#1e1e25;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{
+  max-width:840px;
+  margin:0 auto;
+  padding:56px 24px 120px;
+  display:flex;
+  flex-direction:column;
+  gap:64px;
+}
+@media (max-width:640px){ .wrap{padding:36px 18px 80px; gap:48px} }
+
+/* ---------- type roles ---------- */
+h1,h2,h3{
+  font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;
+  font-weight:600;
+  text-wrap:balance;
+  margin:0;
+  line-height:1.12;
+  letter-spacing:-.02em;
+}
+h1{font-size:clamp(38px,7vw,60px);font-weight:700;letter-spacing:-.035em}
+h2{font-size:clamp(24px,3.6vw,31px)}
+h3{font-size:18px;letter-spacing:-.01em}
+p{margin:0;max-width:66ch}
+a{color:var(--accent)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+
+.eyebrow{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+  color:var(--faint);
+}
+.lede{font-size:19px;color:var(--sub);max-width:62ch}
+.small{font-size:14.5px;color:var(--sub)}
+
+section{display:flex;flex-direction:column;gap:22px}
+.sec-head{display:flex;flex-direction:column;gap:9px;padding-bottom:14px;border-bottom:1px solid var(--rule)}
+
+/* ---------- hero ---------- */
+.hero{display:flex;flex-direction:column;gap:26px}
+.wordmark{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.tag{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:500;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--sub);
+  border:1px solid var(--border);border-radius:5px;padding:3px 7px;background:var(--panel);
+}
+.tag.live{color:var(--green);border-color:color-mix(in srgb,var(--green) 34%,transparent);background:var(--green-soft)}
+.thesis{font-size:22px;line-height:1.45;max-width:36ch;font-weight:500;letter-spacing:-.012em;text-wrap:balance}
+.thesis em{font-style:normal;color:var(--accent)}
+
+/* ---------- the dot plot figure (the thesis, shown) ---------- */
+.figure{
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.fig-bar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:11px 15px;border-bottom:1px solid var(--rule);background:var(--panel-2);
+}
+.fig-bar b{font-size:13.5px;font-weight:600}
+.fig-body{padding:16px 15px 12px;overflow-x:auto}
+#plot{display:block;width:100%;min-width:470px;height:auto}
+.fig-keys{
+  display:flex;flex-wrap:wrap;gap:9px 22px;padding:12px 15px 14px;
+  border-top:1px solid var(--rule);
+}
+.key{display:flex;align-items:center;gap:7px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--sub);letter-spacing:.01em}
+.swatch{width:22px;height:9px;border-radius:4.5px;background:var(--accent);flex:none}
+.swatch.one{width:9px}
+.swatch.ring{width:11px;height:11px;border-radius:50%;background:none;border:1.8px solid var(--accent);flex:none}
+
+/* ---------- problem list ---------- */
+.probs{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--rule);margin:0}
+.prob{display:grid;grid-template-columns:132px 1fr;gap:18px;padding:17px 0;border-bottom:1px solid var(--rule);align-items:start}
+.prob dt{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);padding-top:4px}
+.prob dd{margin:0;font-size:15.5px;line-height:1.62}
+@media (max-width:600px){ .prob{grid-template-columns:1fr;gap:6px} .prob dt{padding-top:0} }
+
+.pull{
+  border-left:2.5px solid var(--accent);padding:4px 0 4px 20px;
+  font-size:18.5px;line-height:1.52;font-weight:500;max-width:60ch;letter-spacing:-.01em;
+}
+.pull span{color:var(--sub);font-weight:400;font-size:15.5px;display:block;margin-top:9px;letter-spacing:0;line-height:1.62}
+.pull span em{font-style:italic;color:var(--text)}
+
+/* ---------- feature cards ---------- */
+.feats{display:flex;flex-direction:column;gap:14px}
+.feat{
+  background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:20px 22px;
+  display:flex;flex-direction:column;gap:9px;
+}
+.feat-top{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+.feat-top h3{flex:none}
+.feat-top .role{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.06em;color:var(--faint)}
+.feat p{font-size:15.5px;line-height:1.62}
+.feat p em{font-style:italic}
+.feat .note{font-size:14px;color:var(--sub);border-top:1px dashed var(--border);padding-top:9px;margin-top:2px}
+
+/* ---------- difference grid ---------- */
+.diffs{display:grid;grid-template-columns:repeat(auto-fit,minmax(236px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:11px;overflow:hidden}
+.diff{background:var(--panel);padding:18px 19px;display:flex;flex-direction:column;gap:6px}
+.diff b{font-size:14.5px;font-weight:600;letter-spacing:-.005em}
+.diff span{font-size:14px;color:var(--sub);line-height:1.55}
+
+/* ---------- PRD: phases (a real sequence) ---------- */
+.phases{display:flex;flex-direction:column;gap:0}
+.phase{
+  display:grid;grid-template-columns:44px 1fr;gap:18px;padding:18px 0;
+  border-bottom:1px solid var(--rule);align-items:start;
+}
+.phase:first-child{border-top:1px solid var(--rule)}
+.pnum{
+  font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;color:var(--accent);
+  background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:6px;
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  font-variant-numeric:tabular-nums;
+}
+.pbody{display:flex;flex-direction:column;gap:5px}
+.pbody b{font-size:15.5px;font-weight:600}
+.pbody span{font-size:14.5px;color:var(--sub);line-height:1.58}
+.pbody .ship{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--green);letter-spacing:.02em;margin-top:3px}
+
+/* ---------- decision block ---------- */
+.decisions{display:flex;flex-direction:column;gap:12px}
+.dec{
+  background:var(--panel);border:1px solid var(--border);border-left:2.5px solid var(--amber);
+  border-radius:9px;padding:16px 18px;display:flex;flex-direction:column;gap:5px;
+}
+.dec b{font-size:15px;font-weight:600}
+.dec span{font-size:14.5px;color:var(--sub);line-height:1.58}
+.dec .rec{color:var(--text);font-weight:600}
+
+.plain{display:flex;flex-direction:column;gap:14px}
+.plain p{font-size:15.5px;line-height:1.65}
+
+.outs{display:flex;flex-wrap:wrap;gap:7px}
+.out{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--sub);
+  background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:5px 9px;
+}
+
+.sub-h{margin-top:12px}
+
+footer{
+  border-top:1px solid var(--rule);padding-top:20px;
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--faint);
+  display:flex;flex-wrap:wrap;gap:6px 18px;letter-spacing:.02em;
+}
+
+/* one-shot load motion only - the product's own design rule */
+.strip{opacity:0;transform-box:fill-box;transform-origin:left center;transform:scaleX(.28)}
+.animate .strip{animation:draw .5s cubic-bezier(.22,.9,.3,1) forwards}
+@keyframes draw{to{opacity:1;transform:scaleX(1)}}
+@media (prefers-reduced-motion:reduce){
+  .strip{opacity:1;transform:none}
+  .animate .strip{animation:none}
+}
+</style>
+
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <div class="wordmark">
+      <span class="eyebrow">Product brief &amp; build plan</span>
+      <span class="tag live">Prototype complete</span>
+      <span class="tag">Open source</span>
+    </div>
+
+    <h1>ANYKPI</h1>
+    <p class="thesis">The growth dashboard a founder actually opens every morning &mdash; and the first one <em>agents can read too.</em></p>
+    <p class="lede">Free and open source. Runs on your own machine, connects to the tools you already pay for, and shows you people instead of averages.</p>
+
+    <div class="figure">
+      <div class="fig-bar">
+        <b>Who's actually using it?</b>
+        <span class="eyebrow">8 people &middot; 28 days</span>
+      </div>
+      <div class="fig-body">
+        <svg id="plot" viewBox="0 0 590 196" role="img" aria-label="A dot plot. Eight named users form the rows, twenty-eight days form the columns, and a mark appears on each day a person used the product. Runs of consecutive days merge into continuous strips, so streaks and silences are visible at a glance."></svg>
+      </div>
+      <div class="fig-keys">
+        <span class="key"><i class="swatch"></i> a streak</span>
+        <span class="key"><i class="swatch one"></i> a single day</span>
+        <span class="key"><i class="swatch ring"></i> the day they joined</span>
+        <span class="key">hatched = not signed up yet</span>
+      </div>
+    </div>
+
+    <p class="small">This is the whole idea. One row per person, one column per day, a mark when they showed up. You don't read it, you see it: Dave never misses, Mia only shows up on weekends, Jo tried it for four days and vanished, Nova just caught fire.</p>
+  </header>
+
+  <!-- ============ PROBLEM ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">The problem</span>
+      <h2>Founders have analytics. They still can't answer "is this working?"</h2>
+    </div>
+
+    <p>A founder needs three things every week: who is actually using the product, whether the business is on track, and what's coming. Today that means four tools, none of which answer the question, plus a spreadsheet somebody updates by hand on Sunday night.</p>
+
+    <dl class="probs">
+      <div class="prob">
+        <dt>Averages</dt>
+        <dd>Product analytics tools were built for analysts running queries. They tell you "daily actives: 1,240." They cannot tell you whether <em>Dave</em> came back. You end up staring at a line chart that has averaged away every person inside it.</dd>
+      </div>
+      <div class="prob">
+        <dt>No business review</dt>
+        <dd>The Amazon weekly business review is the gold standard for running a company on numbers, and there is essentially one open-source implementation of it in existence. Everyone else runs their week off a hand-updated spreadsheet.</dd>
+      </div>
+      <div class="prob">
+        <dt>Nothing connects</dt>
+        <dd>Revenue lives in one tool, users in another, releases in a third, payroll in the bank, the roadmap in a doc. The founder is the integration layer, copying numbers between tabs to assemble one picture, every single week.</dd>
+      </div>
+      <div class="prob">
+        <dt>Built for mice</dt>
+        <dd>Founders now work alongside AI agents all day. Every one of these tools assumes a human with a mouse. An agent asking "who churned this week, and why?" has no good way in, and no way to show its work.</dd>
+      </div>
+    </dl>
+
+    <div class="pull">
+      Analytics tools show you numbers. Founders need to see people.
+      <span>The best-known method for finding product-market fit is a chart drawn by hand: one row per named user, one column per day, a dot when they used the product. You look at it and you can <em>feel</em> retention &mdash; who is sticking, who vanished, who came back after a month away. Founders draw this in spreadsheets because no tool ships it well. It is the most useful artifact in early-stage analytics and it is the one thing nobody builds.</span>
+    </div>
+  </section>
+
+  <!-- ============ SOLUTION ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">The solution</span>
+      <h2>One dashboard, built around that chart</h2>
+    </div>
+
+    <div class="plain">
+      <p>ANYKPI is a single open-source dashboard with five sections. It doesn't collect your data &mdash; your existing tools stay the source of truth. It quietly pulls summaries from each of them on a schedule, keeps a fast local copy, and shows an honest "synced 4 minutes ago" on every source. It never writes anything back to a connected tool. ANYKPI reads.</p>
+      <p>Everything is built on one principle, and it is what makes the product feel different within the first thirty seconds:</p>
+    </div>
+
+    <div class="pull">
+      The answer is the view.
+      <span>Ask a question &mdash; typed by you, or asked by your agent &mdash; and you don't get a paragraph explaining the answer. You land on the screen that <em>is</em> the answer, filtered to exactly the people or numbers in question, with a link you can paste into the group chat. Ask for "iOS users in France" and you arrive at the plot with two removable filter chips already applied. No summary strip on top narrating what just happened.</span>
+    </div>
+  </section>
+
+  <!-- ============ FEATURES ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">What's in it</span>
+      <h2>Five sections</h2>
+    </div>
+
+    <div class="feats">
+      <article class="feat">
+        <div class="feat-top"><h3>Dot Plot</h3><span class="role">who's actually using it</span></div>
+        <p>Every user gets a row, every day a column, and runs of activity merge into continuous strips so streaks and silences read instantly without counting anything. Group people by behaviour, by the week they signed up, or by company account. Zoom from a year down to a single day. Drag a thumbnail map to travel across hundreds of users and months of history. Hover anyone for their card: who they are, what they're worth, what they've been doing.</p>
+        <p class="note">Milestones appear as stickers on the day they happened &mdash; first payment &#x1F4B8;, signup birthday &#x1F382;, went quiet &#x1F47B;.</p>
+      </article>
+
+      <article class="feat">
+        <div class="feat-top"><h3>Cohorts</h3><span class="role">is it working</span></div>
+        <p>The retention triangle and the decay curves, linked both ways &mdash; hover a number and its curve lights up. The system watches for the shape that actually matters: a curve that <em>flattens</em> instead of falling to zero, meaning a group of people who simply keep coming back. When enough groups flatten, it says so plainly: product-market fit is forming.</p>
+        <p class="note">This is the one moment the product celebrates. There is confetti. It tells you to go tell the group chat.</p>
+      </article>
+
+      <article class="feat">
+        <div class="feat-top"><h3>Weekly Business Review</h3><span class="role">is the business on track</span></div>
+        <p>The Amazon method, kept intact: every metric shown as six trailing weeks beside twelve trailing months, this year against last year, inputs separated from outputs and ordered so the deck reads as a causal argument. The system finds its own exceptions and writes the sentence explaining each one &mdash; "six weeks under target, and still falling." Walk the deck, focus a single metric with its full data sheet, or see all of them in one table.</p>
+        <p class="note">21 metrics across finance, acquisition, activation, retention and quality &mdash; surfacing roughly three to discuss and two to watch in a normal week.</p>
+      </article>
+
+      <article class="feat">
+        <div class="feat-top"><h3>Calendar</h3><span class="role">what's coming</span></div>
+        <p>Read-only, permanently and by design. It never asks you to enter anything. It lines up what your connected tools already know &mdash; payouts, renewals, releases, payroll, board meetings &mdash; alongside milestones it detects on its own, like your 1,000th signup or the company's birthday. The past renders as record, the future as projection, and every card shows exactly which source it came from.</p>
+      </article>
+
+      <article class="feat">
+        <div class="feat-top"><h3>PMF+</h3><span class="role">who these people actually are</span></div>
+        <p>Point at one user or a whole group and say "go understand these people." A researcher goes and finds them across the public internet, reads their actual content, and comes back with a card: who they are, what they're into, what their behaviour in your product means <em>given who they are</em>, and two or three sharp questions worth asking that specific person. It can draft the outreach too, each message waiting in a queue for your approval.</p>
+        <p class="note">Nothing ever sends on its own. That is a permanent property of the product, not a setting.</p>
+      </article>
+    </div>
+
+    <p class="small">Running underneath all five: type a question in plain English and land in the view that answers it. Your agents get the same access you do, and every answer they give comes back with a link to the view that proves it.</p>
+  </section>
+
+  <!-- ============ DIFFERENTIATION ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Why it wins</span>
+      <h2>What makes it different</h2>
+    </div>
+    <div class="diffs">
+      <div class="diff"><b>People, not averages</b><span>The flagship view is named humans on a grid. Nothing on the market ships this well.</span></div>
+      <div class="diff"><b>Agent-native from day zero</b><span>Agents aren't a bolted-on integration. They're a first-class caller, and their answers carry the view.</span></div>
+      <div class="diff"><b>Your data stays yours</b><span>Self-hosted. Person-level data never leaves your own infrastructure. No telemetry, ever.</span></div>
+      <div class="diff"><b>It teaches the method</b><span>Choose "opened the app" as your key event and it warns you that's vanity. The tool argues for good practice.</span></div>
+      <div class="diff"><b>Your agent sets it up</b><span>You don't instrument anything by hand. You hand the job to the agent you already work with.</span></div>
+      <div class="diff"><b>It's genuinely fun</b><span>Enterprise dashboards are grey because nobody loved them. This one has stickers, emoji and confetti, without ever costing legibility.</span></div>
+    </div>
+  </section>
+
+  <!-- ============ PRD ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Requirements</span>
+      <h2>The build plan</h2>
+    </div>
+
+    <div class="plain">
+      <p><b>Who it's for.</b> Seed to Series&nbsp;A founders and small product teams who already pay for product analytics, still can't answer "is this working?", and who work with AI agents every day. Secondary audience: the open-source community that adopts tools a founder can run without a data team.</p>
+      <p><b>Where it stands.</b> The prototype is finished and verified in a real browser &mdash; all five sections, ten rounds of design fixes, every decision recorded. That prototype <em>is</em> the specification. The production architecture is written and approved. What remains is building it against real data.</p>
+    </div>
+
+    <h3 class="sub-h">Decisions of record</h3>
+    <div class="plain">
+      <p><b>The calendar is read-only forever.</b> No event editor, no manual entry, anywhere. It is a lens over what the company already runs on, never a place to keep things.</p>
+      <p><b>No self-narrating chrome.</b> The product never explains what it just did. No summary strips, no suggestion chips, no methodology quotes. The view is the answer.</p>
+      <p><b>Motion is one-shot and earned.</b> No glowing lines, no looping animation, no shadows on data marks. Energy comes from colour and type; playfulness lives in emoji, copy and confetti.</p>
+      <p><b>Demo data ships forever.</b> A stranger who installs it never meets an empty screen, and that same dataset is what every automated check runs against.</p>
+    </div>
+
+    <h3 class="sub-h">Six phases, each shippable on its own</h3>
+    <div class="phases">
+      <div class="phase">
+        <span class="pnum">01</span>
+        <div class="pbody">
+          <b>The dashboard, on demo data</b>
+          <span>Clean public project, one-command install, all five sections working, agents already able to query it, shareable links from the first day.</span>
+          <span class="ship">this alone is an open-sourceable v1</span>
+        </div>
+      </div>
+      <div class="phase">
+        <span class="pnum">02</span>
+        <div class="pbody">
+          <b>Real users on the dot plot</b>
+          <span>Connect your analytics, choose what counts as real usage (with the vanity-metric warning), first sync, your actual people on the grid. The flagship goes real first.</span>
+        </div>
+      </div>
+      <div class="phase">
+        <span class="pnum">03</span>
+        <div class="pbody">
+          <b>Cohorts on real behaviour</b>
+          <span>Retention computed from your own activity, with the flattening detector running against real curves.</span>
+        </div>
+      </div>
+      <div class="phase">
+        <span class="pnum">04</span>
+        <div class="pbody">
+          <b>The weekly review on real money</b>
+          <span>Metric setup, revenue connected, targets, and the manual entries no tool can supply &mdash; headcount, customer satisfaction.</span>
+        </div>
+      </div>
+      <div class="phase">
+        <span class="pnum">05</span>
+        <div class="pbody">
+          <b>Calendar sources</b>
+          <span>Your calendar feed, payments, releases, subscriptions and banking, plus the milestone detector that invents nothing and notices everything.</span>
+        </div>
+      </div>
+      <div class="phase">
+        <span class="pnum">06</span>
+        <div class="pbody">
+          <b>Agent polish and the front door</b>
+          <span>Access keys, documentation, and the copy-paste line that lets someone's agent install and configure the whole thing unattended.</span>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="sub-h">Deliberately not in v1</h3>
+    <div class="outs">
+      <span class="out">collecting events ourselves</span>
+      <span class="out">team accounts &amp; permissions</span>
+      <span class="out">alerts &amp; digests</span>
+      <span class="out">writing back to connected tools</span>
+      <span class="out">raw query passthrough</span>
+      <span class="out">mobile app</span>
+      <span class="out">hosted version</span>
+      <span class="out">autonomous outreach</span>
+    </div>
+
+    <h3 class="sub-h">How "done" is defined</h3>
+    <p class="small" style="max-width:66ch">Every phase opens with a page of promises written in plain customer language &mdash; the things a person will be able to do &mdash; which you approve in about two minutes. That approval is your only review. Nothing is called finished until every promise passes automatically in a real browser. No phase ever ships on someone's word that it works.</p>
+  </section>
+
+  <!-- ============ OPEN DECISIONS ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="eyebrow">Needs your call</span>
+      <h2>Three open decisions</h2>
+    </div>
+    <p class="small">None of them block starting. All three should be settled before anything goes public.</p>
+
+    <div class="decisions">
+      <div class="dec">
+        <b>The name</b>
+        <span><span class="rec">Recommendation: keep ANYKPI.</span> It is the working name of record and it is already built into the prototype. Worth settling explicitly whether it sits under your anytime.day brand or stands alone &mdash; standalone is easier to hand to an open-source community that may outlive the parent brand.</span>
+      </div>
+      <div class="dec">
+        <b>The license</b>
+        <span><span class="rec">Recommendation: MIT.</span> Maximally permissive, the standard for tools you want widely adopted, and it does not stop you selling a hosted version later. That is the same open-core path Plausible, Cal.com and PostHog all took.</span>
+      </div>
+      <div class="dec">
+        <b>The hosted waitlist link</b>
+        <span><span class="rec">Recommendation: keep it in v1.</span> It is the cheapest possible demand test for a paid hosted version, it costs one line of interface, and every comparable open-source product validated its business exactly this way.</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>ANYKPI &mdash; product brief</span>
+    <span>every user, every number, every agent</span>
+    <span>prototype verified in browser &middot; architecture approved</span>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  // The canonical demo cast - the same archetypes the prototype's dataset encodes.
+  var PEOPLE=[
+    {n:"Dave", e:"\u{1F9E2}", p:"IOS",     s:0,  t:"1101101"+"1011011"+"1101101"+"1011011"},
+    {n:"Mia",  e:"\u{1F3A7}", p:"ANDROID", s:0,  t:"0000011"+"0000011"+"0000011"+"0000011"},
+    {n:"Jo",   e:"\u{1F331}", p:"IOS",     s:0,  t:"1111010"+"0100000"+"0000000"+"0000000"},
+    {n:"Rex",  e:"\u{1F4DF}", p:"WEB",     s:0,  t:"1000000"+"1000000"+"1000000"+"1000000"},
+    {n:"Kai",  e:"\u{1F6F9}", p:"ANDROID", s:0,  t:"0011100"+"0011100"+"0011100"+"0011100"},
+    {n:"Zara", e:"\u{1FA9A}", p:"IOS",     s:12, t:"0000000"+"0000011"+"0000011"+"0000011"},
+    {n:"Nova", e:"\u{1F680}", p:"WEB",     s:17, t:"0000000"+"0000000"+"0001111"+"1111111"},
+    {n:"Leo",  e:"\u{1F355}", p:"IOS",     s:0,  t:"0101000"+"0000000"+"0000000"+"0000000"}
+  ];
+  var DAYS=28, LBL=140, CW=15.6, RH=20, TOP=22, PAD=2.6;
+  var svg=document.getElementById("plot");
+  if(!svg) return;
+  var out=[];
+
+  // hatch pattern: "did not exist yet", which is not the same as "was inactive"
+  out.push('<defs><pattern id="hz" width="4" height="4" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">'+
+           '<line x1="0" y1="0" x2="0" y2="4" stroke="var(--hatch)" stroke-width="2.6"/></pattern></defs>');
+
+  var letters=["M","T","W","T","F","S","S"];
+  for(var d=0; d<DAYS; d++){
+    var wk=(d%7)>=5;
+    out.push('<text x="'+(LBL+d*CW+CW/2).toFixed(1)+'" y="12" text-anchor="middle" '+
+      'font-family="IBM Plex Mono, monospace" font-size="8.5" fill="'+(wk?"var(--accent)":"var(--faint)")+'" opacity="'+(wk?".8":".55")+'">'+letters[d%7]+'</text>');
+  }
+
+  PEOPLE.forEach(function(u,i){
+    var y=TOP+i*RH, cy=y+RH/2;
+
+    out.push('<text x="2" y="'+(cy+4.4).toFixed(1)+'" font-size="12.5">'+u.e+'</text>');
+    out.push('<text x="26" y="'+(cy+4).toFixed(1)+'" font-family="IBM Plex Sans, sans-serif" font-size="11.5" font-weight="500" fill="var(--text)">'+u.n+'</text>');
+    out.push('<text x="'+(LBL-11)+'" y="'+(cy+3.4).toFixed(1)+'" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="7.5" fill="var(--faint)" letter-spacing=".06em">'+u.p+'</text>');
+
+    if(u.s>0){
+      out.push('<rect x="'+LBL+'" y="'+(y+3.5).toFixed(1)+'" width="'+(u.s*CW).toFixed(1)+'" height="'+(RH-7).toFixed(1)+'" rx="3" fill="url(#hz)"/>');
+    }
+
+    // runs of consecutive active days merge into one strip - streaks become pre-attentive
+    var d=0;
+    while(d<DAYS){
+      if(u.t[d]==="1"){
+        var start=d;
+        while(d<DAYS && u.t[d]==="1") d++;
+        var w=(d-start)*CW-PAD*2;
+        out.push('<rect class="strip" x="'+(LBL+start*CW+PAD).toFixed(1)+'" y="'+(cy-4.6).toFixed(1)+'" width="'+w.toFixed(1)+'" height="9.2" rx="4.6" '+
+                 'fill="var(--accent)" style="animation-delay:'+(i*45+start*7)+'ms"/>');
+      } else d++;
+    }
+
+    if(u.s>0){
+      out.push('<circle cx="'+(LBL+u.s*CW+CW/2).toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="6.4" fill="none" stroke="var(--accent)" stroke-width="1.6" opacity=".85"/>');
+    }
+  });
+
+  svg.setAttribute("viewBox","0 0 "+(LBL+DAYS*CW+4)+" "+(TOP+PEOPLE.length*RH+8));
+  svg.innerHTML=out.join("");
+
+  if(!window.matchMedia || !window.matchMedia("(prefers-reduced-motion: reduce)").matches){
+    requestAnimationFrame(function(){ svg.classList.add("animate"); });
+  }
+})();
+</script>
