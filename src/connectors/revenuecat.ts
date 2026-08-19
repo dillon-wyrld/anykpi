@@ -405,7 +405,7 @@ export async function syncRevenueCat(
     throw new Error("RevenueCat secret key is required");
   }
 
-  let projectId = credentials.projectId;
+  let projectId: string | undefined = credentials.projectId;
   if (!projectId) {
     const response = await fetch(projectsUrl(), { headers: authHeaders(apiKey) });
     if (!response.ok) {
