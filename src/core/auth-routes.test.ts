@@ -5,6 +5,7 @@ import { POST as postEvent } from "@/app/api/ingest/event/route";
 import { GET as getDotplot } from "@/app/api/views/dotplot/route";
 import { GET as getCohorts } from "@/app/api/views/cohorts/route";
 import { GET as getPerson } from "@/app/api/views/person/route";
+import { GET as getFreshness } from "@/app/api/v1/freshness/route";
 
 const originalKey = process.env.ANYKPI_API_KEY;
 
@@ -72,6 +73,11 @@ describe("API auth routes", () => {
       get("http://localhost:3000/api/views/person?workspace=demo&user=p1")
     );
     expect([200, 404]).toContain(person.status);
+
+    const freshness = await getFreshness(
+      get("http://localhost:3000/api/v1/freshness?workspace=demo")
+    );
+    expect(freshness.status).toBe(200);
   });
 
   it("unauthenticated GET /api/views/person?workspace=live → 401", async () => {

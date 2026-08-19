@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PersonPanelResponse } from "@/core/contracts";
+import { useFreshness } from "@/components/useFreshness";
 
 interface PersonPanelProps {
   workspace: string;
@@ -34,10 +35,12 @@ export default function PersonPanel({
   const [data, setData] = useState<PersonPanelResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadPerson = useCallback((refresh = false) => {
     let cancelled = false;
-    setData(null);
-    setError(null);
+    if (!refresh) {
+      setData(null);
+      setError(null);
+    }
 
     fetch(
       `/api/views/person?workspace=${encodeURIComponent(workspace)}&user=${encodeURIComponent(personId)}`
@@ -56,13 +59,27 @@ export default function PersonPanel({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error && err.message === "not-found" ? "not-found" : "failed");
+        if (!refresh) {
+          setError(err instanceof Error && err.message === "not-found" ? "not-found" : "failed");
+        }
       });
 
     return () => {
       cancelled = true;
     };
   }, [workspace, personId]);
+
+  useEffect(() => {
+    return loadPerson(false);
+  }, [loadPerson]);
+
+  useFreshness({
+    workspace,
+    watch: ["ingest"],
+    onStale: () => {
+      loadPerson(true);
+    },
+  });
 
   useEffect(() => {
     closeRef.current?.focus();

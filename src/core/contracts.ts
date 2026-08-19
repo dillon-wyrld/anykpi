@@ -277,6 +277,19 @@ export const SyncResponseSchema = z.object({
   workspace: z.string(),
 });
 
+/** Lightweight poll payload: last ingest + per-source last-sync stamps. */
+export const FreshnessSourceSchema = z.object({
+  source: z.string(),
+  lastSync: z.string().datetime().nullable(),
+});
+
+export const FreshnessResponseSchema = z.object({
+  workspace: z.string(),
+  /** Highest activity id plus that row's event time — moves on every insert. */
+  lastIngest: z.string().nullable(),
+  sources: z.array(FreshnessSourceSchema),
+});
+
 export const SyncTriggerRequestSchema = z.object({
   source: z.string().optional(),
   workspace: z.string().optional(),
@@ -493,6 +506,8 @@ export type CohortsResponse = z.infer<typeof CohortsResponseSchema>;
 export type WBRResponse = z.infer<typeof WBRResponseSchema>;
 export type CalendarResponse = z.infer<typeof CalendarResponseSchema>;
 export type SyncResponse = z.infer<typeof SyncResponseSchema>;
+export type FreshnessSource = z.infer<typeof FreshnessSourceSchema>;
+export type FreshnessResponse = z.infer<typeof FreshnessResponseSchema>;
 export type SyncTriggerRequest = z.infer<typeof SyncTriggerRequestSchema>;
 export type SyncTriggerResult = z.infer<typeof SyncTriggerResultSchema>;
 export type SyncTriggerResponse = z.infer<typeof SyncTriggerResponseSchema>;

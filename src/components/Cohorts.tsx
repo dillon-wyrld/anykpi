@@ -19,6 +19,7 @@ import {
   smileTest,
   type CohortSplitField,
 } from "@/core/views/cohort-math";
+import { useFreshness } from "@/components/useFreshness";
 
 interface User {
   personId: string;
@@ -160,8 +161,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
   const initialSyncDone = useRef(false);
   
   const curvesRef = useRef<SVGSVGElement>(null);
-
-  useEffect(() => {
+  const loadCohorts = useCallback((refresh = false) => {
     const params = new URLSearchParams({
       workspace,
       grain: viewState.grain,
@@ -194,10 +194,22 @@ export default function Cohorts({ workspace }: CohortsProps) {
               : current
           );
         }
-        setLoading(false);
+        if (!refresh) setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        if (!refresh) setLoading(false);
+      });
   }, [workspace, viewState.grain, viewState.payers, viewState.split, viewState.series]);
+
+  useEffect(() => {
+    loadCohorts(false);
+  }, [loadCohorts]);
+
+  useFreshness({
+    workspace,
+    watch: ["ingest"],
+    onStale: () => loadCohorts(true),
+  });
 
   useEffect(() => {
     // Skip the URL sync on initial mount to avoid loops

@@ -33,6 +33,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Dashboard views poll `GET /api/v1/freshness` (~30s, paused when the
+  tab is hidden) and refetch in place when last-ingest or a source
+  last-sync stamp moves. No spinner on refresh (ANY-49).
 - RevenueCat connector (ANY-14): paginated customer / subscription
   backfill into the same revenue read models as Stripe (trials,
   conversions, and churn). Secret key is stored via `/connect` or

@@ -13,6 +13,7 @@ import {
   wsign,
   type WbrExceptionRules,
 } from "@/core/views/wbr-math";
+import { useFreshness } from "@/components/useFreshness";
 
 interface Metric {
   id: string;
@@ -100,16 +101,28 @@ export default function WBR({ workspace }: WBRProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const initialSyncDone = useRef(false);
 
-  useEffect(() => {
+  const loadWbr = useCallback((refresh = false) => {
     fetch(`/api/views/wbr?workspace=${workspace}`)
       .then((res) => res.json())
       .then((data) => {
         setMetrics(data.metrics || []);
         if (data.exceptionRules) setExceptionRules(data.exceptionRules);
-        setLoading(false);
+        if (!refresh) setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        if (!refresh) setLoading(false);
+      });
   }, [workspace]);
+
+  useEffect(() => {
+    loadWbr(false);
+  }, [loadWbr]);
+
+  useFreshness({
+    workspace,
+    watch: ["ingest", "sources"],
+    onStale: () => loadWbr(true),
+  });
 
   useEffect(() => {
     const enriched = metrics.map((m, i) => ({

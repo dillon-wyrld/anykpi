@@ -34,6 +34,7 @@ OpenAPI spec: /api/openapi
 - GET /api/v1/wbr — Weekly Business Review (6 weeks, 12 months YOY, exceptions)
 - GET /api/v1/calendar — multi-source event timeline
 - GET /api/v1/sync — connector sync status
+- GET /api/v1/freshness — last ingest + per-source last-sync stamps (views poll this)
 - POST /api/v1/connect — store per-source credentials (encrypted at rest; never returned; csv stores import mapping)
 - POST /api/v1/import — CSV import for users and events (sources store + column-mapping preview; writes keyed)
 - GET /api/v1/keys — list key metadata (raw keys never returned)

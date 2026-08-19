@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, type MouseEvent as ReactMouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PersonPanel from "@/components/PersonPanel";
+import { useFreshness } from "@/components/useFreshness";
 
 interface User {
   personId: string;
@@ -294,15 +295,27 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     router.replace(`/dashboard?${params.toString()}`, { scroll: false });
   }, [router, searchParams]);
 
-  useEffect(() => {
+  const loadUsers = useCallback((refresh = false) => {
     fetch(`/api/views/dotplot?workspace=${workspace}`)
       .then((res) => res.json())
       .then((data) => {
         setUsers(data.users || []);
-        setLoading(false);
+        if (!refresh) setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        if (!refresh) setLoading(false);
+      });
   }, [workspace]);
+
+  useEffect(() => {
+    loadUsers(false);
+  }, [loadUsers]);
+
+  useFreshness({
+    workspace,
+    watch: ["ingest"],
+    onStale: () => loadUsers(true),
+  });
 
   useEffect(() => {
     // Skip the URL sync on initial mount to avoid loops
