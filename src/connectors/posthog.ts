@@ -1,21 +1,21 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
-interface PostHogConfig {
-  apiKey: string;
-  projectId: string;
-  workspaceId: string;
-}
+export async function syncPostHog(workspaceId: string = "live") {
+  const apiKey = process.env.POSTHOG_API_KEY;
+  const projectId = process.env.POSTHOG_PROJECT_ID;
 
-export async function syncPostHog(config: PostHogConfig): Promise<void> {
-  const { apiKey, projectId, workspaceId } = config;
+  if (!apiKey) {
+    throw new Error("POSTHOG_API_KEY is required");
+  }
+
+  const baseUrl = process.env.POSTHOG_HOST || "https://app.posthog.com";
 
   try {
-    const baseUrl = "https://app.posthog.com/api";
-
+    // Sync persons
     const personsResponse = await fetch(
-      `${baseUrl}/projects/${projectId}/persons?limit=1000`,
+      `${baseUrl}/api/projects/${projectId}/persons/?limit=1000`,
       {
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -31,34 +31,37 @@ export async function syncPostHog(config: PostHogConfig): Promise<void> {
 
     for (const person of personsData.results || []) {
       const personId = `person_${person.distinct_ids[0]}`;
+      
+      const existing = await db
+        .select()
+        .from(schema.users)
+        .where(
+          and(
+            eq(schema.users.personId, personId),
+            eq(schema.users.workspaceId, workspaceId)
+          )
+        )
+        .get();
 
-      await db
-        .insert(schema.users)
-        .values({
+      if (!existing) {
+        await db.insert(schema.users).values({
           personId,
-          name: person.properties?.name || person.properties?.email || person.distinct_ids[0],
-          email: person.properties?.email,
-          platform: person.properties?.platform || person.properties?.$initial_os,
-          country: person.properties?.country || person.properties?.$geoip_country_code,
+          name: person.properties?.name || person.distinct_ids[0],
+          email: person.properties?.email || null,
+          emoji: person.properties?.emoji || null,
+          platform: person.properties?.platform || null,
+          country: person.properties?.country || null,
           signupDate: person.created_at ? new Date(person.created_at) : new Date(),
-          emoji: person.properties?.emoji || "👤",
-          traits: JSON.stringify(person.properties || {}),
+          cluster: null,
+          accountId: null,
           workspaceId,
-        })
-        .onConflictDoUpdate({
-          target: schema.users.personId,
-          set: {
-            name: person.properties?.name || person.properties?.email || person.distinct_ids[0],
-            email: person.properties?.email,
-            platform: person.properties?.platform || person.properties?.$initial_os,
-            traits: JSON.stringify(person.properties || {}),
-          },
-        })
-        .run();
+        });
+      }
     }
 
+    // Sync events
     const eventsResponse = await fetch(
-      `${baseUrl}/projects/${projectId}/events?limit=10000`,
+      `${baseUrl}/api/projects/${projectId}/events/?limit=10000`,
       {
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -66,49 +69,39 @@ export async function syncPostHog(config: PostHogConfig): Promise<void> {
       }
     );
 
-    if (eventsResponse.ok) {
-      const eventsData = await eventsResponse.json();
-
-      for (const event of eventsData.results || []) {
-        const personId = `person_${event.distinct_id}`;
-        const eventDate = new Date(event.timestamp);
-        const dateKey = new Date(eventDate);
-        dateKey.setHours(0, 0, 0, 0);
-
-        const existing = await db
-          .select()
-          .from(schema.activity)
-          .where(
-            eq(schema.activity.personId, personId) &&
-              eq(schema.activity.date, dateKey) &&
-              eq(schema.activity.workspaceId, workspaceId)
-          )
-          .get();
-
-        if (existing) {
-          await db
-            .update(schema.activity)
-            .set({
-              coreCount: existing.coreCount + 1,
-              minutes: existing.minutes + 1,
-            })
-            .where(eq(schema.activity.id, existing.id))
-            .run();
-        } else {
-          await db.insert(schema.activity).run({
-            personId,
-            date: dateKey,
-            coreCount: 1,
-            searchCount: 0,
-            shareCount: 0,
-            payCount: 0,
-            minutes: 1,
-            workspaceId,
-          });
-        }
-      }
+    if (!eventsResponse.ok) {
+      throw new Error(`PostHog events API error: ${eventsResponse.statusText}`);
     }
 
+    const eventsData = await eventsResponse.json();
+
+    for (const event of eventsData.results || []) {
+      const personId = `person_${event.distinct_id}`;
+      const eventDate = new Date(event.timestamp);
+      
+      // Map event to class
+      let eventClass: 'core' | 'search' | 'share' | 'pay' = 'core';
+      const eventLower = event.event.toLowerCase();
+      
+      if (eventLower.includes('search') || eventLower.includes('query')) {
+        eventClass = 'search';
+      } else if (eventLower.includes('share') || eventLower.includes('invite')) {
+        eventClass = 'share';
+      } else if (eventLower.includes('pay') || eventLower.includes('purchase') || eventLower.includes('subscribe')) {
+        eventClass = 'pay';
+      }
+
+      await db.insert(schema.activity).values({
+        personId,
+        timestamp: eventDate,
+        eventName: event.event,
+        eventClass,
+        platform: event.properties?.$device || null,
+        workspaceId,
+      });
+    }
+
+    // Update sync state
     await db
       .insert(schema.syncState)
       .values({
@@ -123,12 +116,10 @@ export async function syncPostHog(config: PostHogConfig): Promise<void> {
         set: {
           lastSync: new Date(),
           status: "success",
-          stats: JSON.stringify({
-            users: personsData.results?.length || 0,
-          }),
         },
-      })
-      .run();
+      });
+
+    console.log("PostHog sync complete");
   } catch (error) {
     console.error("PostHog sync error:", error);
 
@@ -149,8 +140,7 @@ export async function syncPostHog(config: PostHogConfig): Promise<void> {
           status: "error",
           error: error instanceof Error ? error.message : "Unknown error",
         },
-      })
-      .run();
+      });
 
     throw error;
   }

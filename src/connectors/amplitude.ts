@@ -1,23 +1,34 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
-interface AmplitudeConfig {
-  apiKey: string;
-  secretKey: string;
-  workspaceId: string;
-}
+export async function syncAmplitude(workspaceId: string = "live") {
+  const apiKey = process.env.AMPLITUDE_API_KEY;
+  const secretKey = process.env.AMPLITUDE_SECRET_KEY;
 
-export async function syncAmplitude(config: AmplitudeConfig): Promise<void> {
-  const { apiKey, secretKey, workspaceId } = config;
+  if (!apiKey || !secretKey) {
+    throw new Error("AMPLITUDE_API_KEY and AMPLITUDE_SECRET_KEY are required");
+  }
+
+  const auth = Buffer.from(`${apiKey}:${secretKey}`).toString("base64");
 
   try {
-    const baseUrl = "https://amplitude.com/api/2";
-    const auth = Buffer.from(`${apiKey}:${secretKey}`).toString("base64");
-
-    const usersResponse = await fetch(`${baseUrl}/users`, {
-      headers: { Authorization: `Basic ${auth}` },
-    });
+    // Sync users
+    const usersResponse = await fetch(
+      "https://amplitude.com/api/2/usersearch",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${auth}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_search: {
+            limit: 1000,
+          },
+        }),
+      }
+    );
 
     if (!usersResponse.ok) {
       throw new Error(`Amplitude API error: ${usersResponse.statusText}`);
@@ -26,33 +37,82 @@ export async function syncAmplitude(config: AmplitudeConfig): Promise<void> {
     const usersData = await usersResponse.json();
 
     for (const user of usersData.data || []) {
-      const personId = `person_${user.user_id}`;
+      const personId = `person_${user.user_id || user.amplitude_id}`;
+      
+      const existing = await db
+        .select()
+        .from(schema.users)
+        .where(
+          and(
+            eq(schema.users.personId, personId),
+            eq(schema.users.workspaceId, workspaceId)
+          )
+        )
+        .get();
 
-      await db
-        .insert(schema.users)
-        .values({
+      if (!existing) {
+        await db.insert(schema.users).values({
           personId,
-          name: user.user_properties?.name || user.user_id,
-          email: user.user_properties?.email,
-          platform: user.platform,
-          country: user.country,
-          signupDate: user.user_properties?.$created
-            ? new Date(user.user_properties.$created)
-            : new Date(),
-          traits: JSON.stringify(user.user_properties || {}),
+          name: user.user_properties?.name || user.user_id || user.amplitude_id,
+          email: user.user_properties?.email || null,
+          emoji: user.user_properties?.emoji || null,
+          platform: user.platform || null,
+          country: user.country || null,
+          signupDate: user.user_properties?.created_at ? new Date(user.user_properties.created_at) : new Date(),
+          cluster: null,
+          accountId: null,
           workspaceId,
-        })
-        .onConflictDoUpdate({
-          target: schema.users.personId,
-          set: {
-            name: user.user_properties?.name || user.user_id,
-            email: user.user_properties?.email,
-            traits: JSON.stringify(user.user_properties || {}),
-          },
-        })
-        .run();
+        });
+      }
     }
 
+    // Sync events
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const eventsResponse = await fetch(
+      `https://amplitude.com/api/2/export?start=${startDate}&end=${endDate}`,
+      {
+        headers: {
+          Authorization: `Basic ${auth}`,
+        },
+      }
+    );
+
+    if (!eventsResponse.ok) {
+      throw new Error(`Amplitude export API error: ${eventsResponse.statusText}`);
+    }
+
+    const eventsText = await eventsResponse.text();
+    const events = eventsText.split('\n').filter(Boolean).map(line => JSON.parse(line));
+
+    for (const event of events) {
+      const personId = `person_${event.user_id || event.amplitude_id}`;
+      const eventDate = new Date(event.event_time);
+      
+      // Map event to class
+      let eventClass: 'core' | 'search' | 'share' | 'pay' = 'core';
+      const eventLower = event.event_type.toLowerCase();
+      
+      if (eventLower.includes('search') || eventLower.includes('query')) {
+        eventClass = 'search';
+      } else if (eventLower.includes('share') || eventLower.includes('invite')) {
+        eventClass = 'share';
+      } else if (eventLower.includes('pay') || eventLower.includes('purchase') || eventLower.includes('subscribe')) {
+        eventClass = 'pay';
+      }
+
+      await db.insert(schema.activity).values({
+        personId,
+        timestamp: eventDate,
+        eventName: event.event_type,
+        eventClass,
+        platform: event.platform || null,
+        workspaceId,
+      });
+    }
+
+    // Update sync state
     await db
       .insert(schema.syncState)
       .values({
@@ -68,8 +128,9 @@ export async function syncAmplitude(config: AmplitudeConfig): Promise<void> {
           lastSync: new Date(),
           status: "success",
         },
-      })
-      .run();
+      });
+
+    console.log("Amplitude sync complete");
   } catch (error) {
     console.error("Amplitude sync error:", error);
 
@@ -90,8 +151,7 @@ export async function syncAmplitude(config: AmplitudeConfig): Promise<void> {
           status: "error",
           error: error instanceof Error ? error.message : "Unknown error",
         },
-      })
-      .run();
+      });
 
     throw error;
   }

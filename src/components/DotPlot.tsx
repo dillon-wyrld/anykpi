@@ -9,10 +9,43 @@ interface User {
   platform: string;
   signupOffset: number;
   activity: boolean[];
+  streak?: number;
 }
 
 interface DotPlotProps {
   workspace: string;
+}
+
+function computeStreak(activity: boolean[]): number {
+  let streak = 0;
+  for (let d = activity.length - 1; d >= 0 && activity[d]; d--) {
+    streak++;
+  }
+  return streak;
+}
+
+function findStreaks(activity: boolean[]): Array<{ start: number; len: number }> {
+  const streaks: Array<{ start: number; len: number }> = [];
+  let start = -1;
+  let len = 0;
+  
+  for (let i = 0; i < activity.length; i++) {
+    if (activity[i]) {
+      if (start === -1) start = i;
+      len++;
+    } else {
+      if (len > 0) {
+        streaks.push({ start, len });
+      }
+      start = -1;
+      len = 0;
+    }
+  }
+  if (len > 0) {
+    streaks.push({ start, len });
+  }
+  
+  return streaks;
 }
 
 export default function DotPlot({ workspace }: DotPlotProps) {
@@ -23,7 +56,11 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     fetch(`/api/views/dotplot?workspace=${workspace}`)
       .then((res) => res.json())
       .then((data) => {
-        setUsers(data.users || []);
+        const usersWithStreaks = (data.users || []).map((u: User) => ({
+          ...u,
+          streak: computeStreak(u.activity),
+        }));
+        setUsers(usersWithStreaks);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -34,10 +71,10 @@ export default function DotPlot({ workspace }: DotPlotProps) {
   }
 
   const DAYS = 28;
-  const LBL = 140;
-  const CW = 15.6;
-  const RH = 20;
-  const TOP = 22;
+  const LBL = 180;
+  const CW = 18;
+  const RH = 26;
+  const TOP = 24;
   const PAD = 2.6;
 
   const letters = ["M", "T", "W", "T", "F", "S", "S"];

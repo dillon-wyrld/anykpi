@@ -1,23 +1,27 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
-interface MixpanelConfig {
-  projectId: string;
-  apiSecret: string;
-  workspaceId: string;
-}
+export async function syncMixpanel(workspaceId: string = "live") {
+  const projectId = process.env.MIXPANEL_PROJECT_ID;
+  const apiSecret = process.env.MIXPANEL_API_SECRET;
 
-export async function syncMixpanel(config: MixpanelConfig): Promise<void> {
-  const { projectId, apiSecret, workspaceId } = config;
+  if (!projectId || !apiSecret) {
+    throw new Error("MIXPANEL_PROJECT_ID and MIXPANEL_API_SECRET are required");
+  }
+
+  const auth = Buffer.from(`${apiSecret}:`).toString("base64");
 
   try {
-    const baseUrl = "https://mixpanel.com/api/2.0";
-    const auth = Buffer.from(`${apiSecret}:`).toString("base64");
-
-    const usersResponse = await fetch(`${baseUrl}/engage?project_id=${projectId}`, {
-      headers: { Authorization: `Basic ${auth}` },
-    });
+    // Sync users via engage endpoint
+    const usersResponse = await fetch(
+      `https://mixpanel.com/api/2.0/engage?project_id=${projectId}`,
+      {
+        headers: {
+          Authorization: `Basic ${auth}`,
+        },
+      }
+    );
 
     if (!usersResponse.ok) {
       throw new Error(`Mixpanel API error: ${usersResponse.statusText}`);
@@ -26,31 +30,82 @@ export async function syncMixpanel(config: MixpanelConfig): Promise<void> {
     const usersData = await usersResponse.json();
 
     for (const user of usersData.results || []) {
-      const personId = `person_${user.distinct_id}`;
+      const personId = `person_${user.$distinct_id}`;
+      
+      const existing = await db
+        .select()
+        .from(schema.users)
+        .where(
+          and(
+            eq(schema.users.personId, personId),
+            eq(schema.users.workspaceId, workspaceId)
+          )
+        )
+        .get();
 
-      await db
-        .insert(schema.users)
-        .values({
+      if (!existing) {
+        await db.insert(schema.users).values({
           personId,
-          name: user.$properties.$name || user.distinct_id,
-          email: user.$properties.$email,
-          platform: user.$properties.platform,
-          country: user.$properties.country,
-          signupDate: user.$properties.$created ? new Date(user.$properties.$created) : new Date(),
-          traits: JSON.stringify(user.$properties),
+          name: user.$properties?.$name || user.$distinct_id,
+          email: user.$properties?.$email || null,
+          emoji: user.$properties?.emoji || null,
+          platform: user.$properties?.platform || null,
+          country: user.$properties?.$country_code || null,
+          signupDate: user.$properties?.$created ? new Date(user.$properties.$created) : new Date(),
+          cluster: null,
+          accountId: null,
           workspaceId,
-        })
-        .onConflictDoUpdate({
-          target: schema.users.personId,
-          set: {
-            name: user.$properties.$name || user.distinct_id,
-            email: user.$properties.$email,
-            traits: JSON.stringify(user.$properties),
-          },
-        })
-        .run();
+        });
+      }
     }
 
+    // Sync events via export endpoint
+    const toDate = new Date().toISOString().split('T')[0];
+    const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const eventsResponse = await fetch(
+      `https://data.mixpanel.com/api/2.0/export?project_id=${projectId}&from_date=${fromDate}&to_date=${toDate}`,
+      {
+        headers: {
+          Authorization: `Basic ${auth}`,
+        },
+      }
+    );
+
+    if (!eventsResponse.ok) {
+      throw new Error(`Mixpanel export API error: ${eventsResponse.statusText}`);
+    }
+
+    const eventsText = await eventsResponse.text();
+    const events = eventsText.split('\n').filter(Boolean).map(line => JSON.parse(line));
+
+    for (const event of events) {
+      const personId = `person_${event.properties.distinct_id}`;
+      const eventDate = new Date(event.properties.time * 1000);
+      
+      // Map event to class
+      let eventClass: 'core' | 'search' | 'share' | 'pay' = 'core';
+      const eventLower = event.event.toLowerCase();
+      
+      if (eventLower.includes('search') || eventLower.includes('query')) {
+        eventClass = 'search';
+      } else if (eventLower.includes('share') || eventLower.includes('invite')) {
+        eventClass = 'share';
+      } else if (eventLower.includes('pay') || eventLower.includes('purchase') || eventLower.includes('subscribe')) {
+        eventClass = 'pay';
+      }
+
+      await db.insert(schema.activity).values({
+        personId,
+        timestamp: eventDate,
+        eventName: event.event,
+        eventClass,
+        platform: event.properties.$device || null,
+        workspaceId,
+      });
+    }
+
+    // Update sync state
     await db
       .insert(schema.syncState)
       .values({
@@ -66,8 +121,9 @@ export async function syncMixpanel(config: MixpanelConfig): Promise<void> {
           lastSync: new Date(),
           status: "success",
         },
-      })
-      .run();
+      });
+
+    console.log("Mixpanel sync complete");
   } catch (error) {
     console.error("Mixpanel sync error:", error);
 
@@ -88,8 +144,7 @@ export async function syncMixpanel(config: MixpanelConfig): Promise<void> {
           status: "error",
           error: error instanceof Error ? error.message : "Unknown error",
         },
-      })
-      .run();
+      });
 
     throw error;
   }
