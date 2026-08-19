@@ -15,6 +15,8 @@ interface CohortsProps {
 export default function Cohorts({ workspace }: CohortsProps) {
   const [cohorts, setCohorts] = useState<CohortData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [confettiShown, setConfettiShown] = useState(false);
 
   useEffect(() => {
     fetch(`/api/views/cohorts?workspace=${workspace}`)
@@ -22,9 +24,17 @@ export default function Cohorts({ workspace }: CohortsProps) {
       .then((data) => {
         setCohorts(data.cohorts || []);
         setLoading(false);
+        
+        // Trigger confetti once if smile detected
+        const smilingCount = (data.cohorts || []).filter((c: CohortData) => c.smileDetected).length;
+        if (smilingCount >= 3 && !confettiShown) {
+          setShowConfetti(true);
+          setConfettiShown(true);
+          setTimeout(() => setShowConfetti(false), 2500);
+        }
       })
       .catch(() => setLoading(false));
-  }, [workspace]);
+  }, [workspace, confettiShown]);
 
   if (loading) {
     return <div className="text-sub">Loading...</div>;
@@ -34,7 +44,26 @@ export default function Cohorts({ workspace }: CohortsProps) {
   const hasSmile = smilingCount >= 3;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
+      {showConfetti && (
+        <div className="fixed inset-0 pointer-events-none z-50">
+          {Array.from({ length: 40 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute text-2xl animate-confetti"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `-20px`,
+                animationDelay: `${Math.random() * 0.5}s`,
+                animationDuration: `${2 + Math.random()}s`,
+              }}
+            >
+              {["🎉", "✨", "😊", "🎊", "⭐"][Math.floor(Math.random() * 5)]}
+            </div>
+          ))}
+        </div>
+      )}
+      
       {hasSmile && (
         <div className="bg-green-soft border border-green rounded-lg p-3 flex items-center gap-3">
           <span className="text-2xl">😊</span>
