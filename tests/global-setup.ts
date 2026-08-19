@@ -25,4 +25,7 @@ export default async function globalSetup() {
 
   console.log('Building @anykpi/cli for smoke tests...');
   execSync('pnpm --filter @anykpi/cli build', { stdio: 'inherit' });
+
+  console.log('Building @anykpi/sdk for snippet and npm-install tests...');
+  execSync('pnpm --filter @anykpi/sdk build', { stdio: 'inherit' });
 }

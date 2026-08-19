@@ -50,6 +50,9 @@ jobs:
       - name: Build CLI
         run: pnpm --filter @anykpi/cli build
 
+      - name: Typecheck SDK consumer
+        run: pnpm sdk:consumer-types
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
       
