@@ -3,6 +3,7 @@ import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
 import { gate } from "@/core/auth";
+import { ensureWorkspaceClusters } from "@/core/clustering";
 import { internalError, logServerError } from "@/core/errors";
 import { activityWindow, buildDotPlotUsers } from "@/core/views/dotplot";
 
@@ -14,6 +15,8 @@ export async function GET(request: NextRequest) {
   const workspace = gated.workspace;
 
   try {
+
+  await ensureWorkspaceClusters(workspace);
 
   const users = await db
     .select()

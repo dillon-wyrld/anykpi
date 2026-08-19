@@ -22,6 +22,7 @@
  *   reason. Do not advance the cursor; surface the source as unhealthy.
  */
 
+import { refreshWorkspaceClusters } from "@/core/clustering";
 import { SyncResultSchema, type SyncResult } from "@/core/contracts";
 import { syncAmplitude } from "./amplitude";
 import { syncMixpanel } from "./mixpanel";
@@ -86,5 +87,9 @@ export async function sync(
   if (!connector) {
     throw new Error(`Unknown connector source: ${source}`);
   }
-  return SyncResultSchema.parse(await connector.sync(workspaceId, opts));
+  const result = SyncResultSchema.parse(await connector.sync(workspaceId, opts));
+  if (result.health === "ok") {
+    await refreshWorkspaceClusters(workspaceId);
+  }
+  return result;
 }
