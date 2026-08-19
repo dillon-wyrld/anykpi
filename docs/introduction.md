@@ -15,7 +15,7 @@ Founders who need:
 Two paths, both agent-installable:
 
 ### Path 1: Connect Existing Tools
-Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS. Roadmap: GitHub — tools you already pay for. ANYKPI syncs summaries into local read models and never writes back. Calendar ICS is read-only forever.
+Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub. ANYKPI syncs summaries into local read models and never writes back. Calendar ICS is read-only forever.
 
 ```bash
 # Via UI
@@ -115,7 +115,9 @@ anykpi cohorts --json
 anykpi wbr --section=Finance
 anykpi calendar --source=stripe
 anykpi connect stripe --api-key rk_... --secret-key whsec_...
+anykpi connect github --api-key ghp_... --project-id owner/repo
 anykpi sync --source=stripe
+anykpi sync --source=github
 anykpi sync --source=posthog
 anykpi connect csv --kind=events --map user_id=personId
 anykpi import events.csv --kind=events

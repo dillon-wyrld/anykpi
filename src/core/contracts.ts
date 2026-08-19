@@ -380,6 +380,7 @@ export const ConnectSourceIdSchema = z.enum([
   'stripe',
   'revenuecat',
   'mercury',
+  'github',
   'csv',
   'ics',
 ]);

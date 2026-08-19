@@ -6,6 +6,9 @@ const original = {
   POSTHOG_PROJECT_ID: process.env.POSTHOG_PROJECT_ID,
   POSTHOG_HOST: process.env.POSTHOG_HOST,
   MERCURY_API_KEY: process.env.MERCURY_API_KEY,
+  GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+  GITHUB_OWNER: process.env.GITHUB_OWNER,
+  GITHUB_REPO: process.env.GITHUB_REPO,
 };
 
 afterEach(() => {
@@ -48,6 +51,24 @@ describe("connector credential resolution", () => {
     ).toEqual({
       apiKey: "phx_stored",
       projectId: "proj_stored",
+    });
+  });
+
+  it("falls back to GITHUB_* env when stored config is missing", () => {
+    process.env.GITHUB_TOKEN = "ghp_env";
+    process.env.GITHUB_OWNER = "fixture-org";
+    process.env.GITHUB_REPO = "fixture-app";
+    expect(envFallback("github")).toEqual({
+      token: "ghp_env",
+      owner: "fixture-org",
+      repo: "fixture-app",
+    });
+    expect(
+      resolveCredentials("github", { token: "ghp_stored", repo: "acme/app" })
+    ).toEqual({
+      token: "ghp_stored",
+      owner: "fixture-org",
+      repo: "acme/app",
     });
   });
 });

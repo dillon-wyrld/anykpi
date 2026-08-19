@@ -54,6 +54,12 @@ export function envFallback(source: string): SourceConfig {
       return pickDefined({
         apiKey: process.env.MERCURY_API_KEY,
       });
+    case "github":
+      return pickDefined({
+        token: process.env.GITHUB_TOKEN,
+        owner: process.env.GITHUB_OWNER,
+        repo: process.env.GITHUB_REPO,
+      });
     default:
       return {};
   }

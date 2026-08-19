@@ -27,8 +27,8 @@
  * - The registry loads decrypted source config and passes it as
  *   `opts.config`. Connectors must not log it.
  * - Env vars (POSTHOG_*, MIXPANEL_*, AMPLITUDE_*, STRIPE_*, REVENUECAT_*,
- *   MERCURY_*) are a deprecated read-only fallback when stored config is
- *   missing a field.
+ *   MERCURY_*, GITHUB_*) are a deprecated read-only fallback when stored
+ *   config is missing a field.
  */
 
 import { and, eq } from "drizzle-orm";
@@ -41,6 +41,7 @@ import { loadSourceConfig } from "@/core/sources";
 import { upsertSyncState } from "@/core/upsert";
 import { syncAmplitude } from "./amplitude";
 import { loadSyncCursor, saveSyncCursor } from "./cursor";
+import { syncGitHub } from "./github";
 import { ICS_SOURCE, ICS_SOURCE_NAME, syncIcs } from "./ics";
 import { withSourceLock } from "./lock";
 import { syncMercury } from "./mercury";
@@ -57,6 +58,7 @@ export type { SyncResult, ConnectorHealth } from "@/core/contracts";
 export { SyncResultSchema, ConnectorHealthSchema } from "@/core/contracts";
 
 export { syncAmplitude } from "./amplitude";
+export { syncGitHub } from "./github";
 export { syncIcs } from "./ics";
 export { syncMercury } from "./mercury";
 export { syncMixpanel } from "./mixpanel";
@@ -112,6 +114,12 @@ export const icsConnector: Connector = {
   sync: syncIcs,
 };
 
+export const githubConnector: Connector = {
+  source: "github",
+  name: "GitHub",
+  sync: syncGitHub,
+};
+
 /** Registry keyed by `Connector.source`. */
 export const registry: Record<string, Connector> = {
   posthog: posthogConnector,
@@ -121,6 +129,7 @@ export const registry: Record<string, Connector> = {
   revenuecat: revenuecatConnector,
   mercury: mercuryConnector,
   ics: icsConnector,
+  github: githubConnector,
 };
 
 export function listConnectors(): Connector[] {

@@ -1,0 +1,20 @@
+{
+  "source": "github",
+  "description": "401 on repo read",
+  "fixtures": [
+    {
+      "name": "repo-unauthorized",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/repos/fixture-org/fixture-app"
+      },
+      "response": {
+        "status": 401,
+        "body": {
+          "message": "Bad credentials",
+          "documentation_url": "https://docs.github.com/rest"
+        }
+      }
+    }
+  ]
+}
