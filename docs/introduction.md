@@ -190,5 +190,4 @@ Full OpenAPI spec: http://localhost:3000/api-docs
 
 ---
 
-**Bar:** Midday-level completeness (app + API + CLI + MCP + docs)  
 **Vision:** Unified insights for modern day builders

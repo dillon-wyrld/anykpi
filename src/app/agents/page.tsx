@@ -7,7 +7,7 @@ import { nanoid } from "nanoid";
  * Agents Page
  * 
  * MCP + REST API + CLI setup for agent access
- * Midday-style: everything an agent needs in one place
+ * Everything an agent needs in one place
  */
 export default function AgentsPage() {
   const [apiKey, setApiKey] = useState<string>("");

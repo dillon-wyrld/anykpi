@@ -29,7 +29,7 @@ The same pattern applies to every connector: sync → normalize → read model �
 
 **B. Sync into local read models (RECOMMENDED).** Background jobs pull aggregates on schedules (+ webhooks where offered), store compact derived tables, everything reads locally. ✅ Fast UI, one canonical data shape shared by UI/API/MCP, demo mode is just a different filler for the same tables, respects rate limits, staleness is visible and honest. ❌ Sync code to build and operate — but the connector surface is small and the prototype's data shapes already define the target schema.
 
-**C. Own event pipeline / warehouse (ClickHouse/DuckDB + batch exports + modeling layer).** ✅ Unlimited analytical power. ❌ Rebuilds what PostHog already does, heavy ops for a self-hosted OSS tool whose ease-of-use benchmarks are buzz/midday. Rejected for v1; note that PostHog **batch exports** are the documented escape hatch if a deployment ever outgrows query-based sync.
+**C. Own event pipeline / warehouse (ClickHouse/DuckDB + batch exports + modeling layer).** ✅ Unlimited analytical power. ❌ Rebuilds what PostHog already does, heavy ops for a self-hosted OSS tool. Rejected for v1; note that PostHog **batch exports** are the documented escape hatch if a deployment ever outgrows query-based sync.
 
 ## 4. System overview
 
@@ -171,7 +171,7 @@ WOW/MOM/YOY auto-computed for every metric (true WBR YOY: this week vs. same wee
 - **The canon dataset is the permanent test fixture.** The deterministic generators (36 named users, Initech at-risk, cohort seed 777) move to `src/demo` and double as demo mode *and* golden-test input. The pinned facts in the briefs become assertions: "iOS in France = Jo/Zara/Ines/Axel/Sky", "Initech 3/10 activated", "8 smiling cohorts". The PRNG draw-order warning from the learnings log becomes a snapshot test that fails loudly if the stream shifts.
 - **Pure functions get unit tests first**: `wbrStat`, `coSlope`, `coFloorOf`, `coGrade`, smile detection, milestone detector, view-state codec round-trip, connector normalizers (fixture JSON in → read-model rows out).
 - **Promises suite (Playwright)** against the demo dataset: each phase's PROMISES.md in customer language, executable, green in a real browser before "done" — per house doctrine (`scripts/checks.sh`: typecheck → lint → unit → promises → secret scan → review gates).
-- **Demo mode ships forever** — first-run is never empty (buzz/midday lesson), and it's what CI tests against.
+- **Demo mode ships forever** — first-run is never empty, and it's what CI tests against.
 
 ## 13. Build order (each phase independently shippable)
 
