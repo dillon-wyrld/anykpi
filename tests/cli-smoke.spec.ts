@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -10,11 +10,16 @@ const API_URL = "http://localhost:3000";
 const API_KEY = process.env.ANYKPI_API_KEY || "anykpi-e2e-admin";
 
 function run(args: string[], env: NodeJS.ProcessEnv): string {
-  return execFileSync(process.execPath, [CLI, ...args], {
+  const result = spawnSync(process.execPath, [CLI, ...args], {
     encoding: "utf8",
     env,
     timeout: 30000,
   });
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  if (result.status !== 0) {
+    throw new Error(`anykpi ${args.join(" ")} exited ${result.status}\n${output}`);
+  }
+  return output;
 }
 
 test("every --help command succeeds and track is visible in /api/v1/users", async ({
@@ -52,6 +57,7 @@ test("every --help command succeeds and track is visible in /api/v1/users", asyn
       platform,
       "--workspace",
       "demo",
+      "--json",
     ],
     track: [
       userId,
@@ -62,6 +68,7 @@ test("every --help command succeeds and track is visible in /api/v1/users", asyn
       platform,
       "--name",
       "CLI Smoke User",
+      "--json",
     ],
     overview: ["--workspace", "demo", "--json"],
     users: ["--workspace", "demo", "--platform", platform, "--json"],
