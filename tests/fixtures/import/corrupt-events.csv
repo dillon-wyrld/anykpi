@@ -1,0 +1,4 @@
+person_id,timestamp,event_name
+user_ok,2026-01-01T00:00:00.000Z,song_played
+user_bad,not-a-date,song_played
+user_also,2026-01-01T00:10:00.000Z,song_played

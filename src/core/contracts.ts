@@ -29,6 +29,7 @@ export const ActivityEventSchema = z.object({
   eventName: z.string(),
   eventClass: z.enum(['core', 'search', 'share', 'pay']),
   platform: z.string().optional(),
+  externalId: z.string().optional(),
   workspaceId: z.string(),
 });
 
@@ -329,6 +330,15 @@ export const SourceSlugSchema = z
   .max(64)
   .regex(/^[a-z][a-z0-9_-]*$/);
 
+/** Named connect sources, including csv import mapping. */
+export const ConnectSourceIdSchema = z.enum([
+  'posthog',
+  'mixpanel',
+  'amplitude',
+  'stripe',
+  'csv',
+]);
+
 /**
  * Generic webhook-in body. Destinations may send `distinct_id` / `event`
  * (PostHog-style) or `userId` / `eventName` (canonical / Zapier).
@@ -406,6 +416,37 @@ export const ResearchRunRequestSchema = z.object({
   refresh: z.boolean().optional(),
 });
 
+export const ImportKindSchema = z.enum(['users', 'events']);
+
+export const ImportRowErrorSchema = z.object({
+  line: z.number().int().positive(),
+  message: z.string(),
+});
+
+export const ImportRequestSchema = z.object({
+  csv: z.string().min(1),
+  kind: ImportKindSchema.optional(),
+  mapping: z.record(z.string()).optional(),
+  preview: z.boolean().optional(),
+  workspaceId: z.string().default('live'),
+});
+
+export const ImportPreviewResponseSchema = z.object({
+  kind: ImportKindSchema,
+  columns: z.array(z.string()),
+  mapping: z.record(z.string()),
+  sample: z.array(z.record(z.string())),
+  rowCount: z.number().int().nonnegative(),
+});
+
+export const ImportResponseSchema = z.object({
+  workspaceId: z.string(),
+  kind: ImportKindSchema,
+  imported: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  errors: z.array(ImportRowErrorSchema),
+});
+
 export const APIKeyCreateRequestSchema = z.object({
   name: z.string(),
 });
@@ -461,8 +502,14 @@ export type IngestEventRequest = z.infer<typeof IngestEventRequestSchema>;
 export type IngestWebhookRequest = z.infer<typeof IngestWebhookRequestSchema>;
 export type IngestWebhookResponse = z.infer<typeof IngestWebhookResponseSchema>;
 export type SourceSlug = z.infer<typeof SourceSlugSchema>;
+export type ConnectSourceId = z.infer<typeof ConnectSourceIdSchema>;
 export type ConnectSourceRequest = z.infer<typeof ConnectSourceRequestSchema>;
 export type ConnectSourceResponse = z.infer<typeof ConnectSourceResponseSchema>;
+export type ImportKind = z.infer<typeof ImportKindSchema>;
+export type ImportRowError = z.infer<typeof ImportRowErrorSchema>;
+export type ImportRequest = z.infer<typeof ImportRequestSchema>;
+export type ImportPreviewResponse = z.infer<typeof ImportPreviewResponseSchema>;
+export type ImportResponse = z.infer<typeof ImportResponseSchema>;
 export type APIKeyCreateRequest = z.infer<typeof APIKeyCreateRequestSchema>;
 export type APIKeyResponse = z.infer<typeof APIKeyResponseSchema>;
 export type ResearchOutgoingField = z.infer<typeof ResearchOutgoingFieldSchema>;

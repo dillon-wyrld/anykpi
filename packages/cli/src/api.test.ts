@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -186,5 +186,113 @@ describe("CLI ingest client", () => {
     expect(logs.join("\n")).not.toContain("phc_never_print_me");
 
     logSpy.mockRestore();
+  });
+
+  it("connect csv POSTs /api/v1/connect with kind and mapping", async () => {
+    isolatedHome();
+    process.env.ANYKPI_API_KEY = "test-key";
+    process.env.ANYKPI_API_URL = "http://instance.test";
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        source: "csv",
+        workspaceId: "live",
+        connected: true,
+        rotated: false,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const program = createProgram();
+    program.exitOverride();
+
+    await program.parseAsync(
+      [
+        "connect",
+        "csv",
+        "--workspace",
+        "live",
+        "--kind",
+        "events",
+        "--map",
+        "user_id=personId",
+        "--map",
+        "event=eventName",
+        "--json",
+      ],
+      { from: "user" }
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("http://instance.test/api/v1/connect");
+    expect(JSON.parse(String(init.body))).toEqual({
+      source: "csv",
+      credentials: {
+        kind: "events",
+        mapping: JSON.stringify({ user_id: "personId", event: "eventName" }),
+      },
+      workspaceId: "live",
+    });
+  });
+
+  it("import POSTs /api/v1/import with the file and mapping", async () => {
+    const dir = isolatedHome();
+    process.env.ANYKPI_API_KEY = "test-key";
+    process.env.ANYKPI_API_URL = "http://instance.test";
+
+    const file = join(dir, "events.csv");
+    writeFileSync(file, "user_id,ts,event\nu1,2026-01-01T00:00:00.000Z,played\n");
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        workspaceId: "live",
+        kind: "events",
+        imported: 1,
+        skipped: 0,
+        errors: [],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const program = createProgram();
+    program.exitOverride();
+
+    await program.parseAsync(
+      [
+        "import",
+        file,
+        "--kind",
+        "events",
+        "--map",
+        "user_id=personId",
+        "--map",
+        "ts=timestamp",
+        "--map",
+        "event=eventName",
+        "--workspace",
+        "live",
+        "--json",
+      ],
+      { from: "user" }
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("http://instance.test/api/v1/import");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(String(init.body))).toEqual({
+      csv: "user_id,ts,event\nu1,2026-01-01T00:00:00.000Z,played\n",
+      workspaceId: "live",
+      preview: false,
+      kind: "events",
+      mapping: {
+        user_id: "personId",
+        ts: "timestamp",
+        event: "eventName",
+      },
+    });
   });
 });

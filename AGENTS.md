@@ -28,7 +28,8 @@ Demo workspace is public-read. Live workspaces and all writes require a key (`Au
 - `GET /api/v1/wbr` — Weekly Business Review
 - `GET /api/v1/calendar` — multi-source timeline
 - `GET /api/v1/sync` — connector status
-- `POST /api/v1/connect` — store per-source credentials (encrypted at rest)
+- `POST /api/v1/connect` — store per-source credentials (encrypted at rest; source `csv` stores import mapping)
+- `POST /api/v1/import` — CSV import for users and events (uses the sources store; column-mapping preview)
 - `GET /api/v1/keys` / `POST /api/v1/keys` — list metadata / mint a key
 - `POST /api/v1/ingest/identify` / `POST /api/v1/ingest/event` — identify and track
 - `POST /api/ingest/webhook/:source` — realtime push; HMAC secret stored via connect
@@ -42,7 +43,7 @@ HTTP `POST /api/mcp`. stdio: `src/mcp/server.ts`. `tools/list` is open. `tools/c
 
 ## CLI
 
-`npx @anykpi/cli` (`packages/cli`): `login` (alias `key`), `workspaces`, `connect`, `identify`, `track`, `overview`, `users`, `cohorts`, `wbr`, `calendar`, `sync`. `login` requires an operator key. `connect` stores source config only.
+`npx @anykpi/cli` (`packages/cli`): `login` (alias `key`), `workspaces`, `connect`, `import`, `identify`, `track`, `overview`, `users`, `cohorts`, `wbr`, `calendar`, `sync`. `login` requires an operator key. `connect` stores source config only (`anykpi connect csv` saves import mapping). `import` loads a users or events CSV.
 
 ## Connectors
 

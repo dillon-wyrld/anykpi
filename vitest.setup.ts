@@ -32,8 +32,11 @@ sqlite.exec(`
     event_name TEXT NOT NULL,
     event_class TEXT NOT NULL,
     platform TEXT,
+    external_id TEXT,
     workspace_id TEXT NOT NULL DEFAULT 'demo'
   );
+  CREATE UNIQUE INDEX IF NOT EXISTS activity_workspace_external_id_uidx
+    ON activity (workspace_id, external_id);
   CREATE TABLE IF NOT EXISTS api_keys (
     id TEXT PRIMARY KEY,
     hashed_key TEXT NOT NULL,

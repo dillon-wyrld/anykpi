@@ -3,6 +3,16 @@ import { commandsFromHelp } from "./help";
 import { createProgram, PUBLISHED_COMMANDS } from "./program";
 
 describe("published CLI surface", () => {
+  it("advertises import for CSV files", () => {
+    const program = createProgram();
+    const names = program.commands.map((command) => command.name());
+    const help = program.helpInformation();
+
+    expect(names).toContain("import");
+    expect(help).toMatch(/\bimport\b/);
+    expect(commandsFromHelp(help)).toContain("import");
+  });
+
   it("advertises connect for storing source config", () => {
     const program = createProgram();
     const names = program.commands.map((command) => command.name());
@@ -31,6 +41,7 @@ describe("published CLI surface", () => {
     expect(fromHelp).toContain("calendar");
     expect(fromHelp).toContain("sync");
     expect(fromHelp).toContain("connect");
+    expect(fromHelp).toContain("import");
     expect(fromHelp).toContain("identify");
     expect(fromHelp).toContain("track");
     expect(fromHelp).toContain("workspaces");

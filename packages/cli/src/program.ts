@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
@@ -9,6 +10,7 @@ export const PUBLISHED_COMMANDS = [
   "login",
   "workspaces",
   "connect",
+  "import",
   "identify",
   "track",
   "overview",
@@ -136,6 +138,13 @@ export function createProgram(): Command {
     .option("--host <host>", "Source host")
     .option("--api-secret <secret>", "Source API secret")
     .option("--secret-key <key>", "Source secret key")
+    .option("--kind <kind>", "CSV kind (users or events)")
+    .option(
+      "--map <column=field>",
+      "CSV column mapping (repeatable)",
+      (value: string, previous: string[]) => [...previous, value],
+      [] as string[]
+    )
     .option("--json", "Output as JSON")
     .action(async (source, options) => {
       const spinner = ora("Saving source config...").start();
@@ -147,6 +156,19 @@ export function createProgram(): Command {
         if (options.host) credentials.host = options.host;
         if (options.apiSecret) credentials.apiSecret = options.apiSecret;
         if (options.secretKey) credentials.secretKey = options.secretKey;
+        if (options.kind) credentials.kind = options.kind;
+        const mapPairs = options.map as string[];
+        if (mapPairs.length > 0) {
+          const mapping: Record<string, string> = {};
+          for (const pair of mapPairs) {
+            const eq = pair.indexOf("=");
+            if (eq <= 0 || eq === pair.length - 1) {
+              throw new Error(`Invalid --map ${pair}; use column=field`);
+            }
+            mapping[pair.slice(0, eq)] = pair.slice(eq + 1);
+          }
+          credentials.mapping = JSON.stringify(mapping);
+        }
 
         if (Object.keys(credentials).length === 0) {
           throw new Error("Pass at least one source credential flag");
@@ -180,6 +202,94 @@ export function createProgram(): Command {
           data.rotated ? "Updated" : "Connected",
           chalk.bold(data.source),
           chalk.dim(data.workspaceId)
+        );
+        console.log();
+      } catch (error) {
+        spinner.fail((error as Error).message);
+        throw error;
+      }
+    });
+
+  program
+    .command("import <file>")
+    .description("Import users or events from a CSV file")
+    .option("--kind <kind>", "users or events")
+    .option(
+      "--map <column=field>",
+      "Column mapping (repeatable)",
+      (value: string, previous: string[]) => [...previous, value],
+      [] as string[]
+    )
+    .option("--preview", "Show column mapping without writing")
+    .option("--workspace <workspace>", "Workspace")
+    .option("--json", "Output as JSON")
+    .action(async (file: string, options) => {
+      const spinner = ora(options.preview ? "Previewing CSV..." : "Importing CSV...").start();
+
+      try {
+        const csv = readFileSync(file, "utf8");
+        const mapping: Record<string, string> = {};
+        for (const pair of options.map as string[]) {
+          const eq = pair.indexOf("=");
+          if (eq <= 0 || eq === pair.length - 1) {
+            throw new Error(`Invalid --map ${pair}; use column=field`);
+          }
+          mapping[pair.slice(0, eq)] = pair.slice(eq + 1);
+        }
+
+        if (options.kind && options.kind !== "users" && options.kind !== "events") {
+          throw new Error("kind must be users or events");
+        }
+
+        const data = (await apiRequest("/api/v1/import", {
+          method: "POST",
+          body: JSON.stringify({
+            csv,
+            workspaceId: workspaceOf(options),
+            preview: Boolean(options.preview),
+            ...(options.kind ? { kind: options.kind } : {}),
+            ...(Object.keys(mapping).length > 0 ? { mapping } : {}),
+          }),
+        })) as {
+          kind?: string;
+          columns?: string[];
+          mapping?: Record<string, string>;
+          sample?: Record<string, string>[];
+          rowCount?: number;
+          imported?: number;
+          skipped?: number;
+          workspaceId?: string;
+          errors?: Array<{ line: number; message: string }>;
+        };
+
+        spinner.stop();
+
+        if (options.json) {
+          console.log(JSON.stringify(data, null, 2));
+          return;
+        }
+
+        console.log();
+        if (options.preview) {
+          console.log(chalk.bold("Preview"), chalk.dim(data.kind || ""));
+          console.log();
+          console.log("  Rows:", chalk.bold(String(data.rowCount ?? 0)));
+          console.log("  Columns:", (data.columns ?? []).join(", "));
+          console.log();
+          console.log(chalk.bold("Mapping"));
+          for (const [column, field] of Object.entries(data.mapping ?? {})) {
+            console.log("  ", chalk.cyan(column), "→", field);
+          }
+          console.log();
+          return;
+        }
+
+        console.log(
+          chalk.green("✓"),
+          "Imported",
+          chalk.bold(String(data.imported ?? 0)),
+          data.kind || "rows",
+          (data.skipped ?? 0) > 0 ? chalk.dim(`(${data.skipped} already present)`) : ""
         );
         console.log();
       } catch (error) {

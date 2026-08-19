@@ -37,14 +37,14 @@
             "type": "boolean",
             "description": "When true, keep only paying people"
           },
-          "series": {
-            "description": "Comma-separated split values, max 3. A fourth series is refused.",
-            "type": "string"
-          },
           "split": {
-            "description": "Compare retention curves by this field (max 3 series)",
+            "type": "string",
             "enum": ["platform", "country", "cluster"],
-            "type": "string"
+            "description": "Compare retention curves by this field (max 3 series)"
+          },
+          "series": {
+            "type": "string",
+            "description": "Comma-separated split values, max 3. A fourth series is refused."
           }
         }
       }

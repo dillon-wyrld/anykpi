@@ -1,0 +1,4 @@
+person_id,timestamp,event_name,platform,external_id
+user_ada,2026-01-01T00:00:00.000Z,song_played,web,evt_ada_1
+user_grace,2026-01-01T00:05:00.000Z,song_played,ios,evt_grace_1
+user_ada,2026-01-01T00:10:00.000Z,search_query,web,evt_ada_2

@@ -13,6 +13,9 @@ import {
   QueryUsersRequestSchema,
   ConnectSourceRequestSchema,
   ConnectSourceResponseSchema,
+  ImportRequestSchema,
+  ImportPreviewResponseSchema,
+  ImportResponseSchema,
   APIKeyCreateRequestSchema,
   APIKeyResponseSchema,
   ErrorResponseSchema,
@@ -57,6 +60,7 @@ export async function GET(request: NextRequest) {
       { name: 'Calendar', description: 'Multi-source event timeline' },
       { name: 'Sync', description: 'Connected source status' },
       { name: 'Connect', description: 'Store per-source credentials' },
+      { name: 'Import', description: 'CSV import for users and events' },
       { name: 'Ingest', description: 'Direct event collection' },
       { name: 'Keys', description: 'API key management' }
     ],
@@ -314,7 +318,7 @@ export async function GET(request: NextRequest) {
           tags: ['Connect'],
           summary: 'Store source credentials',
           description:
-            'Persist per-source config encrypted at rest with ANYKPI_SECRET. Requires an API key. Credentials are never returned.',
+            'Persist per-source config encrypted at rest with ANYKPI_SECRET. Requires an API key. Credentials are never returned. Source `csv` stores import kind and column mapping.',
           requestBody: {
             required: true,
             content: {
@@ -342,6 +346,61 @@ export async function GET(request: NextRequest) {
             },
             400: {
               description: 'Invalid request',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Missing or invalid API key',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            503: {
+              description: 'ANYKPI_SECRET is not set',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/v1/import': {
+        post: {
+          tags: ['Import'],
+          summary: 'Import users or events from CSV',
+          description:
+            'Write-gated. Mapping is stored in the encrypted sources store (same as POST /api/v1/connect). Send `preview: true` for column-mapping preview. Re-running the same file is idempotent on activity.externalId.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(ImportRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Imported rows, or a mapping preview when preview=true',
+              content: {
+                'application/json': {
+                  schema: {
+                    oneOf: [
+                      zodToJsonSchema(ImportResponseSchema),
+                      zodToJsonSchema(ImportPreviewResponseSchema)
+                    ]
+                  }
+                }
+              }
+            },
+            400: {
+              description: 'Invalid CSV or mapped rows (errors include line numbers)',
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(ErrorResponseSchema)
