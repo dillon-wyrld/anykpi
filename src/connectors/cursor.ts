@@ -25,8 +25,10 @@ export type SourceCursor = {
   since?: string | null;
 };
 
-export function syncCursorKey(source: string): string {
-  return `${SYNC_CURSOR_KEY_PREFIX}${source}`;
+export function syncCursorKey(source: string, workspaceId: string): string {
+  // `config.key` is the table primary key, so the slot must be unique
+  // per workspace as well as source.
+  return `${SYNC_CURSOR_KEY_PREFIX}${source}:${workspaceId}`;
 }
 
 export function encodeSourceCursor(cursor: SourceCursor): string {
@@ -65,7 +67,7 @@ export async function loadSyncCursor(
     .where(
       and(
         eq(schema.config.workspaceId, workspaceId),
-        eq(schema.config.key, syncCursorKey(source))
+        eq(schema.config.key, syncCursorKey(source, workspaceId))
       )
     )
     .get();
@@ -77,7 +79,7 @@ export async function saveSyncCursor(
   source: string,
   cursor: string | null
 ): Promise<void> {
-  const key = syncCursorKey(source);
+  const key = syncCursorKey(source, workspaceId);
   if (!cursor) {
     await db
       .delete(schema.config)

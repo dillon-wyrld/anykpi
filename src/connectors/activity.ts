@@ -4,7 +4,6 @@
  */
 
 import { createHash } from "crypto";
-import { and, eq } from "drizzle-orm";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 
@@ -49,30 +48,23 @@ export async function insertUserIfAbsent(row: {
   signupDate: Date;
   workspaceId: string;
 }): Promise<number> {
-  const existing = await db
-    .select({ personId: schema.users.personId })
-    .from(schema.users)
-    .where(
-      and(
-        eq(schema.users.personId, row.personId),
-        eq(schema.users.workspaceId, row.workspaceId)
-      )
-    )
-    .get();
-  if (existing) return 0;
-  await db.insert(schema.users).values({
-    personId: row.personId,
-    name: row.name,
-    email: row.email,
-    emoji: row.emoji,
-    platform: row.platform,
-    country: row.country,
-    signupDate: row.signupDate,
-    cluster: null,
-    accountId: null,
-    workspaceId: row.workspaceId,
-  });
-  return 1;
+  const written = await db
+    .insert(schema.users)
+    .values({
+      personId: row.personId,
+      name: row.name,
+      email: row.email,
+      emoji: row.emoji,
+      platform: row.platform,
+      country: row.country,
+      signupDate: row.signupDate,
+      cluster: null,
+      accountId: null,
+      workspaceId: row.workspaceId,
+    })
+    .onConflictDoNothing({ target: schema.users.personId })
+    .returning({ personId: schema.users.personId });
+  return written.length;
 }
 
 export type ActivityWrite = {

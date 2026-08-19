@@ -42,6 +42,7 @@ afterEach(async () => {
       .delete(schema.activity)
       .where(eq(schema.activity.workspaceId, workspace));
     await db.delete(schema.users).where(eq(schema.users.workspaceId, workspace));
+    await db.delete(schema.config).where(eq(schema.config.workspaceId, workspace));
   }
 });
 
