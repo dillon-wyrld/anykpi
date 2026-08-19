@@ -30,6 +30,7 @@
 
 import { and, eq } from "drizzle-orm";
 import { refreshWorkspaceClusters } from "@/core/clustering";
+import { persistWorkspaceMilestones } from "@/core/milestones";
 import { SyncResultSchema, type SyncResult } from "@/core/contracts";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
@@ -145,6 +146,7 @@ async function runSource(
     );
     if (result.health === "ok") {
       await refreshWorkspaceClusters(workspaceId);
+      await persistWorkspaceMilestones(workspaceId);
     }
     return result;
   } catch {
