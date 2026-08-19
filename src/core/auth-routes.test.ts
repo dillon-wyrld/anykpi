@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { GET as getUsers } from "@/app/api/v1/users/route";
 import { POST as postEvent } from "@/app/api/ingest/event/route";
@@ -6,7 +6,6 @@ import { GET as getDotplot } from "@/app/api/views/dotplot/route";
 import { GET as getCohorts } from "@/app/api/views/cohorts/route";
 
 const originalKey = process.env.ANYKPI_API_KEY;
-const originalNodeEnv = process.env.NODE_ENV;
 
 afterEach(() => {
   if (originalKey === undefined) {
@@ -14,7 +13,7 @@ afterEach(() => {
   } else {
     process.env.ANYKPI_API_KEY = originalKey;
   }
-  process.env.NODE_ENV = originalNodeEnv;
+  vi.unstubAllEnvs();
 });
 
 function get(url: string, headers?: Record<string, string>) {
@@ -32,7 +31,7 @@ function post(url: string, body: unknown, headers?: Record<string, string>) {
 describe("API auth routes", () => {
   it("unauthenticated GET /api/v1/users?workspace=live → 401", async () => {
     delete process.env.ANYKPI_API_KEY;
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("NODE_ENV", "test");
 
     const response = await getUsers(
       get("http://localhost:3000/api/v1/users?workspace=live")
@@ -42,7 +41,7 @@ describe("API auth routes", () => {
 
   it("unauthenticated POST /api/ingest/event → 401", async () => {
     delete process.env.ANYKPI_API_KEY;
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("NODE_ENV", "test");
 
     const response = await postEvent(
       post("http://localhost:3000/api/ingest/event", {
@@ -56,7 +55,7 @@ describe("API auth routes", () => {
 
   it("demo GET views still 200", async () => {
     delete process.env.ANYKPI_API_KEY;
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("NODE_ENV", "test");
 
     const dotplot = await getDotplot(
       get("http://localhost:3000/api/views/dotplot?workspace=demo")

@@ -20,11 +20,10 @@ export async function GET(request: NextRequest) {
     const wbrData = await loadWbrView(workspace);
 
     const sections = Array.from(new Set((wbrData.metrics || []).map((m) => m.section)));
-    const exceptionsCount = (wbrData.metrics || []).filter((m) => m.status !== 'ok' && m.status !== 'on').length;
+    const exceptionsCount = (wbrData.metrics || []).filter((m) => m.status !== 'ok').length;
 
     const metrics = (wbrData.metrics || []).map((m) => ({
       ...m,
-      status: m.status === 'on' ? 'ok' : m.status,
       type: m.type === 'output' ? 'output' : 'input',
     }));
 

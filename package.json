@@ -23,6 +23,12 @@
     "cli:build": "cd packages/cli && pnpm install && pnpm build",
     "anykpi": "cd packages/cli && pnpm build && node dist/index.js"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild"
+    ]
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
     "@tanstack/react-query": "^5.59.0",

@@ -1,10 +1,16 @@
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import * as schema from "./schema";
-import { chmodSync, existsSync } from "fs";
-import { resolve } from "path";
+import { chmodSync, existsSync, mkdirSync } from "fs";
+import { dirname, resolve } from "path";
 
 const dbPath = process.env.DATABASE_PATH || resolve(process.cwd(), "data", "anykpi.db");
+
+// Ensure the parent directory exists before better-sqlite3 opens the file.
+// db.ts is imported at build time (page-data collection) and by scripts/init-db
+// before it creates its own dir, so a fresh clone or fresh Docker volume would
+// otherwise crash with "Cannot open database because the directory does not exist".
+mkdirSync(dirname(dbPath), { recursive: true });
 
 const sqlite = new Database(dbPath, { timeout: 5000 });
 sqlite.pragma("busy_timeout = 5000");

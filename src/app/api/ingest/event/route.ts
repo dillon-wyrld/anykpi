@@ -2,20 +2,33 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { authorize, authResponse, resolveWorkspace } from "@/core/auth";
-import { badRequest, internalError, logServerError } from "@/core/errors";
+import {
+  badRequest,
+  internalError,
+  logServerError,
+  payloadTooLarge,
+  PayloadTooLargeError,
+  readJsonBounded,
+  tooManyRequests,
+} from "@/core/errors";
+import { rateLimit, clientKeyFrom } from "@/core/rate-limit";
 
 /**
  * POST /api/ingest/event
  *
  * Track activity event (SDK or agent). Always requires a valid API key.
- * Workspace comes from the key (env admin may choose).
+ * Workspace comes from the key (env admin may choose). Rate-limited and
+ * size-bounded to prevent flooding / memory exhaustion.
  */
 export async function POST(request: NextRequest) {
   const auth = await authorize(request, { write: true });
   if (!auth.ok) return authResponse(auth);
 
+  const limit = rateLimit(clientKeyFrom(request.headers));
+  if (!limit.allowed) return tooManyRequests(limit.retryAfterSeconds);
+
   try {
-    const body = await request.json();
+    const body = (await readJsonBounded(request)) as Record<string, any>;
     const resolved = resolveWorkspace(auth, body.workspaceId, true);
     if ("ok" in resolved && resolved.ok === false) {
       return authResponse(resolved);
@@ -57,7 +70,9 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    if (error instanceof PayloadTooLargeError) return payloadTooLarge();
+    if (error instanceof SyntaxError) return badRequest("Invalid JSON body");
     logServerError("Ingest event failed");
     return internalError();
   }

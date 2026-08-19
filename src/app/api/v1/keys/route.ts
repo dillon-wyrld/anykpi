@@ -83,7 +83,14 @@ export async function GET(request: NextRequest) {
   try {
     const keys = await db.select().from(schema.apiKeys).all();
 
-    const response = keys.map((k) =>
+    // A workspace-bound key may only see its own workspace's keys; the env
+    // admin (canChooseWorkspace) sees all. Prevents cross-workspace metadata
+    // enumeration.
+    const visible = auth.canChooseWorkspace
+      ? keys
+      : keys.filter((k) => (k.workspaceId || LIVE_WORKSPACE) === auth.keyWorkspace);
+
+    const response = visible.map((k) =>
       APIKeyResponseSchema.parse({
         id: k.id,
         name: k.name,
