@@ -1,6 +1,20 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
+import {
+  round2,
+  seriesWowYoy,
+  wbrDecimals,
+  wbrGoodDir,
+} from "@/core/views/wbr-math";
+
+export {
+  seriesPctChange,
+  seriesWowYoy,
+  wbrBox,
+  wbrSheet,
+  wbrStat,
+} from "@/core/views/wbr-math";
 
 export async function loadWbrView(workspace: string) {
   const metricDefs = await db
@@ -24,20 +38,27 @@ export async function loadWbrView(workspace: string) {
       .filter((p) => p.metricId === def.metricId && p.grain === "month")
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-    const weeks = allWeeks.slice(0, 6).reverse().map((p) => Math.round((p.value || 0) * 100) / 100);
-    const prevWeeks = allWeeks.slice(52, 58).reverse().map((p) => Math.round((p.value || 0) * 100) / 100);
-    const months = allMonths.slice(0, 12).reverse().map((p) => Math.round((p.value || 0) * 100) / 100);
-    const prevMonths = allMonths.slice(12, 24).reverse().map((p) => Math.round((p.value || 0) * 100) / 100);
+    const weeks = allWeeks
+      .slice(0, 6)
+      .reverse()
+      .map((p) => round2(p.value || 0));
+    const prevWeeks = allWeeks
+      .slice(52, 58)
+      .reverse()
+      .map((p) => round2(p.value || 0));
+    const months = allMonths
+      .slice(0, 12)
+      .reverse()
+      .map((p) => round2(p.value || 0));
+    const prevMonths = allMonths
+      .slice(12, 24)
+      .reverse()
+      .map((p) => round2(p.value || 0));
 
-    const current = weeks[weeks.length - 1] || 0;
-    const lastWeek = weeks[weeks.length - 2] || current;
-    const lastYear = prevWeeks[prevWeeks.length - 1] || current;
-
-    const wow = lastWeek !== 0 ? Math.round(((current - lastWeek) / lastWeek) * 100 * 10) / 10 : 0;
-    const yoy = lastYear !== 0 ? Math.round(((current - lastYear) / lastYear) * 100 * 10) / 10 : 0;
+    const { current, wow, yoy } = seriesWowYoy(weeks, prevWeeks);
 
     const status = (def.status as "ok" | "watch" | "off") || "ok";
-    const dp = def.unit === "%" || def.unit === "$" ? 1 : 0;
+    const dp = wbrDecimals(def.unit);
 
     return {
       id: def.metricId,
@@ -46,14 +67,14 @@ export async function loadWbrView(workspace: string) {
       sectionOrder: def.sectionOrder,
       owner: def.owner,
       type: def.type,
-      current: Math.round(current * 100) / 100,
-      target: Math.round((def.target || 0) * 100) / 100,
-      wow: Math.round(wow * 10) / 10,
-      yoy: Math.round(yoy * 10) / 10,
+      current,
+      target: round2(def.target || 0),
+      wow,
+      yoy,
       status,
       statusReason: def.statusReason,
       unit: def.unit,
-      goodDir: def.goodDir === "up" ? 1 : -1,
+      goodDir: wbrGoodDir(def.goodDir),
       dp,
       weeks,
       prevWeeks,

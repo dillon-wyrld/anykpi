@@ -2,7 +2,13 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { format, addDays, startOfWeek, startOfMonth, endOfMonth, isSameDay, isAfter, isBefore, differenceInDays } from "date-fns";
+import { format, addDays, startOfWeek, endOfMonth, isSameDay, differenceInDays } from "date-fns";
+import {
+  classifyCalendarDate,
+  eventsInRange,
+  rollupCalendarSources,
+  startOfLocalDay,
+} from "@/core/views/calendar-math";
 
 interface CalendarEvent {
   id: number;
@@ -70,8 +76,7 @@ export default function Calendar({ workspace }: CalendarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = startOfLocalDay(new Date());
 
   const defaultViewState: ViewState = {
     view: "week",
@@ -95,29 +100,16 @@ export default function Calendar({ workspace }: CalendarProps) {
     fetch(`/api/views/calendar?workspace=${workspace}`)
       .then((res) => res.json())
       .then((data) => {
-        const events = (data.events || []).map((e: any) => ({
-          ...e,
-          date: new Date(e.date),
-          isPast: new Date(e.date) < today,
-          isFuture: new Date(e.date) > today,
-        }));
-        setAllEvents(events);
-
-        const sourceMap = new Map<string, Source>();
-        events.forEach((e: CalendarEvent) => {
-          if (!sourceMap.has(e.source)) {
-            sourceMap.set(e.source, {
-              id: e.source,
-              name: e.sourceName,
-              glyph: e.sourceGlyph,
-              color: e.sourceColor,
-              syncAge: e.syncAge,
-              count: 0,
-            });
-          }
-          sourceMap.get(e.source)!.count++;
+        const events = (data.events || []).map((e: any) => {
+          const date = new Date(e.date);
+          return {
+            ...e,
+            date,
+            ...classifyCalendarDate(date, today),
+          };
         });
-        setSources(Array.from(sourceMap.values()));
+        setAllEvents(events);
+        setSources(rollupCalendarSources(events));
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -293,7 +285,7 @@ export default function Calendar({ workspace }: CalendarProps) {
       ? `${format(from, "d MMM")} – ${format(to, "d MMM, yyyy")}`
       : format(from, "MMMM yyyy");
 
-  const visibleCount = filteredEvents.filter((e) => e.date >= from && e.date <= to).length;
+  const visibleCount = eventsInRange(filteredEvents, from, to).length
 
   return (
     <div className="space-y-4">

@@ -39,6 +39,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   the `NPM_TOKEN` secret is present; otherwise the workflow logs a skip.
 - CLI smoke coverage: every published `--help` command against a local
   instance, and `track` is visible via `/api/v1/users`.
+- Unit-test net for every on-screen view number (ANY-40): DotPlot-derived
+  fields, cohort retention/smile/grade, WBR exception engine / YoY / PoP,
+  calendar past/future, and PMF card fields. View math lives in
+  `src/core/views/*` as pure functions.
 
 ### Changed
 - Removed internal design notes and competitor/brand references from the public
