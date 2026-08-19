@@ -351,6 +351,7 @@ export const ConnectSourceIdSchema = z.enum([
   'stripe',
   'revenuecat',
   'csv',
+  'ics',
 ]);
 
 /**

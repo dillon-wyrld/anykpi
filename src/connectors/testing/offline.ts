@@ -19,6 +19,7 @@ export function restoreEnv(name: string, value: string | undefined) {
 export async function clearWorkspace(workspaceId: string) {
   await db.delete(schema.activity).where(eq(schema.activity.workspaceId, workspaceId));
   await db.delete(schema.users).where(eq(schema.users.workspaceId, workspaceId));
+  await db.delete(schema.calEvents).where(eq(schema.calEvents.workspaceId, workspaceId));
   await db.delete(schema.syncState).where(eq(schema.syncState.workspaceId, workspaceId));
   await db.delete(schema.sources).where(eq(schema.sources.workspaceId, workspaceId));
   await db.delete(schema.mrrSnapshots).where(eq(schema.mrrSnapshots.workspaceId, workspaceId));

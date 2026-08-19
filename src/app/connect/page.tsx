@@ -42,6 +42,7 @@ export default function ConnectPage() {
   const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
   const [webhookSource, setWebhookSource] = useState("webhook");
   const [webhookSecret, setWebhookSecret] = useState("");
+  const [icsUrl, setIcsUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [adminKey, setAdminKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
@@ -107,6 +108,16 @@ export default function ConnectPage() {
         ok: true,
         rotated: data.rotated,
       });
+      if (source === "ics") {
+        await fetch("/api/v1/sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(adminKey ? { Authorization: `Bearer ${adminKey}` } : {}),
+          },
+          body: JSON.stringify({ source: "ics", workspace: workspaceId }),
+        });
+      }
     } catch {
       setConnectStatus({
         source,
@@ -273,13 +284,6 @@ export default function ConnectPage() {
       description: "Banking data for payroll and runway tracking",
       status: "dark",
       badge: "🏦",
-    },
-    {
-      id: "ics",
-      name: "ICS Calendar",
-      description: "Read-only calendar feed (Google, Outlook, Apple)",
-      status: "dark",
-      badge: "📅",
     },
     {
       id: "github",
@@ -702,6 +706,54 @@ export default function ConnectPage() {
                       {statusFor(webhookSource)?.error}
                     </p>
                   )}
+                </div>
+              </div>
+            </section>
+
+            <section>
+              <h2 className="font-display text-xl font-semibold mb-4">Calendar</h2>
+              <div className="bg-panel border border-border rounded-lg p-6">
+                <div className="flex items-start gap-4">
+                  <span className="text-3xl">📅</span>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-base mb-1">ICS feed</h3>
+                    <p className="text-sm text-sub mb-3">
+                      Paste a read-only calendar URL. Events appear on the Calendar
+                      view. Nothing is written back.
+                    </p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                          ICS URL
+                        </label>
+                        <input
+                          type="url"
+                          value={icsUrl}
+                          onChange={(e) => setIcsUrl(e.target.value)}
+                          placeholder="https://…"
+                          className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        disabled={connecting === "ics"}
+                        onClick={() => connectSource("ics", { icsUrl })}
+                        className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90 disabled:opacity-60"
+                      >
+                        Connect calendar
+                      </button>
+                      {statusFor("ics")?.ok && (
+                        <p className="text-sm text-sub">
+                          {statusFor("ics")?.rotated
+                            ? "Calendar URL updated."
+                            : "Calendar connected."}
+                        </p>
+                      )}
+                      {statusFor("ics") && !statusFor("ics")?.ok && (
+                        <p className="text-sm text-sub">{statusFor("ics")?.error}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>

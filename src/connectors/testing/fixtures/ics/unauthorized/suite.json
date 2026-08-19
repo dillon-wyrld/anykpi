@@ -1,0 +1,17 @@
+{
+  "source": "ics",
+  "description": "401 on ICS feed fetch",
+  "fixtures": [
+    {
+      "name": "feed-unauthorized",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "calendar.ics"
+      },
+      "response": {
+        "status": 401,
+        "body": "unauthorized"
+      }
+    }
+  ]
+}
