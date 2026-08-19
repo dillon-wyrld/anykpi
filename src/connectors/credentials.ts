@@ -50,6 +50,10 @@ export function envFallback(source: string): SourceConfig {
         apiKey: process.env.REVENUECAT_API_KEY,
         projectId: process.env.REVENUECAT_PROJECT_ID,
       });
+    case "mercury":
+      return pickDefined({
+        apiKey: process.env.MERCURY_API_KEY,
+      });
     default:
       return {};
   }

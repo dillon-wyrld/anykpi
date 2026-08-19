@@ -39,6 +39,7 @@ describe("connector registry", () => {
     expect(Object.keys(registry).sort()).toEqual([
       "amplitude",
       "ics",
+      "mercury",
       "mixpanel",
       "posthog",
       "revenuecat",
@@ -47,6 +48,7 @@ describe("connector registry", () => {
     expect(listConnectors().map((c) => c.source).sort()).toEqual([
       "amplitude",
       "ics",
+      "mercury",
       "mixpanel",
       "posthog",
       "revenuecat",
@@ -57,10 +59,12 @@ describe("connector registry", () => {
     expect(registry.amplitude.name).toBe("Amplitude");
     expect(registry.stripe.name).toBe("Stripe");
     expect(registry.revenuecat.name).toBe("RevenueCat");
+    expect(registry.mercury.name).toBe("Mercury");
     expect(registry.ics.name).toBe("Calendar");
     expect(getConnector("posthog")).toBe(registry.posthog);
     expect(getConnector("stripe")).toBe(registry.stripe);
     expect(getConnector("revenuecat")).toBe(registry.revenuecat);
+    expect(getConnector("mercury")).toBe(registry.mercury);
     expect(getConnector("ics")).toBe(registry.ics);
   });
 
