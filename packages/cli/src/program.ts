@@ -8,6 +8,7 @@ import { configFile, loadConfig, saveConfig } from "./config";
 export const PUBLISHED_COMMANDS = [
   "login",
   "workspaces",
+  "connect",
   "identify",
   "track",
   "overview",
@@ -124,6 +125,67 @@ export function createProgram(): Command {
       console.log("  live", config.workspace === "live" ? chalk.green("(current)") : "");
       console.log();
       console.log(chalk.dim("Use --workspace flag to switch"));
+    });
+
+  program
+    .command("connect <source>")
+    .description("Store connector credentials on the instance")
+    .option("--workspace <workspace>", "Workspace")
+    .option("--api-key <key>", "Source API key")
+    .option("--project-id <id>", "Source project ID")
+    .option("--host <host>", "Source host")
+    .option("--api-secret <secret>", "Source API secret")
+    .option("--secret-key <key>", "Source secret key")
+    .option("--json", "Output as JSON")
+    .action(async (source, options) => {
+      const spinner = ora("Saving source config...").start();
+
+      try {
+        const credentials: Record<string, string> = {};
+        if (options.apiKey) credentials.apiKey = options.apiKey;
+        if (options.projectId) credentials.projectId = options.projectId;
+        if (options.host) credentials.host = options.host;
+        if (options.apiSecret) credentials.apiSecret = options.apiSecret;
+        if (options.secretKey) credentials.secretKey = options.secretKey;
+
+        if (Object.keys(credentials).length === 0) {
+          throw new Error("Pass at least one source credential flag");
+        }
+
+        const workspace = workspaceOf(options);
+        const data = (await apiRequest("/api/v1/connect", {
+          method: "POST",
+          body: JSON.stringify({
+            source,
+            credentials,
+            workspaceId: workspace,
+          }),
+        })) as {
+          source: string;
+          workspaceId: string;
+          connected: boolean;
+          rotated?: boolean;
+        };
+
+        spinner.stop();
+
+        if (options.json) {
+          console.log(JSON.stringify(data, null, 2));
+          return;
+        }
+
+        console.log();
+        console.log(
+          chalk.green("✓"),
+          data.rotated ? "Updated" : "Connected",
+          chalk.bold(data.source),
+          chalk.dim(data.workspaceId)
+        );
+        console.log();
+      } catch (error) {
+        spinner.fail((error as Error).message);
+        throw error;
+      }
     });
 
   program

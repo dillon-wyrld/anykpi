@@ -219,6 +219,25 @@ export const personRevenue = sqliteTable("person_revenue", {
   ),
 }));
 
+/**
+ * Per-source connector config. `config` is ciphertext (AES-256-GCM)
+ * sealed with ANYKPI_SECRET. Never store plaintext credentials.
+ */
+export const sources = sqliteTable("sources", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  workspaceId: text("workspace_id").notNull().default("live"),
+  source: text("source").notNull(),
+  config: text("config").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+}, (table) => ({
+  workspaceIdx: index("sources_workspace_idx").on(table.workspaceId),
+  workspaceSourceUidx: uniqueIndex("sources_workspace_source_uidx").on(
+    table.workspaceId,
+    table.source
+  ),
+}));
+
 /** Cash balance and runway. Banking connectors fill this later. */
 export const balanceSnapshots = sqliteTable("balance_snapshots", {
   id: integer("id").primaryKey({ autoIncrement: true }),

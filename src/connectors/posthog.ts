@@ -3,20 +3,23 @@ import * as schema from "@/core/schema";
 import type { SyncResult } from "@/core/contracts";
 import { upsertSyncState } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
+import { resolveCredentials } from "./credentials";
 import { failedSync } from "./http-status";
+import type { SyncOpts } from "./types";
 
 export async function syncPostHog(
   workspaceId: string = "live",
-  _opts?: { cursor?: string }
+  opts?: SyncOpts
 ): Promise<SyncResult> {
-  const apiKey = process.env.POSTHOG_API_KEY;
-  const projectId = process.env.POSTHOG_PROJECT_ID;
+  const credentials = resolveCredentials("posthog", opts?.config);
+  const apiKey = credentials.apiKey;
+  const projectId = credentials.projectId;
 
   if (!apiKey) {
-    throw new Error("POSTHOG_API_KEY is required");
+    throw new Error("PostHog API key is required");
   }
 
-  const baseUrl = process.env.POSTHOG_HOST || "https://app.posthog.com";
+  const baseUrl = credentials.host || "https://app.posthog.com";
 
   let rowsSynced = 0;
 

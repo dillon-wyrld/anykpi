@@ -28,6 +28,7 @@ Demo workspace is public-read. Live workspaces and all writes require a key (`Au
 - `GET /api/v1/wbr` — Weekly Business Review
 - `GET /api/v1/calendar` — multi-source timeline
 - `GET /api/v1/sync` — connector status
+- `POST /api/v1/connect` — store per-source credentials (encrypted at rest)
 - `GET /api/v1/keys` / `POST /api/v1/keys` — list metadata / mint a key
 - `POST /api/v1/ingest/identify` / `POST /api/v1/ingest/event` — identify and track
 
@@ -40,11 +41,11 @@ HTTP `POST /api/mcp`. stdio: `src/mcp/server.ts`. `tools/list` is open. `tools/c
 
 ## CLI
 
-`npx @anykpi/cli` (`packages/cli`): `login` (alias `key`), `workspaces`, `identify`, `track`, `overview`, `users`, `cohorts`, `wbr`, `calendar`. `login` requires an operator key.
+`npx @anykpi/cli` (`packages/cli`): `login` (alias `key`), `workspaces`, `connect`, `identify`, `track`, `overview`, `users`, `cohorts`, `wbr`, `calendar`, `sync`. `login` requires an operator key. `connect` stores source config only.
 
 ## Connectors
 
-Shipped: PostHog, Mixpanel, Amplitude. Pull-only. Connector setup is the `/connect` UI until v0.5.
+Shipped: PostHog, Mixpanel, Amplitude. Pull-only. Connector setup is the `/connect` UI or `anykpi connect`. Config is encrypted at rest with `ANYKPI_SECRET`. Env vars are a deprecated read-only fallback.
 
 ## view_url
 

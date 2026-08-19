@@ -297,6 +297,14 @@ export const ConnectSourceRequestSchema = z.object({
   workspaceId: z.string().default('live'),
 });
 
+/** Persist result. Credentials are never echoed. */
+export const ConnectSourceResponseSchema = z.object({
+  source: z.enum(['posthog', 'mixpanel', 'amplitude', 'stripe']),
+  workspaceId: z.string(),
+  connected: z.literal(true),
+  rotated: z.boolean(),
+});
+
 export const APIKeyCreateRequestSchema = z.object({
   name: z.string(),
 });
@@ -347,6 +355,7 @@ export type QueryUsersRequest = z.infer<typeof QueryUsersRequestSchema>;
 export type IngestIdentifyRequest = z.infer<typeof IngestIdentifyRequestSchema>;
 export type IngestEventRequest = z.infer<typeof IngestEventRequestSchema>;
 export type ConnectSourceRequest = z.infer<typeof ConnectSourceRequestSchema>;
+export type ConnectSourceResponse = z.infer<typeof ConnectSourceResponseSchema>;
 export type APIKeyCreateRequest = z.infer<typeof APIKeyCreateRequestSchema>;
 export type APIKeyResponse = z.infer<typeof APIKeyResponseSchema>;
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;

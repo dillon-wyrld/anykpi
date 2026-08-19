@@ -22,6 +22,13 @@
       "when": 1787176349457,
       "tag": "0002_revenue_read_models",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1787176992047,
+      "tag": "0003_sources",
+      "breakpoints": true
     }
   ]
 }

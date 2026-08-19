@@ -20,6 +20,12 @@
  *   (partial page, skipped endpoint). Do not advance the cursor; retry.
  * - `error` — the run failed. `error` may carry a short, non-secret
  *   reason. Do not advance the cursor; surface the source as unhealthy.
+ *
+ * Config contract:
+ * - The registry loads decrypted source config and passes it as
+ *   `opts.config`. Connectors must not log it.
+ * - Env vars (POSTHOG_*, MIXPANEL_*, AMPLITUDE_*) are a deprecated
+ *   read-only fallback when stored config is missing a field.
  */
 
 import { and, eq } from "drizzle-orm";
@@ -27,11 +33,15 @@ import { refreshWorkspaceClusters } from "@/core/clustering";
 import { SyncResultSchema, type SyncResult } from "@/core/contracts";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
+import { loadSourceConfig } from "@/core/sources";
 import { upsertSyncState } from "@/core/upsert";
 import { syncAmplitude } from "./amplitude";
 import { withSourceLock } from "./lock";
 import { syncMixpanel } from "./mixpanel";
 import { syncPostHog } from "./posthog";
+import type { SyncOpts } from "./types";
+
+export type { SyncOpts } from "./types";
 
 export type { SyncResult, ConnectorHealth } from "@/core/contracts";
 export { SyncResultSchema, ConnectorHealthSchema } from "@/core/contracts";
@@ -39,10 +49,6 @@ export { SyncResultSchema, ConnectorHealthSchema } from "@/core/contracts";
 export { syncAmplitude } from "./amplitude";
 export { syncMixpanel } from "./mixpanel";
 export { syncPostHog } from "./posthog";
-
-export type SyncOpts = {
-  cursor?: string;
-};
 
 export interface Connector {
   source: string;
@@ -130,7 +136,13 @@ async function runSource(
 ): Promise<SyncResult> {
   await markPending(connector, workspaceId);
   try {
-    const result = SyncResultSchema.parse(await connector.sync(workspaceId, opts));
+    const stored = await loadSourceConfig(workspaceId, connector.source);
+    const result = SyncResultSchema.parse(
+      await connector.sync(workspaceId, {
+        ...opts,
+        config: stored ?? opts?.config,
+      })
+    );
     if (result.health === "ok") {
       await refreshWorkspaceClusters(workspaceId);
     }

@@ -134,4 +134,57 @@ describe("CLI ingest client", () => {
       source: "posthog",
     });
   });
+
+  it("connect POSTs /api/v1/connect without echoing credentials in output", async () => {
+    isolatedHome();
+    process.env.ANYKPI_API_KEY = "test-key";
+    process.env.ANYKPI_API_URL = "http://instance.test";
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        source: "posthog",
+        workspaceId: "live",
+        connected: true,
+        rotated: false,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const logs: string[] = [];
+    const logSpy = vi.spyOn(console, "log").mockImplementation((...args) => {
+      logs.push(args.map(String).join(" "));
+    });
+
+    const program = createProgram();
+    program.exitOverride();
+
+    await program.parseAsync(
+      [
+        "connect",
+        "posthog",
+        "--workspace",
+        "live",
+        "--api-key",
+        "phc_never_print_me",
+        "--project-id",
+        "proj_1",
+        "--json",
+      ],
+      { from: "user" }
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("http://instance.test/api/v1/connect");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(String(init.body))).toEqual({
+      source: "posthog",
+      credentials: { apiKey: "phc_never_print_me", projectId: "proj_1" },
+      workspaceId: "live",
+    });
+    expect(logs.join("\n")).not.toContain("phc_never_print_me");
+
+    logSpy.mockRestore();
+  });
 });

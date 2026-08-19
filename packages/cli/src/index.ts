@@ -8,6 +8,7 @@
  * Commands:
  * - login / key     Generate API key
  * - workspaces      List workspaces
+ * - connect         Store connector credentials
  * - identify        Identify a user
  * - track           Track an event
  * - overview        Get company snapshot
