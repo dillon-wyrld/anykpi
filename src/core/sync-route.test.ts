@@ -173,7 +173,7 @@ describe("POST /api/v1/sync", () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.results.map((r: { source: string }) => r.source).sort()).toEqual(
-        ["amplitude", "mixpanel", "posthog", "stripe"]
+        ["amplitude", "mixpanel", "posthog", "revenuecat", "stripe"]
       );
 
       const bySource = Object.fromEntries(
@@ -186,6 +186,7 @@ describe("POST /api/v1/sync", () => {
       expect(bySource.mixpanel).toBe("error");
       expect(bySource.amplitude).toBe("error");
       expect(bySource.stripe).toBe("error");
+      expect(bySource.revenuecat).toBe("error");
 
       const states = Object.fromEntries(
         body.states.map((s: { source: string; status: string }) => [
@@ -197,6 +198,7 @@ describe("POST /api/v1/sync", () => {
       expect(states.mixpanel).toBe("error");
       expect(states.amplitude).toBe("error");
       expect(states.stripe).toBe("error");
+      expect(states.revenuecat).toBe("error");
     } finally {
       harness.restore();
     }

@@ -71,7 +71,7 @@ login mints a key via POST /api/v1/keys and requires ANYKPI_API_KEY or --key. co
 
 ## Connectors
 
-Shipped: PostHog, Mixpanel, Amplitude, Stripe. Sync is pull-only into local read models; ANYKPI never writes back. Stripe also accepts a signature-verified webhook at POST /api/webhooks/stripe so revenue stays minutes-fresh. Connector setup is the /connect UI or \`anykpi connect\`. Config is encrypted at rest with ANYKPI_SECRET. Env vars are a deprecated read-only fallback.
+Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat. Sync is pull-only into local read models; ANYKPI never writes back. Stripe also accepts a signature-verified webhook at POST /api/webhooks/stripe so revenue stays minutes-fresh. Connector setup is the /connect UI or \`anykpi connect\`. Config is encrypted at rest with ANYKPI_SECRET. Env vars are a deprecated read-only fallback.
 
 ## More
 

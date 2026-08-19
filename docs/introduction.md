@@ -15,7 +15,7 @@ Founders who need:
 Two paths, both agent-installable:
 
 ### Path 1: Connect Existing Tools
-Shipped: PostHog, Mixpanel, Amplitude, Stripe. Roadmap: calendar/ICS, GitHub — tools you already pay for. ANYKPI syncs summaries into local read models and never writes back.
+Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat. Roadmap: calendar/ICS, GitHub — tools you already pay for. ANYKPI syncs summaries into local read models and never writes back.
 
 ```bash
 # Via UI

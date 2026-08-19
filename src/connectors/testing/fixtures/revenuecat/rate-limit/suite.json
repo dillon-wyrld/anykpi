@@ -1,0 +1,23 @@
+{
+  "source": "revenuecat",
+  "description": "429 on customers list",
+  "fixtures": [
+    {
+      "name": "customers-rate-limited",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/v2/projects/proj_fixture/customers"
+      },
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "1"
+        },
+        "body": {
+          "type": "rate_limit_error",
+          "message": "Rate limit exceeded"
+        }
+      }
+    }
+  ]
+}

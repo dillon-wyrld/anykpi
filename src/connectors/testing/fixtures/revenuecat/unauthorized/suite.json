@@ -1,0 +1,20 @@
+{
+  "source": "revenuecat",
+  "description": "401 on customers list",
+  "fixtures": [
+    {
+      "name": "customers-unauthorized",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/v2/projects/proj_fixture/customers"
+      },
+      "response": {
+        "status": 401,
+        "body": {
+          "type": "authentication_error",
+          "message": "Invalid API key"
+        }
+      }
+    }
+  ]
+}
