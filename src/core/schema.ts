@@ -25,10 +25,19 @@ export const activity = sqliteTable("activity", {
   eventName: text("event_name").notNull(),
   eventClass: text("event_class").notNull(), // core, search, share, pay
   platform: text("platform"),
+  /**
+   * Stable event identity. Unique with workspaceId so CSV import,
+   * connectors, and later ingest paths can retry without duplicates.
+   */
+  externalId: text("external_id"),
   workspaceId: text("workspace_id").notNull().default("demo"),
 }, (table) => ({
   personTimestampIdx: index("activity_person_timestamp_idx").on(table.personId, table.timestamp),
   workspaceIdx: index("activity_workspace_idx").on(table.workspaceId),
+  workspaceExternalUidx: uniqueIndex("activity_workspace_external_id_uidx").on(
+    table.workspaceId,
+    table.externalId
+  ),
 }));
 
 export const accounts = sqliteTable("accounts", {

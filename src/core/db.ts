@@ -44,7 +44,23 @@ function ensureApiKeyWorkspaceColumn() {
   }
 }
 
+function ensureActivityExternalId() {
+  try {
+    const cols = sqlite.prepare("PRAGMA table_info(activity)").all() as { name: string }[];
+    if (cols.length === 0) return;
+    if (!cols.some((c) => c.name === "external_id")) {
+      sqlite.exec("ALTER TABLE activity ADD COLUMN external_id TEXT");
+    }
+    sqlite.exec(
+      "CREATE UNIQUE INDEX IF NOT EXISTS activity_workspace_external_id_uidx ON activity (workspace_id, external_id)"
+    );
+  } catch {
+    // Table may not exist until db:init / drizzle push
+  }
+}
+
 ensureApiKeyWorkspaceColumn();
+ensureActivityExternalId();
 
 export const db = drizzle(sqlite, { schema });
 

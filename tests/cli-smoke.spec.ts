@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { commandsFromHelp } from "../packages/cli/src/help";
@@ -85,8 +85,21 @@ test("every --help command succeeds and track is visible in /api/v1/users", asyn
       "proj_cli_smoke",
       "--json",
     ],
+    import: [
+      join(home, "cli-smoke-import.csv"),
+      "--kind",
+      "users",
+      "--workspace",
+      "demo",
+      "--json",
+    ],
     sync: ["--workspace", "demo", "--json"],
   };
+
+  writeFileSync(
+    join(home, "cli-smoke-import.csv"),
+    `person_id,name,platform\ncli-import-${stamp},CLI Import User,${platform}\n`
+  );
 
   for (const command of commands) {
     const extra = extras[command];

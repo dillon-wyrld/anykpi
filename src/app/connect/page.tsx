@@ -3,9 +3,33 @@
 import { useState } from "react";
 import Link from "next/link";
 import { browserSnippet } from "@/sdk";
+import {
+  detectKind,
+  fieldsFor,
+  parseCsv,
+  previewCsv,
+  suggestMapping,
+  type ImportKind,
+} from "@/core/csv-parse";
 
 export default function ConnectPage() {
-  const [selectedPath, setSelectedPath] = useState<"existing" | "sdk" | null>(null);
+  const [selectedPath, setSelectedPath] = useState<"existing" | "sdk" | "csv" | null>(null);
+  const [csvText, setCsvText] = useState("");
+  const [csvName, setCsvName] = useState("");
+  const [csvKind, setCsvKind] = useState<ImportKind>("events");
+  const [csvMapping, setCsvMapping] = useState<Record<string, string>>({});
+  const [csvColumns, setCsvColumns] = useState<string[]>([]);
+  const [csvSample, setCsvSample] = useState<Record<string, string>[]>([]);
+  const [csvRowCount, setCsvRowCount] = useState(0);
+  const [csvParseError, setCsvParseError] = useState<string | null>(null);
+  const [csvImporting, setCsvImporting] = useState(false);
+  const [csvResult, setCsvResult] = useState<{
+    ok: boolean;
+    imported?: number;
+    skipped?: number;
+    error?: string;
+    errors?: Array<{ line: number; message: string }>;
+  } | null>(null);
   const [workspaceId, setWorkspaceId] = useState("live");
   const [posthogKey, setPosthogKey] = useState("");
   const [posthogProject, setPosthogProject] = useState("");
@@ -97,6 +121,90 @@ export default function ConnectPage() {
   const statusFor = (source: string) =>
     connectStatus && connectStatus.source === source ? connectStatus : null;
 
+  const applyCsv = (text: string, name: string, kindOverride?: ImportKind) => {
+    setCsvText(text);
+    setCsvName(name);
+    setCsvResult(null);
+    const parsed = parseCsv(text);
+    if (!parsed.ok) {
+      setCsvParseError(`Line ${parsed.line}: ${parsed.message}`);
+      setCsvColumns([]);
+      setCsvSample([]);
+      setCsvRowCount(0);
+      setCsvMapping({});
+      return;
+    }
+    const kind = kindOverride ?? detectKind(parsed.headers) ?? "events";
+    const mapping = suggestMapping(parsed.headers, kind);
+    const preview = previewCsv(parsed.headers, parsed.records, kind, mapping);
+    setCsvParseError(null);
+    setCsvKind(kind);
+    setCsvMapping(mapping);
+    setCsvColumns(preview.columns);
+    setCsvSample(preview.sample);
+    setCsvRowCount(preview.rowCount);
+  };
+
+  const handleCsvFile = (file: File | undefined) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      applyCsv(String(reader.result ?? ""), file.name);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCsvKindChange = (kind: ImportKind) => {
+    if (!csvText) {
+      setCsvKind(kind);
+      return;
+    }
+    applyCsv(csvText, csvName, kind);
+  };
+
+  const handleCsvImport = async () => {
+    setCsvImporting(true);
+    setCsvResult(null);
+    try {
+      const response = await fetch("/api/v1/import", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminKey ? { Authorization: `Bearer ${adminKey}` } : {}),
+        },
+        body: JSON.stringify({
+          csv: csvText,
+          kind: csvKind,
+          mapping: csvMapping,
+          workspaceId,
+        }),
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        imported?: number;
+        skipped?: number;
+        errors?: Array<{ line: number; message: string }>;
+      };
+      if (!response.ok) {
+        setCsvResult({
+          ok: false,
+          error: data.error || "Import failed",
+          errors: data.errors,
+        });
+        return;
+      }
+      setCsvResult({
+        ok: true,
+        imported: data.imported,
+        skipped: data.skipped,
+      });
+    } catch {
+      setCsvResult({ ok: false, error: "Import failed" });
+    } finally {
+      setCsvImporting(false);
+    }
+  };
+
   const handleGenerateSnippet = () => {
     setSdkSnippet(
       browserSnippet({
@@ -172,11 +280,11 @@ export default function ConnectPage() {
         <div className="mb-8">
           <h1 className="font-display text-3xl font-bold mb-2">Connect Your Data</h1>
           <p className="text-sub">
-            Two paths. Both doable by a human OR an AI agent. Choose one:
+            Three paths. All doable by a human OR an AI agent. Choose one:
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
+        <div className="grid md:grid-cols-3 gap-6 mb-12">
           <button
             onClick={() => setSelectedPath("existing")}
             className={`bg-panel border-2 rounded-lg p-6 text-left hover:border-accent ${
@@ -202,6 +310,19 @@ export default function ConnectPage() {
             <p className="text-sm text-sub">
               Don't have PostHog/Mixpanel/Amplitude? Add the ANYKPI SDK. Self-hosted, data stays on your
               machine.
+            </p>
+          </button>
+
+          <button
+            onClick={() => setSelectedPath("csv")}
+            className={`bg-panel border-2 rounded-lg p-6 text-left hover:border-accent ${
+              selectedPath === "csv" ? "border-accent" : "border-border"
+            }`}
+          >
+            <div className="text-3xl mb-3">📄</div>
+            <h2 className="font-display text-xl font-semibold mb-2">Path 3: Import CSV</h2>
+            <p className="text-sm text-sub">
+              Upload users or events. Preview the column mapping, then import in one transaction.
             </p>
           </button>
         </div>
@@ -663,6 +784,189 @@ export default function ConnectPage() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {selectedPath === "csv" && (
+          <div className="space-y-6">
+            <section className="bg-panel border border-border rounded-lg p-6 space-y-4">
+              <h2 className="font-display text-xl font-semibold">Import CSV</h2>
+              <p className="text-sm text-sub">
+                Users and events. Writes require an API key. Re-running the same file does not
+                create duplicate events.
+              </p>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                    Workspace
+                  </label>
+                  <input
+                    type="text"
+                    value={workspaceId}
+                    onChange={(e) => setWorkspaceId(e.target.value)}
+                    placeholder="live"
+                    className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                    ANYKPI API key
+                  </label>
+                  <input
+                    type="password"
+                    value={adminKey}
+                    onChange={(e) => setAdminKey(e.target.value)}
+                    placeholder="Required to import"
+                    className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                  CSV file
+                </label>
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(e) => handleCsvFile(e.target.files?.[0])}
+                  className="w-full text-sm"
+                />
+                {csvName && (
+                  <p className="mt-2 text-xs text-faint font-mono">
+                    {csvName} · {csvRowCount} rows
+                  </p>
+                )}
+              </div>
+              {csvParseError && (
+                <p className="text-sm text-red-400">{csvParseError}</p>
+              )}
+            </section>
+
+            {csvColumns.length > 0 && (
+              <section className="bg-panel border border-border rounded-lg p-6 space-y-4">
+                <div className="flex flex-wrap items-end gap-4">
+                  <div>
+                    <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                      File kind
+                    </label>
+                    <select
+                      value={csvKind}
+                      onChange={(e) => handleCsvKindChange(e.target.value as ImportKind)}
+                      className="px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                    >
+                      <option value="events">events</option>
+                      <option value="users">users</option>
+                    </select>
+                  </div>
+                  <p className="text-sm text-sub">
+                    Column-mapping preview. Change a field if the guess is wrong.
+                  </p>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs font-mono uppercase tracking-wider text-faint">
+                        <th className="pb-2 pr-4">Column</th>
+                        <th className="pb-2">Maps to</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {csvColumns.map((column) => (
+                        <tr key={column} className="border-t border-border">
+                          <td className="py-2 pr-4 font-mono">{column}</td>
+                          <td className="py-2">
+                            <select
+                              value={csvMapping[column] ?? ""}
+                              onChange={(e) => {
+                                const next = { ...csvMapping };
+                                if (e.target.value) next[column] = e.target.value;
+                                else delete next[column];
+                                setCsvMapping(next);
+                              }}
+                              className="px-2 py-1 text-sm bg-bg border border-border rounded font-mono"
+                            >
+                              <option value="">(ignore)</option>
+                              {fieldsFor(csvKind).map((field) => (
+                                <option key={field} value={field}>
+                                  {field}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {csvSample.length > 0 && (
+                  <div className="overflow-x-auto">
+                    <p className="text-xs font-mono uppercase tracking-wider text-faint mb-2">
+                      First rows
+                    </p>
+                    <table className="w-full text-xs font-mono">
+                      <thead>
+                        <tr className="text-left text-faint">
+                          {csvColumns.map((column) => (
+                            <th key={column} className="pb-2 pr-3">
+                              {column}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {csvSample.map((row, index) => (
+                          <tr key={index} className="border-t border-border">
+                            {csvColumns.map((column) => (
+                              <td key={column} className="py-1 pr-3">
+                                {row[column] || "—"}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleCsvImport}
+                  disabled={csvImporting || !csvText}
+                  className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90 disabled:opacity-50"
+                >
+                  {csvImporting ? "Importing…" : "Import"}
+                </button>
+
+                {csvResult && (
+                  <div
+                    className={`text-sm rounded-lg p-3 border ${
+                      csvResult.ok
+                        ? "bg-accent-soft border-accent-line"
+                        : "border-border"
+                    }`}
+                  >
+                    {csvResult.ok ? (
+                      <p>
+                        Imported {csvResult.imported ?? 0}
+                        {(csvResult.skipped ?? 0) > 0
+                          ? ` · ${csvResult.skipped} already present`
+                          : ""}
+                      </p>
+                    ) : (
+                      <div className="space-y-1">
+                        <p>{csvResult.error}</p>
+                        {(csvResult.errors ?? []).slice(0, 20).map((error) => (
+                          <p key={`${error.line}-${error.message}`} className="font-mono text-xs">
+                            line {error.line}: {error.message}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
           </div>
         )}
 

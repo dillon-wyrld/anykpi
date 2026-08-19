@@ -29,6 +29,13 @@
       "when": 1787176992047,
       "tag": "0003_sources",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1787177540771,
+      "tag": "0004_activity_external_id",
+      "breakpoints": true
     }
   ]
 }

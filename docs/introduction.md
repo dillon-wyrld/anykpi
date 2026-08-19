@@ -85,6 +85,7 @@ Returns:
 - `GET /api/v1/calendar` — Multi-source events
 - `GET /api/v1/sync` — Connector status
 - `POST /api/v1/sync` — Trigger a sync (one source or all; requires an API key)
+- `POST /api/v1/import` — Import users or events from CSV (requires an API key)
 - `POST /api/v1/keys` — Generate API key
 - `POST /api/ingest/identify` — Identify user
 - `POST /api/ingest/event` — Track event
@@ -106,6 +107,8 @@ anykpi wbr --section=Finance
 anykpi calendar --source=stripe
 anykpi connect stripe --api-key rk_... --secret-key whsec_...
 anykpi sync --source=stripe
+anykpi sync --source=posthog
+anykpi import events.csv --kind=events
 
 # Ingest
 anykpi identify user123 --name="Jane Doe" --email="jane@example.com"

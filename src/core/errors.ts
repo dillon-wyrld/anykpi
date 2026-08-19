@@ -54,6 +54,9 @@ export async function readTextBounded(
   return raw;
 }
 
+/** Alias used by CSV import. Same ceiling as readTextBounded. */
+export const readBodyBounded = readTextBounded;
+
 export async function readJsonBounded(
   request: Request,
   maxBytes = 64 * 1024

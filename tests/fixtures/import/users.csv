@@ -1,0 +1,3 @@
+person_id,name,email,platform
+user_ada,Ada Lovelace,ada@example.com,web
+user_grace,Grace Hopper,grace@example.com,ios
