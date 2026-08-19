@@ -29,13 +29,21 @@ export async function GET(request: NextRequest) {
       const ageMs = sync?.lastSync ? Date.now() - sync.lastSync.getTime() : 0;
       const ageStr = ageMs < 60000 ? 'live' : 
                      ageMs < 3600000 ? `${Math.floor(ageMs / 60000)}m ago` :
-                     `${Math.floor(ageMs / 3600000)}h ago`;
+                     ageMs < 86400000 ? `${Math.floor(ageMs / 3600000)}h ago` :
+                     `${Math.floor(ageMs / 86400000)}d ago`;
 
       return {
-        ...e,
+        id: e.id,
+        source: e.source,
+        sourceName: e.sourceName,
+        sourceColor: e.sourceColor,
+        sourceGlyph: e.emoji,
+        type: e.type,
         date: e.eventDate.toISOString(),
+        title: e.title,
+        badge: e.badge,
+        detail: `${e.type} event from ${e.sourceName}`,
         syncAge: ageStr,
-        syncStatus: sync?.status || 'unknown'
       };
     }),
   });
