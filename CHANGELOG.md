@@ -25,6 +25,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - API status comparisons and types corrected (`ok` vs `on`); `tsc`/`build`/CI
   are green.
 - Regenerated database migrations to match the current schema.
+- `@anykpi/cli` `track` / `identify` now POST to `/api/ingest/*` (with
+  `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
 - Working ESLint configuration; CI now gates on lint, unit tests, and a build.
@@ -33,6 +35,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Shared `Connector` interface and source-keyed registry (`sync("posthog")`)
   with cursor + health `SyncResult`, plus an offline recorded-fixture harness
   for connector tests (ANY-44).
+- Tagged `v*` releases build and pack `@anykpi/cli`. Publish runs only when
+  the `NPM_TOKEN` secret is present; otherwise the workflow logs a skip.
+- CLI smoke coverage: every published `--help` command against a local
+  instance, and `track` is visible via `/api/v1/users`.
 
 ### Changed
 - Removed internal design notes and competitor/brand references from the public
@@ -48,3 +54,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - GitHub language statistics exclude `spec/**` so TypeScript dominates the bar.
 - Hosted-version copy points at the self-host quickstart and the GitHub
   Discussions waitlist instead of anykpi.com.
+- Removed the stub `connect` command from the published CLI. Connector
+  setup stays on `/connect` until connect ships for real.

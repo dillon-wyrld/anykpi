@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
+import { eq } from "drizzle-orm";
 import { authorize, authResponse, resolveWorkspace } from "@/core/auth";
 import {
   badRequest,
@@ -68,6 +69,27 @@ export async function POST(request: NextRequest) {
       platform: properties?.platform || "web",
       workspaceId,
     });
+
+    const existingUser = await db
+      .select({ personId: schema.users.personId })
+      .from(schema.users)
+      .where(eq(schema.users.personId, personId))
+      .get();
+
+    if (!existingUser) {
+      await db.insert(schema.users).values({
+        personId,
+        name: properties?.name || `User ${userId}`,
+        email: properties?.email || null,
+        emoji: properties?.emoji || null,
+        platform: properties?.platform || "web",
+        country: properties?.country || null,
+        signupDate: eventDate,
+        cluster: null,
+        accountId: null,
+        workspaceId,
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

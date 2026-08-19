@@ -26,5 +26,9 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120000, // Give Next.js 2 minutes to start
+    env: {
+      ...process.env,
+      ANYKPI_API_KEY: process.env.ANYKPI_API_KEY || 'anykpi-e2e-admin',
+    },
   },
 });

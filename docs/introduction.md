@@ -18,13 +18,12 @@ Two paths, both agent-installable:
 Shipped: PostHog, Mixpanel, Amplitude. Roadmap: Stripe, calendar/ICS, GitHub — tools you already pay for. ANYKPI syncs summaries into local read models and never writes back.
 
 ```bash
-# Via CLI
-anykpi connect posthog
-anykpi connect mixpanel
-anykpi connect amplitude
-
 # Via UI
 Visit /connect and enter credentials
+
+# Via CLI ingest (same read models the connectors write)
+anykpi identify user123 --name="Jane Doe"
+anykpi track user123 song_played
 ```
 
 ### Path 2: Add ANYKPI to Your Product
@@ -84,8 +83,8 @@ Returns:
 - `GET /api/v1/calendar` — Multi-source events
 - `GET /api/v1/sync` — Connector status
 - `POST /api/v1/keys` — Generate API key
-- `POST /api/v1/ingest/identify` — Identify user
-- `POST /api/v1/ingest/event` — Track event
+- `POST /api/ingest/identify` — Identify user
+- `POST /api/ingest/event` — Track event
 
 **API Docs:** http://localhost:3000/api-docs (OpenAPI spec from Zod contracts)
 
