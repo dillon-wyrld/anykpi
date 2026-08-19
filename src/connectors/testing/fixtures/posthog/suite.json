@@ -3,6 +3,20 @@
   "description": "Persons + events list used by registry sync(\"posthog\")",
   "fixtures": [
     {
+      "name": "events-incremental-empty",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "after=2026-"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "results": [],
+          "next": null
+        }
+      }
+    },
+    {
       "name": "persons",
       "request": {
         "method": "GET",
@@ -37,12 +51,14 @@
         "body": {
           "results": [
             {
+              "id": "ph-fixture-song",
               "distinct_id": "fixture-ada",
               "event": "song_played",
               "timestamp": "2026-01-16T12:00:00.000Z",
               "properties": { "$device": "ios" }
             },
             {
+              "id": "ph-fixture-search",
               "distinct_id": "fixture-ada",
               "event": "search_performed",
               "timestamp": "2026-01-16T12:01:00.000Z",

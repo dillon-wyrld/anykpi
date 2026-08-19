@@ -5,6 +5,7 @@ import { GET as getSync, POST as postSync } from "@/app/api/v1/sync/route";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { registry } from "@/connectors";
+import { caughtUpCursor } from "@/connectors/cursor";
 import {
   fixtureDir,
   installConnectorFetch,
@@ -138,7 +139,7 @@ describe("POST /api/v1/sync", () => {
         source: "posthog",
         health: "ok",
         rowsSynced: 3,
-        nextCursor: null,
+        nextCursor: caughtUpCursor("2026-01-16T12:01:00.000Z"),
       });
       expect(body.states).toEqual([
         expect.objectContaining({

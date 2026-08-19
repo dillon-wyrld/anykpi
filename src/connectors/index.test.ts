@@ -4,6 +4,7 @@ import { resolve } from "path";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
+import { caughtUpCursor } from "./cursor";
 import {
   getConnector,
   listConnectors,
@@ -82,6 +83,8 @@ describe("connector registry", () => {
     expect(src).toMatch(/Config contract/);
     expect(src).toMatch(/opts\.config/);
     expect(src).toMatch(/deprecated/);
+    expect(src).toMatch(/loadSyncCursor/);
+    expect(src).toMatch(/saveSyncCursor/);
   });
 });
 
@@ -102,7 +105,7 @@ describe('sync("posthog")', () => {
       const result = await sync("posthog");
 
       expect(result.health).toBe("ok");
-      expect(result.nextCursor).toBeNull();
+      expect(result.nextCursor).toBe(caughtUpCursor("2026-01-16T12:01:00.000Z"));
       expect(result.rowsSynced).toBe(3);
 
       const users = await db

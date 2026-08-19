@@ -3,6 +3,20 @@
   "description": "Engage users + export events for contract sync(\"mixpanel\")",
   "fixtures": [
     {
+      "name": "export-incremental-empty",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "where="
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "text/plain"
+        },
+        "body": ""
+      }
+    },
+    {
       "name": "engage",
       "request": {
         "method": "GET",
@@ -37,7 +51,7 @@
         "headers": {
           "content-type": "text/plain"
         },
-        "body": "{\"event\":\"song_played\",\"properties\":{\"distinct_id\":\"mp-ada\",\"time\":1768564800,\"$device\":\"ios\"}}\n{\"event\":\"search_performed\",\"properties\":{\"distinct_id\":\"mp-ada\",\"time\":1768564860,\"$device\":\"ios\"}}\n"
+        "body": "{\"event\":\"song_played\",\"properties\":{\"distinct_id\":\"mp-ada\",\"time\":1768564800,\"$device\":\"ios\",\"$insert_id\":\"mp-song\"}}\n{\"event\":\"search_performed\",\"properties\":{\"distinct_id\":\"mp-ada\",\"time\":1768564860,\"$device\":\"ios\",\"$insert_id\":\"mp-search\"}}\n"
       }
     }
   ]
