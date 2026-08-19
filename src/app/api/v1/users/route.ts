@@ -4,6 +4,7 @@ import * as schema from '@/core/schema';
 import { eq, and, gte, lte, sql, asc } from 'drizzle-orm';
 import { QueryUsersRequestSchema, UsersListResponseSchema } from '@/core/contracts';
 import { gate } from '@/core/auth';
+import { ensureWorkspaceClusters } from '@/core/clustering';
 import { publicBaseUrl } from '@/core/view-state';
 import { badRequest, internalError, logServerError } from '@/core/errors';
 
@@ -20,6 +21,8 @@ export async function GET(request: NextRequest) {
     const gated = await gate(request, { workspace: requested, write: false });
     if (!gated.ok) return gated.response;
     const workspace = gated.workspace;
+
+    await ensureWorkspaceClusters(workspace);
 
     const params = QueryUsersRequestSchema.parse({
       workspace,

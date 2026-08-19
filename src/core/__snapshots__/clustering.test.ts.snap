@@ -1,0 +1,14 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`clusterPeople (seeded heuristics) > is stable across runs and matches the snapshot 1`] = `
+{
+  "u-burst": "⚡ Bursty",
+  "u-casual": "🌙 Occasional",
+  "u-churned": "🫥 Fading away",
+  "u-daily": "🔥 Power daily",
+  "u-monthly": "🗓️ Monthly check-ins",
+  "u-newbie": "🐣 Brand new",
+  "u-weekday": "💼 Weekday workers",
+  "u-weekender": "🌴 Weekenders",
+}
+`;
