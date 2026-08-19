@@ -26,4 +26,12 @@ describe("v* GHCR image release", () => {
     expect(yml).toContain("pnpm --filter @anykpi/cli publish");
     expect(yml).toContain("NPM_TOKEN is not set. Skipping npm publish.");
   });
+
+  it("publishes @anykpi/sdk on v* tags and skips cleanly without NPM_TOKEN", () => {
+    expect(yml).toContain("@anykpi/sdk");
+    expect(yml).toContain("pnpm --filter @anykpi/sdk build");
+    expect(yml).toContain("pnpm --filter @anykpi/sdk pack");
+    expect(yml).toContain("pnpm --filter @anykpi/sdk publish");
+    expect(yml).toContain("NPM_TOKEN is not set. Skipping npm publish.");
+  });
 });

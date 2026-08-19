@@ -45,6 +45,45 @@ jobs:
           echo "Publishing @anykpi/cli to npm..."
           pnpm --filter @anykpi/cli publish --access public --no-git-checks
 
+  publish-sdk:
+    name: Build, pack, and publish @anykpi/sdk
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build @anykpi/sdk
+        run: pnpm --filter @anykpi/sdk build
+
+      - name: Pack @anykpi/sdk
+        run: pnpm --filter @anykpi/sdk pack
+
+      - name: Publish @anykpi/sdk
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NPM_TOKEN:-}" ]; then
+            echo "NPM_TOKEN is not set. Skipping npm publish."
+            echo "Claim the anykpi npm org and add the NPM_TOKEN repository secret before the first v* tag that should publish."
+            exit 0
+          fi
+          echo "Publishing @anykpi/sdk to npm..."
+          pnpm --filter @anykpi/sdk publish --access public --no-git-checks
+
   publish-image:
     name: Build and push multi-arch image to GHCR
     runs-on: ubuntu-latest
