@@ -1,8 +1,10 @@
 # ANYKPI
 
-**The growth dashboard a founder actually opens every morning — and the first one agents can read too.**
+**Unified insights for modern day builders.**
 
-Self-hosted, open-source, built around founder mode: **people, not averages**. One row per person, one column per day. You don't read retention numbers — you _see_ who's sticking, who vanished, who came back after a month away.
+Self-hosted dashboard + REST API + CLI + MCP. Connect your tools or add ANYKPI to your product. Same resources humans see in the dashboard, agents can fetch via API.
+
+**Midday's completeness** (app + API + CLI + MCP + docs), **not Midday's features**. Founder metrics domain: users, retention, PMF signals, WBR.
 
 ![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
@@ -46,57 +48,29 @@ The demo workspace loads automatically. Connect your data to see your people.
 
 **Hosted version waitlist:** [anykpi.com](https://anykpi.com) (managed cloud + multiplayer)
 
+## Platform
+
+- **Dashboard** at `/dashboard` — Five views with shareable URLs
+- **REST API** at `/api/v1/*` — [OpenAPI docs](/api-docs)
+- **CLI** via `npx @anykpi/cli` — [Install guide](docs/introduction.md#cli)
+- **MCP** at `/api/mcp` — [Agent setup](/agents)
+- **Docs** at [docs/introduction.md](docs/introduction.md)
+
 ## Connect Data
 
-### Path 1: Existing Tools
+Visit `/connect` or use CLI:
 
 ```bash
-# PostHog
-POSTHOG_API_KEY=your_key pnpm sync:posthog
+# Connect via CLI
+anykpi connect posthog
+anykpi connect mixpanel
+anykpi connect amplitude
 
-# Mixpanel
-MIXPANEL_PROJECT_ID=your_project_id MIXPANEL_API_SECRET=your_secret pnpm sync:mixpanel
-
-# Amplitude
-AMPLITUDE_API_KEY=your_key AMPLITUDE_SECRET_KEY=your_secret pnpm sync:amplitude
+# Or add SDK to your product
+# Visit /connect for snippet
 ```
 
-Or connect via the UI at `/connect`.
-
-### Path 2: ANYKPI SDK
-
-Add to your app:
-
-```html
-<script>
-  !function(){
-    var anykpi = window.anykpi = window.anykpi || [];
-    anykpi.init({
-      endpoint: "http://localhost:3000",
-      workspaceId: "live",
-      debug: true
-    });
-    anykpi.identify({ 
-      userId: "user123", 
-      properties: { 
-        name: "Jane Doe", 
-        email: "jane@example.com",
-        platform: "WEB"
-      }
-    });
-  }();
-</script>
-<script src="http://localhost:3000/sdk.js" async></script>
-```
-
-Track events:
-
-```javascript
-anykpi.track("song_played", { genre: "jazz" });
-anykpi.track("playlist_shared", { recipients: 3 });
-```
-
-Configure value events at `/connect` to map your events to ANYKPI's cell grammar (core, search, share, pay).
+[Full connect guide →](docs/introduction.md#connect-data)
 
 ## Agent Setup
 
