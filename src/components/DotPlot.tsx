@@ -273,6 +273,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const initialSyncDone = useRef(false);
 
   useEffect(() => {
     fetch(`/api/views/dotplot?workspace=${workspace}`)
@@ -285,16 +286,27 @@ export default function DotPlot({ workspace }: DotPlotProps) {
   }, [workspace]);
 
   useEffect(() => {
-    const encoded = encodeViewState(viewState);
-    const params = new URLSearchParams(window.location.search);
-    const newParams = new URLSearchParams(encoded.slice(1)); // Remove leading ?
+    // Skip the URL sync on initial mount to avoid loops
+    if (!initialSyncDone.current) {
+      initialSyncDone.current = true;
+      return;
+    }
     
-    // Merge view-state params with existing params
+    const encoded = encodeViewState(viewState);
+    if (!encoded) {
+      // All defaults, no need to sync
+      return;
+    }
+    
+    const params = new URLSearchParams(searchParams.toString());
+    const newParams = new URLSearchParams(encoded.slice(1));
+    
+    // Merge view-state params
     newParams.forEach((value, key) => {
       params.set(key, value);
     });
     
-    // Remove view-state keys that are defaults (not in newParams)
+    // Remove view-state keys that are at defaults (not in newParams)
     const viewStateKeys = ['z', 'g', 'v', 'w', 'win', 'wl', 'c', 'cs', 'ce', 'csc', 'cc', 'cl', 'cem', 'cey', 'cew', 'cel'];
     viewStateKeys.forEach(key => {
       if (!newParams.has(key)) {
@@ -303,13 +315,10 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     });
     
     const newSearch = params.toString();
-    const currentSearch = window.location.search.slice(1);
-    
-    // Only update if params actually changed
-    if (newSearch !== currentSearch) {
+    if (newSearch !== searchParams.toString()) {
       router.replace(`/dashboard?${newSearch}`, { scroll: false });
     }
-  }, [viewState, router]);
+  }, [viewState, router, searchParams]);
 
   const getFilteredUsers = useCallback(() => {
     let filtered = [...users];

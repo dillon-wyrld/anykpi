@@ -104,6 +104,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
   const [highlightedRow, setHighlightedRow] = useState(-1);
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiTriggered, setConfettiTriggered] = useState(false);
+  const initialSyncDone = useRef(false);
   
   const curvesRef = useRef<SVGSVGElement>(null);
   const totalDays = 168;
@@ -120,16 +121,27 @@ export default function Cohorts({ workspace }: CohortsProps) {
   }, [workspace, viewState.grain]);
 
   useEffect(() => {
-    const encoded = encodeViewState(viewState);
-    const params = new URLSearchParams(window.location.search);
-    const newParams = new URLSearchParams(encoded.slice(1)); // Remove leading ?
+    // Skip the URL sync on initial mount to avoid loops
+    if (!initialSyncDone.current) {
+      initialSyncDone.current = true;
+      return;
+    }
     
-    // Merge view-state params with existing params
+    const encoded = encodeViewState(viewState);
+    if (!encoded) {
+      // All defaults, no need to sync
+      return;
+    }
+    
+    const params = new URLSearchParams(searchParams.toString());
+    const newParams = new URLSearchParams(encoded.slice(1));
+    
+    // Merge view-state params
     newParams.forEach((value, key) => {
       params.set(key, value);
     });
     
-    // Remove view-state keys that are defaults (not in newParams)
+    // Remove view-state keys that are at defaults (not in newParams)
     const viewStateKeys = ['g', 'c', 'cel', 'a'];
     viewStateKeys.forEach(key => {
       if (!newParams.has(key)) {
@@ -138,13 +150,10 @@ export default function Cohorts({ workspace }: CohortsProps) {
     });
     
     const newSearch = params.toString();
-    const currentSearch = window.location.search.slice(1);
-    
-    // Only update if params actually changed
-    if (newSearch !== currentSearch) {
+    if (newSearch !== searchParams.toString()) {
       router.replace(`/dashboard?${newSearch}`, { scroll: false });
     }
-  }, [viewState, router]);
+  }, [viewState, router, searchParams]);
 
   const computeCohorts = useCallback(() => {
     if (users.length === 0) return [];
