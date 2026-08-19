@@ -15,7 +15,7 @@ Founders who need:
 Two paths, both agent-installable:
 
 ### Path 1: Connect Existing Tools
-PostHog, Mixpanel, Amplitude, Stripe — tools you already pay for. ANYKPI syncs summaries into local read models and never writes back.
+Shipped: PostHog, Mixpanel, Amplitude. Roadmap: Stripe, calendar/ICS, GitHub — tools you already pay for. ANYKPI syncs summaries into local read models and never writes back.
 
 ```bash
 # Via CLI
@@ -163,7 +163,7 @@ docker run -p 3000:3000 -v anykpi-data:/app/data anykpi/anykpi
 ## Stack
 
 - Next.js 15, TypeScript strict, Tailwind
-- SQLite via Drizzle (Postgres via DATABASE_URL)
+- SQLite via Drizzle (`DATABASE_PATH`). [Postgres later](#postgres-later).
 - Hand-rolled SVG charts from prototype learnings
 - Zod contracts shared by UI, REST, MCP
 - MCP SDK for agents
@@ -181,6 +181,12 @@ docker run -p 3000:3000 -v anykpi-data:/app/data anykpi/anykpi
 - Demo ships forever as a workspace
 - Nothing sends on its own (PMF+ drafts wait)
 - No telemetry (person-level data never leaves machine)
+
+## Postgres later
+
+Storage is SQLite, configured with `DATABASE_PATH` (see `.env.example`).
+Postgres is planned for a later hosted deployment and is not wired up.
+There is no `DATABASE_URL` and no Postgres driver in this tree.
 
 ## API Reference
 

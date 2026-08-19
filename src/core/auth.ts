@@ -296,13 +296,7 @@ export async function gate(
   };
 }
 
-export function publicBaseUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:3000"
-  );
-}
+export { publicBaseUrl } from "./view-state";
 
 export function isReadOnlyMcpTool(name: string | undefined): boolean {
   return Boolean(name && MCP_READ_ONLY_TOOLS.has(name));

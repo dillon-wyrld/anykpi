@@ -30,3 +30,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 - Removed internal design notes and competitor/brand references from the public
   repository.
+- `view_url` now uses the request origin (`Host` / `X-Forwarded-*`).
+  `PUBLIC_BASE_URL` is the only override. `NEXT_PUBLIC_BASE_URL` and
+  `NEXT_PUBLIC_API_URL` are no longer read (they are inlined at build time
+  and cannot configure a pulled Docker image).
+- `/api/v1/users` returns a real `total` (separate COUNT) plus `hasMore` /
+  `nextOffset` instead of the page length.
+- README lists shipped connectors (PostHog, Mixpanel, Amplitude) separately
+  from roadmap tools, and describes SQLite via `DATABASE_PATH`.
+- GitHub language statistics exclude `spec/**` so TypeScript dominates the bar.
+- Hosted-version copy points at the self-host quickstart and the GitHub
+  Discussions waitlist instead of anykpi.com.

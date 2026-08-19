@@ -81,3 +81,65 @@ export function buildViewUrl(baseUrl: string, state: ViewState): string {
   const encoded = encodeViewState(state);
   return `${baseUrl}?state=${encoded}`;
 }
+
+export type RequestLike = { headers: { get(name: string): string | null }; url?: string };
+
+function firstHeaderValue(value: string | null): string | null {
+  if (!value) return null;
+  const first = value.split(",")[0]?.trim();
+  return first && first.length > 0 ? first : null;
+}
+
+function protocolFromUrl(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    const proto = new URL(url).protocol.replace(/:$/, "");
+    return proto.length > 0 ? proto : null;
+  } catch {
+    return null;
+  }
+}
+
+function originFromUrl(url: string | undefined): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Origin used in API `view_url` values.
+ *
+ * `PUBLIC_BASE_URL` is the only explicit override. Otherwise the origin is
+ * derived from `X-Forwarded-Host` / `X-Forwarded-Proto` / `Host`.
+ * `NEXT_PUBLIC_BASE_URL` and `NEXT_PUBLIC_API_URL` are not read — those are
+ * inlined at build time and cannot configure a pulled Docker image.
+ */
+export function publicBaseUrl(request?: RequestLike): string {
+  const pinned = process.env.PUBLIC_BASE_URL?.trim();
+  if (pinned) {
+    return pinned.replace(/\/+$/, "");
+  }
+
+  if (!request) {
+    return "http://localhost:3000";
+  }
+
+  const host =
+    firstHeaderValue(request.headers.get("x-forwarded-host")) ??
+    firstHeaderValue(request.headers.get("host"));
+
+  const proto =
+    firstHeaderValue(request.headers.get("x-forwarded-proto")) ??
+    protocolFromUrl(request.url) ??
+    (host && !/^(localhost|127\.0\.0\.1)(:|$)/i.test(host) ? "https" : "http");
+
+  if (host) {
+    return `${proto}://${host}`;
+  }
+
+  return originFromUrl(request.url) ?? "http://localhost:3000";
+}

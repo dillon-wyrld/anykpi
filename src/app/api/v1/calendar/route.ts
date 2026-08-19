@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CalendarResponseSchema } from '@/core/contracts';
-import { gate, publicBaseUrl } from '@/core/auth';
+import { gate } from '@/core/auth';
+import { publicBaseUrl } from '@/core/view-state';
 import { internalError, logServerError } from '@/core/errors';
 import { loadCalendarView } from '@/core/views/calendar';
 
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       events,
       sources,
       workspace,
-      view_url: `${publicBaseUrl()}/dashboard?workspace=${workspace}&view=calendar`
+      view_url: `${publicBaseUrl(request)}/dashboard?workspace=${workspace}&view=calendar`
     });
 
     return NextResponse.json(response);

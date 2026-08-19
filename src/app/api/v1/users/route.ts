@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/core/db';
 import * as schema from '@/core/schema';
-import { eq, and, gte, lte } from 'drizzle-orm';
+import { eq, and, gte, lte, sql, asc } from 'drizzle-orm';
 import { QueryUsersRequestSchema, UsersListResponseSchema } from '@/core/contracts';
-import { gate, publicBaseUrl } from '@/core/auth';
+import { gate } from '@/core/auth';
+import { publicBaseUrl } from '@/core/view-state';
 import { badRequest, internalError, logServerError } from '@/core/errors';
 
 /**
  * GET /api/v1/users
- * 
- * Query users with filters: cluster, platform, signup dates
+ *
+ * Query users with filters: cluster, platform, signup dates.
+ * `total` is a separate COUNT; page with `hasMore` / `nextOffset`.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +20,7 @@ export async function GET(request: NextRequest) {
     const gated = await gate(request, { workspace: requested, write: false });
     if (!gated.ok) return gated.response;
     const workspace = gated.workspace;
-    
+
     const params = QueryUsersRequestSchema.parse({
       workspace,
       cluster: searchParams.get('cluster') || undefined,
@@ -28,35 +30,46 @@ export async function GET(request: NextRequest) {
       limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 100,
       offset: searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0,
     });
-    
+
     const conditions = [eq(schema.users.workspaceId, params.workspace)];
-    
+
     if (params.cluster) {
       conditions.push(eq(schema.users.cluster, params.cluster));
     }
-    
+
     if (params.platform) {
       conditions.push(eq(schema.users.platform, params.platform));
     }
-    
+
     if (params.signupAfter) {
       conditions.push(gte(schema.users.signupDate, new Date(params.signupAfter)));
     }
-    
+
     if (params.signupBefore) {
       conditions.push(lte(schema.users.signupDate, new Date(params.signupBefore)));
     }
-    
+
+    const where = and(...conditions);
+
+    const countRows = await db
+      .select({ total: sql<number>`count(*)` })
+      .from(schema.users)
+      .where(where)
+      .all();
+    const total = Number(countRows[0]?.total ?? 0);
+
     const users = await db
       .select()
       .from(schema.users)
-      .where(and(...conditions))
+      .where(where)
+      .orderBy(asc(schema.users.personId))
       .limit(params.limit)
       .offset(params.offset)
       .all();
-    
-    const total = users.length; // TODO: separate count query for pagination
-    
+
+    const hasMore = params.offset + users.length < total;
+    const nextOffset = hasMore ? params.offset + users.length : null;
+
     const response = UsersListResponseSchema.parse({
       users: users.map(u => ({
         personId: u.personId,
@@ -71,10 +84,12 @@ export async function GET(request: NextRequest) {
         workspaceId: u.workspaceId,
       })),
       total,
+      hasMore,
+      nextOffset,
       workspace: params.workspace,
-      view_url: `${publicBaseUrl()}/dashboard?workspace=${params.workspace}&view=dotplot${params.cluster ? `&cluster=${params.cluster}` : ''}`
+      view_url: `${publicBaseUrl(request)}/dashboard?workspace=${params.workspace}&view=dotplot${params.cluster ? `&cluster=${params.cluster}` : ''}`
     });
-    
+
     return NextResponse.json(response);
   } catch (error) {
     if (error instanceof Error && error.name === 'ZodError') {
