@@ -84,6 +84,7 @@ Returns:
 - `GET /api/v1/wbr` — Weekly Business Review metrics
 - `GET /api/v1/calendar` — Multi-source events
 - `GET /api/v1/sync` — Connector status
+- `GET /api/v1/freshness` — Last ingest + per-source last-sync stamps
 - `POST /api/v1/sync` — Trigger a sync (one source or all; requires an API key)
 - `POST /api/v1/import` — Import users or events from CSV (requires an API key)
 - `POST /api/v1/keys` — Generate API key

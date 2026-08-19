@@ -28,6 +28,7 @@ Demo workspace is public-read. Live workspaces and all writes require a key (`Au
 - `GET /api/v1/wbr` — Weekly Business Review
 - `GET /api/v1/calendar` — multi-source timeline
 - `GET /api/v1/sync` — connector status
+- `GET /api/v1/freshness` — last ingest + per-source last-sync stamps
 - `POST /api/v1/connect` — store per-source credentials (encrypted at rest; source `csv` stores import mapping)
 - `POST /api/v1/import` — CSV import for users and events (uses the sources store; column-mapping preview)
 - `GET /api/v1/keys` / `POST /api/v1/keys` — list metadata / mint a key

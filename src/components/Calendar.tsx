@@ -9,6 +9,7 @@ import {
   rollupCalendarSources,
   startOfLocalDay,
 } from "@/core/views/calendar-math";
+import { useFreshness } from "@/components/useFreshness";
 
 interface CalendarEvent {
   id: number;
@@ -97,7 +98,7 @@ export default function Calendar({ workspace }: CalendarProps) {
   const [loading, setLoading] = useState(true);
   const initialSyncDone = useRef(false);
 
-  useEffect(() => {
+  const loadCalendar = useCallback((refresh = false) => {
     fetch(`/api/views/calendar?workspace=${workspace}`)
       .then((res) => res.json())
       .then((data) => {
@@ -111,10 +112,22 @@ export default function Calendar({ workspace }: CalendarProps) {
         });
         setAllEvents(events);
         setSources(rollupCalendarSources(events));
-        setLoading(false);
+        if (!refresh) setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        if (!refresh) setLoading(false);
+      });
   }, [workspace, today]);
+
+  useEffect(() => {
+    loadCalendar(false);
+  }, [loadCalendar]);
+
+  useFreshness({
+    workspace,
+    watch: ["sources"],
+    onStale: () => loadCalendar(true),
+  });
 
   useEffect(() => {
     // Skip the URL sync on initial mount so workspace= and view= stay put

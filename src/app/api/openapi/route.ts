@@ -10,6 +10,7 @@ import {
   SyncResponseSchema,
   SyncTriggerRequestSchema,
   SyncTriggerResponseSchema,
+  FreshnessResponseSchema,
   QueryUsersRequestSchema,
   ConnectSourceRequestSchema,
   ConnectSourceResponseSchema,
@@ -59,6 +60,7 @@ export async function GET(request: NextRequest) {
       { name: 'WBR', description: 'Weekly Business Review metrics' },
       { name: 'Calendar', description: 'Multi-source event timeline' },
       { name: 'Sync', description: 'Connected source status' },
+      { name: 'Freshness', description: 'Last ingest and per-source last-sync stamps' },
       { name: 'Connect', description: 'Store per-source credentials' },
       { name: 'Import', description: 'CSV import for users and events' },
       { name: 'Ingest', description: 'Direct event collection' },
@@ -304,6 +306,40 @@ export async function GET(request: NextRequest) {
             },
             401: {
               description: 'Missing or invalid API key',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/v1/freshness': {
+        get: {
+          tags: ['Freshness'],
+          summary: 'Get freshness stamps',
+          description:
+            'Last ingest plus per-source last-sync stamps. Dashboard views poll this and refetch only when a watched stamp moves.',
+          parameters: [
+            {
+              name: 'workspace',
+              in: 'query',
+              schema: { type: 'string', default: 'demo' },
+              description: 'Workspace ID'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Freshness stamps',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(FreshnessResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Live workspace requires an API key',
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(ErrorResponseSchema)
