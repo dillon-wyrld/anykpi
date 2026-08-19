@@ -1,8 +1,12 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
+import type { SyncResult } from "@/core/contracts";
 import { eq, and } from "drizzle-orm";
 
-export async function syncMixpanel(workspaceId: string = "live") {
+export async function syncMixpanel(
+  workspaceId: string = "live",
+  _opts?: { cursor?: string }
+): Promise<SyncResult> {
   const projectId = process.env.MIXPANEL_PROJECT_ID;
   const apiSecret = process.env.MIXPANEL_API_SECRET;
 
@@ -11,6 +15,8 @@ export async function syncMixpanel(workspaceId: string = "live") {
   }
 
   const auth = Buffer.from(`${apiSecret}:`).toString("base64");
+
+  let rowsSynced = 0;
 
   try {
     // Sync users via engage endpoint
@@ -56,6 +62,7 @@ export async function syncMixpanel(workspaceId: string = "live") {
           accountId: null,
           workspaceId,
         });
+        rowsSynced += 1;
       }
     }
 
@@ -103,6 +110,7 @@ export async function syncMixpanel(workspaceId: string = "live") {
         platform: event.properties.$device || null,
         workspaceId,
       });
+      rowsSynced += 1;
     }
 
     // Update sync state
@@ -124,6 +132,8 @@ export async function syncMixpanel(workspaceId: string = "live") {
       });
 
     console.log("Mixpanel sync complete");
+    // Full-snapshot connector: ignore cursor, no incremental watermark yet.
+    return { rowsSynced, nextCursor: null, health: "ok" };
   } catch (error) {
     console.error("Mixpanel sync failed");
 

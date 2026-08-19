@@ -1,8 +1,12 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
+import type { SyncResult } from "@/core/contracts";
 import { eq, and } from "drizzle-orm";
 
-export async function syncAmplitude(workspaceId: string = "live") {
+export async function syncAmplitude(
+  workspaceId: string = "live",
+  _opts?: { cursor?: string }
+): Promise<SyncResult> {
   const apiKey = process.env.AMPLITUDE_API_KEY;
   const secretKey = process.env.AMPLITUDE_SECRET_KEY;
 
@@ -11,6 +15,8 @@ export async function syncAmplitude(workspaceId: string = "live") {
   }
 
   const auth = Buffer.from(`${apiKey}:${secretKey}`).toString("base64");
+
+  let rowsSynced = 0;
 
   try {
     // Sync users
@@ -63,6 +69,7 @@ export async function syncAmplitude(workspaceId: string = "live") {
           accountId: null,
           workspaceId,
         });
+        rowsSynced += 1;
       }
     }
 
@@ -110,6 +117,7 @@ export async function syncAmplitude(workspaceId: string = "live") {
         platform: event.platform || null,
         workspaceId,
       });
+      rowsSynced += 1;
     }
 
     // Update sync state
@@ -131,6 +139,8 @@ export async function syncAmplitude(workspaceId: string = "live") {
       });
 
     console.log("Amplitude sync complete");
+    // Full-snapshot connector: ignore cursor, no incremental watermark yet.
+    return { rowsSynced, nextCursor: null, health: "ok" };
   } catch (error) {
     console.error("Amplitude sync failed");
 

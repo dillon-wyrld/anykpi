@@ -41,5 +41,14 @@ sqlite.exec(`
     created_at INTEGER NOT NULL,
     last_used_at INTEGER
   );
+  CREATE TABLE IF NOT EXISTS sync_state (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source TEXT NOT NULL UNIQUE,
+    source_name TEXT NOT NULL,
+    last_sync INTEGER,
+    status TEXT NOT NULL,
+    error TEXT,
+    workspace_id TEXT NOT NULL DEFAULT 'demo'
+  );
 `);
 sqlite.close();

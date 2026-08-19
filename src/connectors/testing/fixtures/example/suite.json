@@ -1,0 +1,45 @@
+{
+  "source": "example",
+  "description": "Toy export API — proves the harness is not vendor-specific",
+  "fixtures": [
+    {
+      "name": "page-start",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/v1/export?cursor=start"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "rows": [{ "id": "a" }, { "id": "b" }],
+          "next_cursor": "page-2"
+        }
+      }
+    },
+    {
+      "name": "page-2",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/v1/export?cursor=page-2"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "rows": [{ "id": "c" }],
+          "next_cursor": null
+        }
+      }
+    },
+    {
+      "name": "unavailable",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/v1/export?cursor=down"
+      },
+      "response": {
+        "status": 503,
+        "body": { "error": "unavailable" }
+      }
+    }
+  ]
+}

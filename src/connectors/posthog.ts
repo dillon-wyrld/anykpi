@@ -1,8 +1,12 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
+import type { SyncResult } from "@/core/contracts";
 import { eq, and } from "drizzle-orm";
 
-export async function syncPostHog(workspaceId: string = "live") {
+export async function syncPostHog(
+  workspaceId: string = "live",
+  _opts?: { cursor?: string }
+): Promise<SyncResult> {
   const apiKey = process.env.POSTHOG_API_KEY;
   const projectId = process.env.POSTHOG_PROJECT_ID;
 
@@ -11,6 +15,8 @@ export async function syncPostHog(workspaceId: string = "live") {
   }
 
   const baseUrl = process.env.POSTHOG_HOST || "https://app.posthog.com";
+
+  let rowsSynced = 0;
 
   try {
     // Sync persons
@@ -56,6 +62,7 @@ export async function syncPostHog(workspaceId: string = "live") {
           accountId: null,
           workspaceId,
         });
+        rowsSynced += 1;
       }
     }
 
@@ -99,6 +106,7 @@ export async function syncPostHog(workspaceId: string = "live") {
         platform: event.properties?.$device || null,
         workspaceId,
       });
+      rowsSynced += 1;
     }
 
     // Update sync state
@@ -120,6 +128,8 @@ export async function syncPostHog(workspaceId: string = "live") {
       });
 
     console.log("PostHog sync complete");
+    // Full-snapshot connector: ignore cursor, no incremental watermark yet.
+    return { rowsSynced, nextCursor: null, health: "ok" };
   } catch (error) {
     console.error("PostHog sync failed");
 
