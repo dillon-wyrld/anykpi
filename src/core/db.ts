@@ -6,7 +6,8 @@ import { resolve } from "path";
 
 const dbPath = process.env.DATABASE_PATH || resolve(process.cwd(), "data", "anykpi.db");
 
-const sqlite = new Database(dbPath);
+const sqlite = new Database(dbPath, { timeout: 5000 });
+sqlite.pragma("busy_timeout = 5000");
 sqlite.pragma("journal_mode = WAL");
 
 function restrictDbFileMode(path: string) {
