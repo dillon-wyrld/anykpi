@@ -6,13 +6,25 @@ import { browserSnippet } from "@/sdk";
 
 export default function ConnectPage() {
   const [selectedPath, setSelectedPath] = useState<"existing" | "sdk" | null>(null);
+  const [workspaceId, setWorkspaceId] = useState("live");
   const [posthogKey, setPosthogKey] = useState("");
+  const [posthogProject, setPosthogProject] = useState("");
+  const [posthogHost, setPosthogHost] = useState("");
   const [mixpanelProject, setMixpanelProject] = useState("");
+  const [mixpanelSecret, setMixpanelSecret] = useState("");
   const [amplitudeKey, setAmplitudeKey] = useState("");
+  const [amplitudeSecret, setAmplitudeSecret] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [adminKey, setAdminKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [sdkSnippet, setSdkSnippet] = useState("");
+  const [connecting, setConnecting] = useState<string | null>(null);
+  const [connectStatus, setConnectStatus] = useState<{
+    source: string;
+    ok: boolean;
+    rotated?: boolean;
+    error?: string;
+  } | null>(null);
 
   const handleGenerateApiKey = async () => {
     try {
@@ -34,6 +46,52 @@ export default function ConnectPage() {
       // Do not log keys or request bodies
     }
   };
+
+  const connectSource = async (
+    source: "posthog" | "mixpanel" | "amplitude",
+    credentials: Record<string, string>
+  ) => {
+    setConnecting(source);
+    setConnectStatus(null);
+    try {
+      const response = await fetch("/api/v1/connect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminKey ? { Authorization: `Bearer ${adminKey}` } : {}),
+        },
+        body: JSON.stringify({ source, credentials, workspaceId }),
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        rotated?: boolean;
+      };
+      if (!response.ok) {
+        setConnectStatus({
+          source,
+          ok: false,
+          error: data.error || "Could not save credentials",
+        });
+        return;
+      }
+      setConnectStatus({
+        source,
+        ok: true,
+        rotated: data.rotated,
+      });
+    } catch {
+      setConnectStatus({
+        source,
+        ok: false,
+        error: "Could not save credentials",
+      });
+    } finally {
+      setConnecting(null);
+    }
+  };
+
+  const statusFor = (source: string) =>
+    connectStatus && connectStatus.source === source ? connectStatus : null;
 
   const handleGenerateSnippet = () => {
     setSdkSnippet(
@@ -153,6 +211,40 @@ export default function ConnectPage() {
 
         {selectedPath === "existing" && (
           <div className="space-y-8">
+            <section className="bg-panel border border-border rounded-lg p-6 space-y-3">
+              <h2 className="font-display text-lg font-semibold">Save credentials</h2>
+              <p className="text-sm text-sub">
+                Writes require an API key. Config is encrypted at rest with ANYKPI_SECRET
+                and is never shown again.
+              </p>
+              <div className="grid md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                    Workspace
+                  </label>
+                  <input
+                    type="text"
+                    value={workspaceId}
+                    onChange={(e) => setWorkspaceId(e.target.value)}
+                    placeholder="live"
+                    className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                    ANYKPI API key
+                  </label>
+                  <input
+                    type="password"
+                    value={adminKey}
+                    onChange={(e) => setAdminKey(e.target.value)}
+                    placeholder="Required to save"
+                    className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                  />
+                </div>
+              </div>
+            </section>
+
             <section>
               <h2 className="font-display text-xl font-semibold mb-4">Analytics Platforms</h2>
               <div className="grid gap-4">
@@ -178,9 +270,56 @@ export default function ConnectPage() {
                                 className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
                               />
                             </div>
-                            <button className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90">
+                            <div>
+                              <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                                Project ID
+                              </label>
+                              <input
+                                type="text"
+                                value={posthogProject}
+                                onChange={(e) => setPosthogProject(e.target.value)}
+                                placeholder="Project ID"
+                                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                                Host (optional)
+                              </label>
+                              <input
+                                type="text"
+                                value={posthogHost}
+                                onChange={(e) => setPosthogHost(e.target.value)}
+                                placeholder="https://app.posthog.com"
+                                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              disabled={connecting === "posthog"}
+                              onClick={() =>
+                                connectSource("posthog", {
+                                  apiKey: posthogKey,
+                                  projectId: posthogProject,
+                                  ...(posthogHost ? { host: posthogHost } : {}),
+                                })
+                              }
+                              className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90 disabled:opacity-60"
+                            >
                               Connect PostHog
                             </button>
+                            {statusFor("posthog")?.ok && (
+                              <p className="text-sm text-sub">
+                                {statusFor("posthog")?.rotated
+                                  ? "PostHog credentials updated."
+                                  : "PostHog connected."}
+                              </p>
+                            )}
+                            {statusFor("posthog") && !statusFor("posthog")?.ok && (
+                              <p className="text-sm text-sub">
+                                {statusFor("posthog")?.error}
+                              </p>
+                            )}
                           </div>
                         )}
 
@@ -198,9 +337,43 @@ export default function ConnectPage() {
                                 className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
                               />
                             </div>
-                            <button className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90">
+                            <div>
+                              <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                                Mixpanel API Secret
+                              </label>
+                              <input
+                                type="password"
+                                value={mixpanelSecret}
+                                onChange={(e) => setMixpanelSecret(e.target.value)}
+                                placeholder="API Secret"
+                                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              disabled={connecting === "mixpanel"}
+                              onClick={() =>
+                                connectSource("mixpanel", {
+                                  projectId: mixpanelProject,
+                                  apiSecret: mixpanelSecret,
+                                })
+                              }
+                              className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90 disabled:opacity-60"
+                            >
                               Connect Mixpanel
                             </button>
+                            {statusFor("mixpanel")?.ok && (
+                              <p className="text-sm text-sub">
+                                {statusFor("mixpanel")?.rotated
+                                  ? "Mixpanel credentials updated."
+                                  : "Mixpanel connected."}
+                              </p>
+                            )}
+                            {statusFor("mixpanel") && !statusFor("mixpanel")?.ok && (
+                              <p className="text-sm text-sub">
+                                {statusFor("mixpanel")?.error}
+                              </p>
+                            )}
                           </div>
                         )}
 
@@ -218,9 +391,43 @@ export default function ConnectPage() {
                                 className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
                               />
                             </div>
-                            <button className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90">
+                            <div>
+                              <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                                Amplitude Secret Key
+                              </label>
+                              <input
+                                type="password"
+                                value={amplitudeSecret}
+                                onChange={(e) => setAmplitudeSecret(e.target.value)}
+                                placeholder="Secret Key"
+                                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              disabled={connecting === "amplitude"}
+                              onClick={() =>
+                                connectSource("amplitude", {
+                                  apiKey: amplitudeKey,
+                                  secretKey: amplitudeSecret,
+                                })
+                              }
+                              className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90 disabled:opacity-60"
+                            >
                               Connect Amplitude
                             </button>
+                            {statusFor("amplitude")?.ok && (
+                              <p className="text-sm text-sub">
+                                {statusFor("amplitude")?.rotated
+                                  ? "Amplitude credentials updated."
+                                  : "Amplitude connected."}
+                              </p>
+                            )}
+                            {statusFor("amplitude") && !statusFor("amplitude")?.ok && (
+                              <p className="text-sm text-sub">
+                                {statusFor("amplitude")?.error}
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>

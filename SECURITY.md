@@ -17,6 +17,14 @@ Send it as `Authorization: Bearer <key>` or `x-api-key: <key>`.
 
 Hashed keys in the `api_keys` table are accepted after you bootstrap with the env key (or a one-time local first key when the table is empty).
 
+## Connector secrets
+
+Set `ANYKPI_SECRET` to encrypt per-source config at rest (`sources.config`).
+`POST /api/v1/connect` and `anykpi connect` persist ciphertext only. Sync
+receives decrypted config in process and never returns credentials.
+Environment variables for the shipped connectors remain a deprecated
+read-only fallback.
+
 ## Telemetry
 
 ANYKPI does not send telemetry. Person-level data stays on the machine that hosts the process.

@@ -34,6 +34,7 @@ OpenAPI spec: /api/openapi
 - GET /api/v1/wbr — Weekly Business Review (6 weeks, 12 months YOY, exceptions)
 - GET /api/v1/calendar — multi-source event timeline
 - GET /api/v1/sync — connector sync status
+- POST /api/v1/connect — store per-source credentials (encrypted at rest; never returned)
 - GET /api/v1/keys — list key metadata (raw keys never returned)
 - POST /api/v1/keys — mint a key (requires an existing operator or hashed key; raw key returned once)
 - POST /api/v1/ingest/identify — create or update a user
@@ -61,13 +62,13 @@ stdio server: src/mcp/server.ts. HTTP tools/list advertises the five read tools 
 
 npx @anykpi/cli
 
-Commands: login (alias: key), workspaces, identify, track, overview, users, cohorts, wbr, calendar.
+Commands: login (alias: key), workspaces, connect, identify, track, overview, users, cohorts, wbr, calendar, sync.
 
-login mints a key via POST /api/v1/keys and requires ANYKPI_API_KEY or --key. Query commands take --workspace and --json.
+login mints a key via POST /api/v1/keys and requires ANYKPI_API_KEY or --key. connect stores source credentials via POST /api/v1/connect. Query commands take --workspace and --json.
 
 ## Connectors
 
-Shipped: PostHog, Mixpanel, Amplitude. Sync is pull-only into local read models; ANYKPI never writes back. Connector setup is the /connect UI until v0.5.
+Shipped: PostHog, Mixpanel, Amplitude. Sync is pull-only into local read models; ANYKPI never writes back. Connector setup is the /connect UI or \`anykpi connect\`. Config is encrypted at rest with ANYKPI_SECRET. Env vars are a deprecated read-only fallback.
 
 ## More
 

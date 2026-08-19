@@ -10,6 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Default-secure API keys: the API and MCP surface require a bearer key,
   verified in constant time; the `demo` workspace stays public-read while `live`
   and all writes require a key.
+- Per-source connector config is stored in `sources` and encrypted at rest
+  with `ANYKPI_SECRET`. Credentials never appear in API responses or logs.
 - Added key revocation (`DELETE /api/v1/keys/:id`) and scoped key-metadata
   listing to the caller's workspace.
 - Rate-limited and size-bounded the ingest endpoints.
@@ -31,6 +33,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- `POST /api/v1/connect` and `anykpi connect` store per-source credentials
+  encrypted at rest. The registry decrypts config for `Connector.sync`.
+  Env vars stay a deprecated read-only fallback (ANY-46).
 - `POST /api/v1/sync` triggers one registered source or all, with
   `pending → success/error` state transitions and in-process coalescing of
   concurrent runs for the same source. CLI: `anykpi sync`.

@@ -3,17 +3,20 @@ import * as schema from "@/core/schema";
 import type { SyncResult } from "@/core/contracts";
 import { upsertSyncState } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
+import { resolveCredentials } from "./credentials";
 import { failedSync } from "./http-status";
+import type { SyncOpts } from "./types";
 
 export async function syncAmplitude(
   workspaceId: string = "live",
-  _opts?: { cursor?: string }
+  opts?: SyncOpts
 ): Promise<SyncResult> {
-  const apiKey = process.env.AMPLITUDE_API_KEY;
-  const secretKey = process.env.AMPLITUDE_SECRET_KEY;
+  const credentials = resolveCredentials("amplitude", opts?.config);
+  const apiKey = credentials.apiKey;
+  const secretKey = credentials.secretKey;
 
   if (!apiKey || !secretKey) {
-    throw new Error("AMPLITUDE_API_KEY and AMPLITUDE_SECRET_KEY are required");
+    throw new Error("Amplitude API key and secret key are required");
   }
 
   const auth = Buffer.from(`${apiKey}:${secretKey}`).toString("base64");

@@ -37,7 +37,7 @@ test("every --help command succeeds and track is visible in /api/v1/users", asyn
   };
 
   const help = run(["--help"], env);
-  expect(help).not.toMatch(/\bconnect\b/);
+  expect(help).toMatch(/\bconnect\b/);
 
   const commands = commandsFromHelp(help);
   expect(commands.length).toBeGreaterThan(0);
@@ -75,6 +75,16 @@ test("every --help command succeeds and track is visible in /api/v1/users", asyn
     cohorts: ["--workspace", "demo", "--json"],
     wbr: ["--workspace", "demo", "--json"],
     calendar: ["--workspace", "demo", "--json"],
+    connect: [
+      "posthog",
+      "--workspace",
+      "demo",
+      "--api-key",
+      "phc_cli_smoke",
+      "--project-id",
+      "proj_cli_smoke",
+      "--json",
+    ],
     sync: ["--workspace", "demo", "--json"],
   };
 

@@ -63,6 +63,9 @@ describe("connector registry", () => {
     expect(src).toMatch(/Health contract/);
     expect(src).toMatch(/health === "ok"/);
     expect(src).toMatch(/degraded/);
+    expect(src).toMatch(/Config contract/);
+    expect(src).toMatch(/opts\.config/);
+    expect(src).toMatch(/deprecated/);
   });
 });
 

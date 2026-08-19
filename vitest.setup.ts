@@ -6,6 +6,7 @@ import Database from "better-sqlite3";
 const dir = join(tmpdir(), "anykpi-vitest");
 mkdirSync(dir, { recursive: true });
 process.env.DATABASE_PATH = join(dir, `anykpi-${process.pid}.db`);
+process.env.ANYKPI_SECRET ??= "vitest-anykpi-secret";
 
 const sqlite = new Database(process.env.DATABASE_PATH);
 sqlite.exec(`
@@ -135,5 +136,15 @@ sqlite.exec(`
   );
   CREATE UNIQUE INDEX IF NOT EXISTS balance_snapshots_workspace_as_of_uidx
     ON balance_snapshots (workspace_id, as_of);
+  CREATE TABLE IF NOT EXISTS sources (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workspace_id TEXT NOT NULL DEFAULT 'live',
+    source TEXT NOT NULL,
+    config TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS sources_workspace_source_uidx
+    ON sources (workspace_id, source);
 `);
 sqlite.close();

@@ -11,6 +11,8 @@ import {
   SyncTriggerRequestSchema,
   SyncTriggerResponseSchema,
   QueryUsersRequestSchema,
+  ConnectSourceRequestSchema,
+  ConnectSourceResponseSchema,
   APIKeyCreateRequestSchema,
   APIKeyResponseSchema,
   ErrorResponseSchema,
@@ -52,6 +54,7 @@ export async function GET(request: NextRequest) {
       { name: 'WBR', description: 'Weekly Business Review metrics' },
       { name: 'Calendar', description: 'Multi-source event timeline' },
       { name: 'Sync', description: 'Connected source status' },
+      { name: 'Connect', description: 'Store per-source credentials' },
       { name: 'Ingest', description: 'Direct event collection' },
       { name: 'Keys', description: 'API key management' }
     ],
@@ -269,6 +272,64 @@ export async function GET(request: NextRequest) {
             },
             401: {
               description: 'Missing or invalid API key',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/v1/connect': {
+        post: {
+          tags: ['Connect'],
+          summary: 'Store source credentials',
+          description:
+            'Persist per-source config encrypted at rest with ANYKPI_SECRET. Requires an API key. Credentials are never returned.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(ConnectSourceRequestSchema)
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Source connected',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ConnectSourceResponseSchema)
+                }
+              }
+            },
+            200: {
+              description: 'Credentials rotated',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ConnectSourceResponseSchema)
+                }
+              }
+            },
+            400: {
+              description: 'Invalid request',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Missing or invalid API key',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            503: {
+              description: 'ANYKPI_SECRET is not set',
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(ErrorResponseSchema)

@@ -29,6 +29,7 @@ export default defineConfig({
     env: {
       ...process.env,
       ANYKPI_API_KEY: process.env.ANYKPI_API_KEY || 'anykpi-e2e-admin',
+      ANYKPI_SECRET: process.env.ANYKPI_SECRET || 'anykpi-e2e-secret',
     },
   },
 });

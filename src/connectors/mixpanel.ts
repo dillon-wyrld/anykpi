@@ -3,17 +3,20 @@ import * as schema from "@/core/schema";
 import type { SyncResult } from "@/core/contracts";
 import { upsertSyncState } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
+import { resolveCredentials } from "./credentials";
 import { failedSync } from "./http-status";
+import type { SyncOpts } from "./types";
 
 export async function syncMixpanel(
   workspaceId: string = "live",
-  _opts?: { cursor?: string }
+  opts?: SyncOpts
 ): Promise<SyncResult> {
-  const projectId = process.env.MIXPANEL_PROJECT_ID;
-  const apiSecret = process.env.MIXPANEL_API_SECRET;
+  const credentials = resolveCredentials("mixpanel", opts?.config);
+  const projectId = credentials.projectId;
+  const apiSecret = credentials.apiSecret;
 
   if (!projectId || !apiSecret) {
-    throw new Error("MIXPANEL_PROJECT_ID and MIXPANEL_API_SECRET are required");
+    throw new Error("Mixpanel project ID and API secret are required");
   }
 
   const auth = Buffer.from(`${apiSecret}:`).toString("base64");
