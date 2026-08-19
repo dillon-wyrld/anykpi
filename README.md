@@ -160,7 +160,7 @@ Data lives in `./data/anykpi.db`. Back it up. It's yours.
 
 ## Contributing
 
-MIT licensed. PRs welcome. Read `PRODUCT.md` for binding product rules.
+MIT licensed. PRs welcome.
 
 ## Hosted Waitlist
 
