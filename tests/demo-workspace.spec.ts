@@ -76,8 +76,8 @@ test.describe('Demo Workspace - Canonical Dataset', () => {
     
     const content = await page.content();
     
-    // Should show "read-only" indicator
-    expect(content).toContain('read-only');
+    // Should show "Read-only" indicator (case-sensitive)
+    expect(content).toContain('Read-only');
     
     // Should NOT have any of these authoring controls
     expect(content).not.toContain('Add event');
