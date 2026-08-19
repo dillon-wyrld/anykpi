@@ -1,0 +1,83 @@
+# AGENTS.md
+
+Guidance for coding agents working in this repository.
+
+ANYKPI is a self-hosted dashboard + REST API + CLI + MCP. Humans and agents see the same resources. Founder metrics: users, retention, PMF signals, WBR.
+
+A running instance serves the same facts at `/llms.txt`.
+
+## Bootstrap
+
+```bash
+pnpm install
+pnpm db:init   # SQLite at DATABASE_PATH (default ./data/anykpi.db); seeds demo
+pnpm dev       # http://localhost:3000
+```
+
+The first API key comes from the operator: set `ANYKPI_API_KEY` in the environment (see `.env.example`), or mint an additional key in the UI at `/connect` or `/agents` while presenting that operator key. There is deliberately no unauthenticated first-key endpoint.
+
+Demo workspace is public-read. Live workspaces and all writes require a key (`Authorization: Bearer` or `x-api-key`).
+
+## REST
+
+`/api/v1/*`. OpenAPI at `/api/openapi`.
+
+- `GET /api/v1/overview` — company snapshot
+- `GET /api/v1/users` — query users (cluster, platform, dates, limit, offset)
+- `GET /api/v1/cohorts` — retention with smile detection
+- `GET /api/v1/wbr` — Weekly Business Review
+- `GET /api/v1/calendar` — multi-source timeline
+- `GET /api/v1/sync` — connector status
+- `GET /api/v1/keys` / `POST /api/v1/keys` — list metadata / mint a key
+- `POST /api/v1/ingest/identify` / `POST /api/v1/ingest/event` — identify and track
+
+## MCP
+
+HTTP `POST /api/mcp`. stdio: `src/mcp/server.ts`. `tools/list` is open. `tools/call` follows REST auth.
+
+- `get_overview`, `query_users`, `get_cohorts`, `get_wbr`, `get_calendar`
+- stdio also: `install_sdk`, `configure_value_events` (write)
+
+## CLI
+
+`npx @anykpi/cli` (`packages/cli`): `login` (alias `key`), `workspaces`, `identify`, `track`, `overview`, `users`, `cohorts`, `wbr`, `calendar`. `login` requires an operator key.
+
+## Connectors
+
+Shipped: PostHog, Mixpanel, Amplitude. Pull-only. Connector setup is the `/connect` UI until v0.5.
+
+## view_url
+
+Read responses include a view_url that opens `/dashboard` in the workspace and view that prove the answer, e.g. `/dashboard?workspace=demo&view=dotplot`. Origin comes from `Host` / `X-Forwarded-*` unless `PUBLIC_BASE_URL` is set.
+
+## Layout
+
+- `src/app/api` — HTTP routes (REST, MCP, views, OpenAPI, `/llms.txt`)
+- `src/core` — auth, Zod contracts, view-state, read-model loaders
+- `src/mcp/server.ts` — stdio MCP server
+- `src/connectors` — PostHog, Mixpanel, Amplitude
+- `src/demo` — canonical demo dataset
+- `packages/cli` — CLI
+- `docs/introduction.md` — human docs
+
+Do not invent routes or tools. The OpenAPI spec and MCP tools list are the source of truth. `spec/` is design history, not the shipped surface.
+
+## Verify
+
+CI gates on:
+
+```bash
+pnpm tsc --noEmit
+pnpm lint
+pnpm test:unit
+pnpm build
+pnpm test:e2e
+```
+
+## Constraints
+
+- Never weaken authentication. Only `demo` is public-read.
+- Calendar is read-only. Nothing sends on its own. No telemetry.
+- Validate inputs with Zod contracts in `src/core/contracts.ts`.
+- TypeScript strict mode is on.
+- Public copy: no internal briefs, no comparison to other products by name, no personal names.
