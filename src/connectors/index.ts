@@ -40,6 +40,7 @@ import { syncAmplitude } from "./amplitude";
 import { withSourceLock } from "./lock";
 import { syncMixpanel } from "./mixpanel";
 import { syncPostHog } from "./posthog";
+import { syncStripe } from "./stripe";
 import type { SyncOpts } from "./types";
 
 export type { SyncOpts } from "./types";
@@ -50,6 +51,7 @@ export { SyncResultSchema, ConnectorHealthSchema } from "@/core/contracts";
 export { syncAmplitude } from "./amplitude";
 export { syncMixpanel } from "./mixpanel";
 export { syncPostHog } from "./posthog";
+export { syncStripe } from "./stripe";
 
 export interface Connector {
   source: string;
@@ -75,11 +77,18 @@ export const amplitudeConnector: Connector = {
   sync: syncAmplitude,
 };
 
+export const stripeConnector: Connector = {
+  source: "stripe",
+  name: "Stripe",
+  sync: syncStripe,
+};
+
 /** Registry keyed by `Connector.source`. */
 export const registry: Record<string, Connector> = {
   posthog: posthogConnector,
   mixpanel: mixpanelConnector,
   amplitude: amplitudeConnector,
+  stripe: stripeConnector,
 };
 
 export function listConnectors(): Connector[] {

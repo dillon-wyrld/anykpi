@@ -28,7 +28,7 @@
     },
     {
       "name": "get_cohorts",
-      "description": "Get cohort retention data with smile flags and PMF verdict. Set payers to filter to people on the revenue join.",
+      "description": "Get cohort retention data with smile flags and PMF verdict. Set payers to filter to people on the revenue join. Set split to compare up to 3 series by platform, country, or cluster.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -36,6 +36,15 @@
           "payers": {
             "type": "boolean",
             "description": "When true, keep only paying people"
+          },
+          "series": {
+            "description": "Comma-separated split values, max 3. A fourth series is refused.",
+            "type": "string"
+          },
+          "split": {
+            "description": "Compare retention curves by this field (max 3 series)",
+            "enum": ["platform", "country", "cluster"],
+            "type": "string"
           }
         }
       }

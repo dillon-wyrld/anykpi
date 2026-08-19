@@ -1,0 +1,26 @@
+{
+  "source": "stripe",
+  "description": "429 on subscriptions list",
+  "fixtures": [
+    {
+      "name": "subscriptions-rate-limited",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/v1/subscriptions"
+      },
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "1"
+        },
+        "body": {
+          "error": {
+            "type": "rate_limit_error",
+            "code": "rate_limited",
+            "message": "Too many requests"
+          }
+        }
+      }
+    }
+  ]
+}

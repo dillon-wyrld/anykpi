@@ -33,6 +33,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Stripe connector (ANY-09): paginated subscription backfill into the
+  revenue read models, plus `POST /api/webhooks/stripe` for
+  signature-verified live MRR updates. Restricted key is stored via
+  `/connect` or `anykpi connect stripe`. Scheduled sync is the
+  reconciliation pass.
 - Configurable WBR exception rules in `anykpi.config.json` beside the
   database (ANY-24). Defaults are documented in `anykpi.config.example.json`
   and `docs/introduction.md`. Invalid config fails at boot and prints the

@@ -35,21 +35,25 @@ function restoreEnv(name: string, value: string | undefined) {
 }
 
 describe("connector registry", () => {
-  it("lists the three shipped connectors keyed by source", () => {
+  it("lists the shipped connectors keyed by source", () => {
     expect(Object.keys(registry).sort()).toEqual([
       "amplitude",
       "mixpanel",
       "posthog",
+      "stripe",
     ]);
     expect(listConnectors().map((c) => c.source).sort()).toEqual([
       "amplitude",
       "mixpanel",
       "posthog",
+      "stripe",
     ]);
     expect(registry.posthog.name).toBe("PostHog");
     expect(registry.mixpanel.name).toBe("Mixpanel");
     expect(registry.amplitude.name).toBe("Amplitude");
+    expect(registry.stripe.name).toBe("Stripe");
     expect(getConnector("posthog")).toBe(registry.posthog);
+    expect(getConnector("stripe")).toBe(registry.stripe);
   });
 
   it("rejects unknown sources", async () => {
