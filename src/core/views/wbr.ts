@@ -20,24 +20,29 @@ export {
   wbrStat,
 } from "@/core/views/wbr-math";
 
-function applyExceptionRules<
-  T extends {
-    weeks: number[];
-    target: number;
-    goodDir: number;
-    type: "input" | "output";
-    unit: string;
-    dp: number;
-    status: "ok" | "watch" | "off";
-    statusReason: string | undefined;
-  },
->(metric: T, rules: WbrExceptionRules): T {
-  const stat = wbrStat(metric, rules);
-  return {
-    ...metric,
-    status: stat.k,
-    statusReason: stat.why,
-  };
+function gradeMetric<T extends {
+  weeks: number[];
+  target: number;
+  goodDir: number;
+  type: string;
+  unit: string;
+  dp: number;
+}>(metric: T, rules: WbrExceptionRules): T & {
+  status: "ok" | "watch" | "off";
+  statusReason: string;
+} {
+  const stat = wbrStat(
+    {
+      weeks: metric.weeks,
+      target: metric.target,
+      goodDir: metric.goodDir,
+      type: metric.type === "output" ? "output" : "input",
+      unit: metric.unit,
+      dp: metric.dp,
+    },
+    rules
+  );
+  return { ...metric, status: stat.k, statusReason: stat.why };
 }
 
 export async function loadWbrView(workspace: string) {
@@ -115,7 +120,7 @@ export async function loadWbrView(workspace: string) {
 
   const revenueLanes = await loadRevenueLanes(workspace);
   const metrics = [...revenueLanes, ...fromDefs].map((m) =>
-    applyExceptionRules(m, rules)
+    gradeMetric(m, rules)
   );
 
   metrics.sort((a, b) => a.sectionOrder.localeCompare(b.sectionOrder));

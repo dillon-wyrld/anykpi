@@ -62,9 +62,18 @@ export function anykpiConfigPath(
   return join(dirname(resolve(databasePath)), "anykpi.config.json");
 }
 
+function issuePath(issue: z.ZodIssue): string {
+  const base = issue.path.length > 0 ? issue.path.join(".") : "";
+  if (issue.code === "unrecognized_keys") {
+    const key = issue.keys[0];
+    if (key) return base ? `${base}.${key}` : key;
+  }
+  return base || "(root)";
+}
+
 export function formatConfigIssues(error: z.ZodError): { path: string; message: string }[] {
   return error.issues.map((issue) => ({
-    path: issue.path.length > 0 ? issue.path.join(".") : "(root)",
+    path: issuePath(issue),
     message: issue.message,
   }));
 }
