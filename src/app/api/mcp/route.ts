@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { and, eq } from "drizzle-orm";
-import { buildViewUrl, publicBaseUrl } from "@/core/view-state";
+import { buildViewUrl, publicBaseUrl, queryUsersPayload } from "@/core/view-state";
 import { gate, isReadOnlyMcpTool } from "@/core/auth";
 import { logServerError } from "@/core/errors";
 import { loadCohortsView } from "@/core/views/cohorts";
@@ -50,7 +50,7 @@ async function handleMCPRequest(
         {
           name: "query_users",
           description:
-            "Filter and group users by platform, country, or behavior. Returns users + view URL",
+            "Filter and group users by platform, country, or behavior. Returns users + per-user view_url",
           inputSchema: {
             type: "object",
             properties: {
@@ -149,7 +149,7 @@ async function handleMCPRequest(
             {
               type: "text",
               text: JSON.stringify({
-                users,
+                ...queryUsersPayload(users, baseUrl, workspace),
                 viewUrl: buildViewUrl(`${baseUrl}/dashboard`, { view: "dotplot" }),
               }),
             },

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, type MouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import PersonPanel from "@/components/PersonPanel";
 
 interface User {
   personId: string;
@@ -274,6 +275,24 @@ export default function DotPlot({ workspace }: DotPlotProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const initialSyncDone = useRef(false);
+  const selectedPersonId = searchParams.get("user");
+
+  const openPerson = useCallback(
+    (personId: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("workspace", workspace);
+      params.set("view", "dotplot");
+      params.set("user", personId);
+      router.replace(`/dashboard?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams, workspace]
+  );
+
+  const closePerson = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("user");
+    router.replace(`/dashboard?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
 
   useEffect(() => {
     fetch(`/api/views/dotplot?workspace=${workspace}`)
@@ -584,6 +603,14 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     });
   };
 
+  const cellOpenProps = (user: User) => ({
+    onClick: (event: MouseEvent) => {
+      event.stopPropagation();
+      openPerson(user.personId);
+    },
+    style: { cursor: "pointer" as const },
+  });
+
   const renderCell = (user: User, day: number, x: number, y: number) => {
     const active = user.activity[day];
     const isSignup = day === user.signupOffset;
@@ -618,6 +645,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
           y={cy + 5}
           fontSize="14"
           textAnchor="middle"
+          {...cellOpenProps(user)}
         >
           {EMOSET[viewState.cc.emoset](user, user.activity)}
         </text>
@@ -635,7 +663,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
       const rxEnd = nextActive ? 0 : 4.6;
 
       return (
-        <g key={`${user.personId}-${day}`}>
+        <g key={`${user.personId}-${day}`} {...cellOpenProps(user)}>
           <rect
             x={x + PAD}
             y={cy - h / 2}
@@ -670,6 +698,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
           rx="3"
           fill={DOTCOLORS[viewState.cc.color]}
           opacity={opacity}
+          {...cellOpenProps(user)}
         />
       );
     }
@@ -677,7 +706,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     const size = (viewState.cc.scale / 100) * (active ? 8 : 6);
 
     return (
-      <g key={`${user.personId}-${day}`}>
+      <g key={`${user.personId}-${day}`} {...cellOpenProps(user)}>
         <circle
           cx={cx}
           cy={cy}
@@ -707,6 +736,18 @@ export default function DotPlot({ workspace }: DotPlotProps) {
           fontSize="11.5"
           fontWeight="500"
           fill="var(--text)"
+          tabIndex={0}
+          role="button"
+          aria-label={`Open ${user.name}`}
+          data-testid={`person-name-${user.personId}`}
+          style={{ cursor: "pointer" }}
+          onClick={() => openPerson(user.personId)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              openPerson(user.personId);
+            }
+          }}
           onMouseEnter={(e) => {
             const rect = (e.target as SVGElement).getBoundingClientRect();
             setUserCard({
@@ -1179,6 +1220,14 @@ export default function DotPlot({ workspace }: DotPlotProps) {
             {userCard.user.churned && <div>👻 churned</div>}
           </div>
         </div>
+      )}
+
+      {selectedPersonId && (
+        <PersonPanel
+          workspace={workspace}
+          personId={selectedPersonId}
+          onClose={closePerson}
+        />
       )}
 
       {/* Legend */}

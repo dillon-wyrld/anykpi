@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { publicBaseUrl } from "./view-state";
+import { personViewUrl, publicBaseUrl, queryUsersPayload } from "./view-state";
 
 function requestWith(
   headers: Record<string, string> = {},
@@ -92,5 +92,27 @@ describe("publicBaseUrl", () => {
 
   it("falls back to localhost when no request is provided", () => {
     expect(publicBaseUrl()).toBe("http://localhost:3000");
+  });
+});
+
+describe("personViewUrl / queryUsersPayload", () => {
+  it("deep-links a person on the dot plot", () => {
+    expect(personViewUrl("https://kpi.example.com/", "demo", "p1")).toBe(
+      "https://kpi.example.com/dashboard?workspace=demo&view=dotplot&user=p1"
+    );
+  });
+
+  it("attaches a per-user view_url on query_users rows", () => {
+    const payload = queryUsersPayload(
+      [{ personId: "p1", name: "Dave", platform: "IOS" }],
+      "http://localhost:3000",
+      "demo"
+    );
+    expect(payload.users).toHaveLength(1);
+    expect(payload.users[0].view_url).toContain("user=p1");
+    expect(payload.users[0].view_url).toContain("view=dotplot");
+    expect(payload.view_url).toBe(
+      "http://localhost:3000/dashboard?workspace=demo&view=dotplot"
+    );
   });
 });

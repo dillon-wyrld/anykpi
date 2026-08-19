@@ -8,7 +8,7 @@ import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { upsertConfig } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
-import { buildViewUrl } from "@/core/view-state";
+import { buildViewUrl, queryUsersPayload } from "@/core/view-state";
 
 const BASE_URL = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -45,7 +45,7 @@ export function createMCPServer() {
         {
           name: "query_users",
           description:
-            "Filter and group users by platform, country, or behavior. Returns users + view URL",
+            "Filter and group users by platform, country, or behavior. Returns users + per-user view_url",
           inputSchema: {
             type: "object",
             properties: {
@@ -246,13 +246,7 @@ export function createMCPServer() {
                 type: "text",
                 text: JSON.stringify(
                   {
-                    users: users.map((u) => ({
-                      personId: u.personId,
-                      name: u.name,
-                      emoji: u.emoji,
-                      platform: u.platform,
-                      country: u.country,
-                    })),
+                    ...queryUsersPayload(users, BASE_URL, workspace),
                     viewUrl: buildViewUrl(`${BASE_URL}/dashboard`, {
                       view: "dotplot",
                       filters: filters.length > 0 ? filters : undefined,

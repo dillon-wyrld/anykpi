@@ -110,5 +110,9 @@ describe("MCP tool output fields (empty fixture DB)", () => {
     });
     expect(Array.isArray(payload.users)).toBe(true);
     expect(payload.viewUrl).toEqual(expect.stringContaining("/dashboard"));
+    expect(payload.view_url).toEqual(expect.stringContaining("/dashboard"));
+    for (const user of payload.users as { personId: string; view_url?: string }[]) {
+      expect(user.view_url).toContain(`user=${user.personId}`);
+    }
   });
 });

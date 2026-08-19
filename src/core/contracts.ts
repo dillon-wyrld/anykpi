@@ -195,6 +195,29 @@ export const PersonRevenueBlockSchema = z.object({
   }),
 });
 
+export const PersonTimelineEventSchema = z.object({
+  id: z.number(),
+  timestamp: z.string().datetime(),
+  eventName: z.string(),
+  eventClass: z.enum(['core', 'search', 'share', 'pay']),
+  platform: z.string().optional(),
+});
+
+export const PersonPanelResponseSchema = z.object({
+  personId: z.string(),
+  name: z.string(),
+  emoji: z.string().nullable(),
+  platform: z.string().nullable(),
+  country: z.string().nullable(),
+  cluster: z.string().nullable(),
+  cohort: z.string().nullable(),
+  firstSeen: z.string().datetime().nullable(),
+  lastSeen: z.string().datetime().nullable(),
+  events: z.array(PersonTimelineEventSchema),
+  revenue: PersonRevenueBlockSchema,
+  workspace: z.string(),
+});
+
 // ========== API Responses ==========
 
 export const OverviewResponseSchema = z.object({
@@ -340,6 +363,8 @@ export type SubscriptionEvent = z.infer<typeof SubscriptionEventSchema>;
 export type PersonRevenue = z.infer<typeof PersonRevenueSchema>;
 export type BalanceSnapshot = z.infer<typeof BalanceSnapshotSchema>;
 export type PersonRevenueBlock = z.infer<typeof PersonRevenueBlockSchema>;
+export type PersonTimelineEvent = z.infer<typeof PersonTimelineEventSchema>;
+export type PersonPanelResponse = z.infer<typeof PersonPanelResponseSchema>;
 
 export type OverviewResponse = z.infer<typeof OverviewResponseSchema>;
 export type UsersListResponse = z.infer<typeof UsersListResponseSchema>;
