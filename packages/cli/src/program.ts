@@ -138,6 +138,13 @@ export function createProgram(): Command {
     .option("--host <host>", "Source host")
     .option("--api-secret <secret>", "Source API secret")
     .option("--secret-key <key>", "Source secret key")
+    .option("--kind <kind>", "CSV kind (users or events)")
+    .option(
+      "--map <column=field>",
+      "CSV column mapping (repeatable)",
+      (value: string, previous: string[]) => [...previous, value],
+      [] as string[]
+    )
     .option("--json", "Output as JSON")
     .action(async (source, options) => {
       const spinner = ora("Saving source config...").start();
@@ -149,6 +156,19 @@ export function createProgram(): Command {
         if (options.host) credentials.host = options.host;
         if (options.apiSecret) credentials.apiSecret = options.apiSecret;
         if (options.secretKey) credentials.secretKey = options.secretKey;
+        if (options.kind) credentials.kind = options.kind;
+        const mapPairs = options.map as string[];
+        if (mapPairs.length > 0) {
+          const mapping: Record<string, string> = {};
+          for (const pair of mapPairs) {
+            const eq = pair.indexOf("=");
+            if (eq <= 0 || eq === pair.length - 1) {
+              throw new Error(`Invalid --map ${pair}; use column=field`);
+            }
+            mapping[pair.slice(0, eq)] = pair.slice(eq + 1);
+          }
+          credentials.mapping = JSON.stringify(mapping);
+        }
 
         if (Object.keys(credentials).length === 0) {
           throw new Error("Pass at least one source credential flag");

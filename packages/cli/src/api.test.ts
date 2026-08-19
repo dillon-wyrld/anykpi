@@ -188,6 +188,55 @@ describe("CLI ingest client", () => {
     logSpy.mockRestore();
   });
 
+  it("connect csv POSTs /api/v1/connect with kind and mapping", async () => {
+    isolatedHome();
+    process.env.ANYKPI_API_KEY = "test-key";
+    process.env.ANYKPI_API_URL = "http://instance.test";
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        source: "csv",
+        workspaceId: "live",
+        connected: true,
+        rotated: false,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const program = createProgram();
+    program.exitOverride();
+
+    await program.parseAsync(
+      [
+        "connect",
+        "csv",
+        "--workspace",
+        "live",
+        "--kind",
+        "events",
+        "--map",
+        "user_id=personId",
+        "--map",
+        "event=eventName",
+        "--json",
+      ],
+      { from: "user" }
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("http://instance.test/api/v1/connect");
+    expect(JSON.parse(String(init.body))).toEqual({
+      source: "csv",
+      credentials: {
+        kind: "events",
+        mapping: JSON.stringify({ user_id: "personId", event: "eventName" }),
+      },
+      workspaceId: "live",
+    });
+  });
+
   it("import POSTs /api/v1/import with the file and mapping", async () => {
     const dir = isolatedHome();
     process.env.ANYKPI_API_KEY = "test-key";

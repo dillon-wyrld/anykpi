@@ -193,6 +193,36 @@ describe("POST /api/v1/connect", () => {
     logs.restore();
   });
 
+  it("persists CSV mapping as ciphertext and never returns it", async () => {
+    const mapping = JSON.stringify({ user_id: "personId", event: "eventName" });
+    const res = await postConnect(
+      asAdmin({
+        source: "csv",
+        workspaceId: WS,
+        credentials: { kind: "events", mapping },
+      })
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(JSON.stringify(body)).not.toContain(mapping);
+    expect(body).toEqual({
+      source: "csv",
+      workspaceId: WS,
+      connected: true,
+      rotated: false,
+    });
+
+    const ciphertext = await loadSourceCiphertext(WS, "csv");
+    expect(ciphertext).toBeTruthy();
+    expect(ciphertext).toMatch(/^v1:/);
+    expect(ciphertext).not.toContain("personId");
+    expect(ciphertext).not.toContain(mapping);
+
+    const decrypted = await loadSourceConfig(WS, "csv");
+    expect(decrypted).toEqual({ kind: "events", mapping });
+  });
+
   it("rejects unauthenticated writes with 401", async () => {
     delete process.env.ANYKPI_API_KEY;
     vi.stubEnv("NODE_ENV", "test");

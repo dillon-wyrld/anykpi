@@ -166,12 +166,34 @@ export default function ConnectPage() {
     setCsvImporting(true);
     setCsvResult(null);
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(adminKey ? { Authorization: `Bearer ${adminKey}` } : {}),
+      };
+      const connected = await fetch("/api/v1/connect", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          source: "csv",
+          workspaceId,
+          credentials: {
+            kind: csvKind,
+            mapping: JSON.stringify(csvMapping),
+          },
+        }),
+      });
+      if (!connected.ok) {
+        const data = (await connected.json()) as { error?: string };
+        setCsvResult({
+          ok: false,
+          error: data.error || "Could not save mapping",
+        });
+        return;
+      }
+
       const response = await fetch("/api/v1/import", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(adminKey ? { Authorization: `Bearer ${adminKey}` } : {}),
-        },
+        headers,
         body: JSON.stringify({
           csv: csvText,
           kind: csvKind,
@@ -792,8 +814,8 @@ export default function ConnectPage() {
             <section className="bg-panel border border-border rounded-lg p-6 space-y-4">
               <h2 className="font-display text-xl font-semibold">Import CSV</h2>
               <p className="text-sm text-sub">
-                Users and events. Writes require an API key. Re-running the same file does not
-                create duplicate events.
+                Users and events. Mapping is stored encrypted via POST /api/v1/connect
+                (ANYKPI_SECRET). Re-running the same file does not create duplicate events.
               </p>
               <div className="grid md:grid-cols-2 gap-3">
                 <div>

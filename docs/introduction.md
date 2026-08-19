@@ -108,6 +108,7 @@ anykpi calendar --source=stripe
 anykpi connect stripe --api-key rk_... --secret-key whsec_...
 anykpi sync --source=stripe
 anykpi sync --source=posthog
+anykpi connect csv --kind=events --map user_id=personId
 anykpi import events.csv --kind=events
 
 # Ingest

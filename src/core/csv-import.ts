@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import { count, eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import * as schema from "./schema";
+import type { SourceConfig } from "./sources";
 import {
   applyMapping,
   detectKind,
@@ -45,6 +46,43 @@ export type CsvImportOutcome =
 
 const BATCH = 400;
 const EVENT_CLASSES = new Set(["core", "search", "share", "pay"]);
+
+/** Sources-store id for CSV mapping. Encrypted at rest like other sources. */
+export const CSV_SOURCE = "csv";
+
+export function csvSourceConfig(
+  kind: ImportKind,
+  mapping: Record<string, string>
+): SourceConfig {
+  return {
+    kind,
+    mapping: JSON.stringify(mapping),
+  };
+}
+
+export function parseCsvSourceConfig(config: SourceConfig | null): {
+  kind?: ImportKind;
+  mapping?: Record<string, string>;
+} {
+  if (!config) return {};
+  const kind = config.kind === "users" || config.kind === "events" ? config.kind : undefined;
+  if (!config.mapping) return { kind };
+  try {
+    const parsed = JSON.parse(config.mapping) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { kind };
+    }
+    const mapping: Record<string, string> = {};
+    for (const [column, field] of Object.entries(parsed)) {
+      if (typeof field === "string" && field.length > 0) {
+        mapping[column] = field;
+      }
+    }
+    return { kind, mapping: Object.keys(mapping).length > 0 ? mapping : undefined };
+  } catch {
+    return { kind };
+  }
+}
 
 export function eventExternalId(input: {
   personId: string;

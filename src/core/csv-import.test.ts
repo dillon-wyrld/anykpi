@@ -5,7 +5,12 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import * as schema from "./schema";
 import { parseCsv, suggestMapping } from "./csv-parse";
-import { eventExternalId, runCsvImport } from "./csv-import";
+import {
+  csvSourceConfig,
+  eventExternalId,
+  parseCsvSourceConfig,
+  runCsvImport,
+} from "./csv-import";
 
 const fixtures = resolve(__dirname, "../../tests/fixtures/import");
 const WS = "csv-import";
@@ -44,6 +49,15 @@ describe("CSV parse and mapping", () => {
       event: "eventName",
       id: "externalId",
     });
+  });
+});
+
+describe("CSV sources-store config", () => {
+  it("round-trips kind and mapping", () => {
+    const mapping = { user_id: "personId", event: "eventName" };
+    const stored = csvSourceConfig("events", mapping);
+    expect(stored.kind).toBe("events");
+    expect(parseCsvSourceConfig(stored)).toEqual({ kind: "events", mapping });
   });
 });
 

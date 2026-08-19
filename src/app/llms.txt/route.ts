@@ -34,8 +34,8 @@ OpenAPI spec: /api/openapi
 - GET /api/v1/wbr — Weekly Business Review (6 weeks, 12 months YOY, exceptions)
 - GET /api/v1/calendar — multi-source event timeline
 - GET /api/v1/sync — connector sync status
-- POST /api/v1/connect — store per-source credentials (encrypted at rest; never returned)
-- POST /api/v1/import — CSV import for users and events (column-mapping preview; writes keyed)
+- POST /api/v1/connect — store per-source credentials (encrypted at rest; never returned; csv stores import mapping)
+- POST /api/v1/import — CSV import for users and events (sources store + column-mapping preview; writes keyed)
 - GET /api/v1/keys — list key metadata (raw keys never returned)
 - POST /api/v1/keys — mint a key (requires an existing operator or hashed key; raw key returned once)
 - POST /api/v1/ingest/identify — create or update a user
@@ -67,7 +67,7 @@ npx @anykpi/cli
 
 Commands: login (alias: key), workspaces, connect, import, identify, track, overview, users, cohorts, wbr, calendar, sync.
 
-login mints a key via POST /api/v1/keys and requires ANYKPI_API_KEY or --key. connect stores source credentials via POST /api/v1/connect. import uploads a users or events CSV via POST /api/v1/import. Query commands take --workspace and --json.
+login mints a key via POST /api/v1/keys and requires ANYKPI_API_KEY or --key. connect stores source credentials via POST /api/v1/connect (including \`anykpi connect csv\`). import uploads a users or events CSV via POST /api/v1/import. Query commands take --workspace and --json.
 
 ## Connectors
 

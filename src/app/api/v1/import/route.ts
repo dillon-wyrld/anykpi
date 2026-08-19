@@ -15,7 +15,14 @@ import {
   tooManyRequests,
 } from "@/core/errors";
 import { clientKeyFrom, rateLimit } from "@/core/rate-limit";
-import { formatImportErrors, runCsvImport } from "@/core/csv-import";
+import {
+  CSV_SOURCE,
+  csvSourceConfig,
+  formatImportErrors,
+  parseCsvSourceConfig,
+  runCsvImport,
+} from "@/core/csv-import";
+import { hasInstanceSecret, loadSourceConfig, saveSourceConfig } from "@/core/sources";
 
 /** 10k-row files are well under this; keeps a single-request import viable. */
 const IMPORT_MAX_BYTES = 16 * 1024 * 1024;
@@ -52,10 +59,20 @@ export async function POST(request: NextRequest) {
     if (!gated.ok) return gated.response;
     const workspaceId = gated.workspace;
 
+    if (!parsed.data.preview && !hasInstanceSecret()) {
+      return NextResponse.json({ error: "set ANYKPI_SECRET" }, { status: 503 });
+    }
+
+    const stored = parseCsvSourceConfig(await loadSourceConfig(workspaceId, CSV_SOURCE));
+    const mapping =
+      parsed.data.mapping && Object.keys(parsed.data.mapping).length > 0
+        ? parsed.data.mapping
+        : stored.mapping;
+
     const outcome = await runCsvImport({
       csv: parsed.data.csv,
-      kind: parsed.data.kind,
-      mapping: parsed.data.mapping,
+      kind: parsed.data.kind ?? stored.kind,
+      mapping,
       preview: parsed.data.preview,
       workspaceId,
     });
@@ -73,6 +90,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    await saveSourceConfig(
+      workspaceId,
+      CSV_SOURCE,
+      csvSourceConfig(outcome.result.kind, mapping ?? {})
+    );
 
     return NextResponse.json(ImportResponseSchema.parse(outcome.result));
   } catch {

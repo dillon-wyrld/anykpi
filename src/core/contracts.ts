@@ -330,6 +330,15 @@ export const SourceSlugSchema = z
   .max(64)
   .regex(/^[a-z][a-z0-9_-]*$/);
 
+/** Named connect sources, including csv import mapping. */
+export const ConnectSourceIdSchema = z.enum([
+  'posthog',
+  'mixpanel',
+  'amplitude',
+  'stripe',
+  'csv',
+]);
+
 /**
  * Generic webhook-in body. Destinations may send `distinct_id` / `event`
  * (PostHog-style) or `userId` / `eventName` (canonical / Zapier).
@@ -493,6 +502,7 @@ export type IngestEventRequest = z.infer<typeof IngestEventRequestSchema>;
 export type IngestWebhookRequest = z.infer<typeof IngestWebhookRequestSchema>;
 export type IngestWebhookResponse = z.infer<typeof IngestWebhookResponseSchema>;
 export type SourceSlug = z.infer<typeof SourceSlugSchema>;
+export type ConnectSourceId = z.infer<typeof ConnectSourceIdSchema>;
 export type ConnectSourceRequest = z.infer<typeof ConnectSourceRequestSchema>;
 export type ConnectSourceResponse = z.infer<typeof ConnectSourceResponseSchema>;
 export type ImportKind = z.infer<typeof ImportKindSchema>;

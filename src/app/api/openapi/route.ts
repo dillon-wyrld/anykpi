@@ -318,7 +318,7 @@ export async function GET(request: NextRequest) {
           tags: ['Connect'],
           summary: 'Store source credentials',
           description:
-            'Persist per-source config encrypted at rest with ANYKPI_SECRET. Requires an API key. Credentials are never returned.',
+            'Persist per-source config encrypted at rest with ANYKPI_SECRET. Requires an API key. Credentials are never returned. Source `csv` stores import kind and column mapping.',
           requestBody: {
             required: true,
             content: {
@@ -376,7 +376,7 @@ export async function GET(request: NextRequest) {
           tags: ['Import'],
           summary: 'Import users or events from CSV',
           description:
-            'Write-gated. Send `preview: true` for column-mapping preview. Re-running the same file is idempotent on activity.externalId.',
+            'Write-gated. Mapping is stored in the encrypted sources store (same as POST /api/v1/connect). Send `preview: true` for column-mapping preview. Re-running the same file is idempotent on activity.externalId.',
           requestBody: {
             required: true,
             content: {
@@ -409,6 +409,14 @@ export async function GET(request: NextRequest) {
             },
             401: {
               description: 'Missing or invalid API key',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            503: {
+              description: 'ANYKPI_SECRET is not set',
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(ErrorResponseSchema)
