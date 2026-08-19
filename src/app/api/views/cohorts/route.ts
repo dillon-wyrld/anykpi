@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
+import { requireAuth } from "@/core/auth";
+import { internalError, logServerError } from "@/core/errors";
 
 const CO_MINSIZE = 3;
 const CO_LEVEL = 25;
@@ -83,6 +85,10 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const workspace = searchParams.get("workspace") || "demo";
   const grainParam = searchParams.get("grain") || "week";
+  const denied = await requireAuth(request, { workspace, write: false });
+  if (denied) return denied;
+
+  try {
 
   const users = await db
     .select()
@@ -219,4 +225,8 @@ export async function GET(request: NextRequest) {
     baseDate: baseDate.toISOString(),
     totalDays,
   });
+  } catch {
+    logServerError("Cohorts view failed");
+    return internalError();
+  }
 }

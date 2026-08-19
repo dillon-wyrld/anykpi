@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
+import { requireAuth } from "@/core/auth";
+import { internalError, logServerError } from "@/core/errors";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const workspace = searchParams.get("workspace") || "demo";
+  const denied = await requireAuth(request, { workspace, write: false });
+  if (denied) return denied;
+
+  try {
 
   const users = await db
     .select()
@@ -126,4 +132,8 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json({ users: result, days: 28, baseDate: baseDate.toISOString() });
+  } catch {
+    logServerError("Dotplot view failed");
+    return internalError();
+  }
 }

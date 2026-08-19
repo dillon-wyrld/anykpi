@@ -1,6 +1,7 @@
 interface AnykpiConfig {
   endpoint: string;
   workspaceId?: string;
+  apiKey?: string;
   debug?: boolean;
 }
 
@@ -31,7 +32,10 @@ class Anykpi {
     };
 
     if (this.config.debug) {
-      console.log("[ANYKPI] Initialized", this.config);
+      console.log("[ANYKPI] Initialized", {
+        endpoint: this.config.endpoint,
+        workspaceId: this.config.workspaceId,
+      });
     }
   }
 
@@ -67,14 +71,19 @@ class Anykpi {
       };
 
       if (this.config.debug) {
-        console.log("[ANYKPI] Sending", url, body);
+        console.log("[ANYKPI] Sending", url);
+      }
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (this.config.apiKey) {
+        headers.Authorization = `Bearer ${this.config.apiKey}`;
       }
 
       await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(body),
       });
     } catch (error) {

@@ -3,6 +3,8 @@ import { db } from '@/core/db';
 import * as schema from '@/core/schema';
 import { eq } from 'drizzle-orm';
 import { SyncResponseSchema } from '@/core/contracts';
+import { requireAuth } from '@/core/auth';
+import { internalError, logServerError } from '@/core/errors';
 
 /**
  * GET /api/v1/sync
@@ -13,6 +15,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const workspace = searchParams.get('workspace') || 'demo';
+    const denied = await requireAuth(request, { workspace, write: false });
+    if (denied) return denied;
     
     const syncStates = await db
       .select()
@@ -32,10 +36,8 @@ export async function GET(request: NextRequest) {
     });
     
     return NextResponse.json(response);
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: error instanceof Error ? error.message : 'Unknown error', statusCode: 500 },
-      { status: 500 }
-    );
+  } catch {
+    logServerError('Sync query failed');
+    return internalError();
   }
 }

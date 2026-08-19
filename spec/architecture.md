@@ -76,7 +76,7 @@ These tables are the product's spine — every surface, API response, and MCP to
 - **`cal_events`** — (source, type, date, title, amount, badge, url, external_id). Read-only forever; no authoring paths exist anywhere.
 - **`annotations`** — the one ANYKPI-*owned* write surface: stickers, highlights, notes pinned to a user/date/metric/cohort. This is the collaborative pattern-reading layer from the Lieb video.
 - **`sync_state`** — (connector, last_synced_at, status, error, stats). Feeds the "synced 4m ago" chips.
-- **`api_keys`** — hashed keys for REST/MCP auth.
+- **`api_keys`** — hashed keys for REST/MCP auth. Bootstrap with env `ANYKPI_API_KEY`. Demo workspace is public-read; writes and non-demo reads require a key. Production without the env key refuses those requests (503).
 - **`config`** — value-event mapping, company profile (name, founded date), connector settings (secrets encrypted, see §11).
 
 Cohort tables are **derived at read time** from `activity` + `users.signup_date` (weekly buckets), so the smile detector (`coSlope`, `coFloorOf`, `coGrade`) ports as pure functions over one source of truth — no separate retention sync to drift.

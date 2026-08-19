@@ -11,6 +11,7 @@ import { nanoid } from "nanoid";
  */
 export default function AgentsPage() {
   const [apiKey, setApiKey] = useState<string>("");
+  const [adminKey, setAdminKey] = useState<string>("");
   const [keyName, setKeyName] = useState<string>("Agent Key");
   const [generatedKey, setGeneratedKey] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -25,7 +26,10 @@ export default function AgentsPage() {
     try {
       const response = await fetch('/api/v1/keys', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminKey ? { Authorization: `Bearer ${adminKey}` } : {}),
+        },
         body: JSON.stringify({ name: keyName }),
       });
       
@@ -34,8 +38,8 @@ export default function AgentsPage() {
         setGeneratedKey(data.key);
         setApiKey(data.key);
       }
-    } catch (error) {
-      console.error('Failed to generate key:', error);
+    } catch {
+      // Do not log keys or request bodies
     } finally {
       setLoading(false);
     }
@@ -113,6 +117,17 @@ anykpi cohorts --json`;
                 onChange={(e) => setKeyName(e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-bg focus:outline-none focus:ring-2 focus:ring-accent"
                 placeholder="My Agent Key"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Existing ANYKPI_API_KEY</label>
+              <input
+                type="password"
+                value={adminKey}
+                onChange={(e) => setAdminKey(e.target.value)}
+                className="w-full px-3 py-2 border border-border rounded-lg bg-bg focus:outline-none focus:ring-2 focus:ring-accent font-mono"
+                placeholder="Required to mint a new key"
               />
             </div>
 

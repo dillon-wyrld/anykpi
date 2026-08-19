@@ -132,7 +132,7 @@ export async function syncAmplitude(workspaceId: string = "live") {
 
     console.log("Amplitude sync complete");
   } catch (error) {
-    console.error("Amplitude sync error:", error);
+    console.error("Amplitude sync failed");
 
     await db
       .insert(schema.syncState)
@@ -141,7 +141,7 @@ export async function syncAmplitude(workspaceId: string = "live") {
         sourceName: "Amplitude",
         lastSync: new Date(),
         status: "error",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "sync failed",
         workspaceId,
       })
       .onConflictDoUpdate({
@@ -149,7 +149,7 @@ export async function syncAmplitude(workspaceId: string = "live") {
         set: {
           lastSync: new Date(),
           status: "error",
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: "sync failed",
         },
       });
 

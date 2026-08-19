@@ -121,7 +121,7 @@ export async function syncPostHog(workspaceId: string = "live") {
 
     console.log("PostHog sync complete");
   } catch (error) {
-    console.error("PostHog sync error:", error);
+    console.error("PostHog sync failed");
 
     await db
       .insert(schema.syncState)
@@ -130,7 +130,7 @@ export async function syncPostHog(workspaceId: string = "live") {
         sourceName: "PostHog",
         lastSync: new Date(),
         status: "error",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "sync failed",
         workspaceId,
       })
       .onConflictDoUpdate({
@@ -138,7 +138,7 @@ export async function syncPostHog(workspaceId: string = "live") {
         set: {
           lastSync: new Date(),
           status: "error",
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: "sync failed",
         },
       });
 

@@ -44,9 +44,9 @@ pnpm db:init
 pnpm dev
 ```
 
-The demo workspace loads automatically. Connect your data to see your people.
+The demo workspace loads automatically (public-read, fictional people). Set `ANYKPI_API_KEY` before connecting live data or deploying.
 
-**Hosted version waitlist:** [anykpi.com](https://anykpi.com) (managed cloud + multiplayer)
+**Hosted version:** [anykpi.com](https://anykpi.com)
 
 ## Platform
 
@@ -76,7 +76,7 @@ anykpi connect amplitude
 
 ANYKPI is agent-native from day zero. Give your AI agent access via MCP:
 
-1. Generate an API key at `/connect`
+1. Set `ANYKPI_API_KEY` and mint an additional key at `/connect` (or send the env key as `Authorization: Bearer`)
 2. Add to your agent's MCP configuration:
 
 ```json
@@ -123,8 +123,13 @@ The agent can do this unattended via MCP tools.
 
 ```bash
 docker build -t anykpi .
-docker run -p 3000:3000 -v anykpi-data:/data anykpi
+docker run -p 3000:3000 \
+  -e ANYKPI_API_KEY=your-secret \
+  -v anykpi-data:/data \
+  anykpi
 ```
+
+In production, if `ANYKPI_API_KEY` is unset, writes and non-demo reads are refused (503). Copy `.env.example` and see [SECURITY.md](SECURITY.md).
 
 Data lives in `./data/anykpi.db`. Back it up. It's yours.
 
@@ -161,10 +166,6 @@ Data lives in `./data/anykpi.db`. Back it up. It's yours.
 ## Contributing
 
 MIT licensed. PRs welcome.
-
-## Hosted Waitlist
-
-Want ANYKPI cloud-hosted with ANYTIME KPI events and multiplayer? [Join the waitlist](https://anykpi.example.com/waitlist).
 
 Self-hosted is free forever.
 

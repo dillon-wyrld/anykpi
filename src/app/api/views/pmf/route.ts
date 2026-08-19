@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/core/auth";
+import { internalError, logServerError } from "@/core/errors";
 
 /**
  * PMF+ View API
@@ -10,6 +12,10 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const workspace = searchParams.get("workspace") || "demo";
+  const denied = await requireAuth(request, { workspace, write: false });
+  if (denied) return denied;
+
+  try {
 
   // For demo workspace, show simulated PMF research runs
   if (workspace === "demo") {
@@ -133,4 +139,8 @@ export async function GET(request: NextRequest) {
 
   // For live workspace, return empty (no auto-research without explicit trigger)
   return NextResponse.json({ runs: [] });
+  } catch {
+    logServerError("PMF view failed");
+    return internalError();
+  }
 }

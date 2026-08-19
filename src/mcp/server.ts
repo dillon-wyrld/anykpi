@@ -432,7 +432,7 @@ export function createMCPServer() {
         content: [
           {
             type: "text",
-            text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+            text: "Internal error",
           },
         ],
         isError: true,
@@ -447,7 +447,7 @@ if (require.main === module) {
   const server = createMCPServer();
   const transport = new StdioServerTransport();
   server.connect(transport).catch((error) => {
-    console.error("Server error:", error);
+    console.error("MCP server failed");
     process.exit(1);
   });
 }

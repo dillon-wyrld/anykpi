@@ -82,10 +82,17 @@ program
   .command('login')
   .description('Generate API key for agent access')
   .option('--url <url>', 'ANYKPI instance URL', 'http://localhost:3000')
+  .option('--key <key>', 'Existing ANYKPI_API_KEY (or set the env var)')
   .action(async (options) => {
     const spinner = ora('Connecting to ANYKPI...').start();
     
     try {
+      const adminKey = options.key || process.env.ANYKPI_API_KEY;
+      if (!adminKey) {
+        spinner.fail('Set ANYKPI_API_KEY or pass --key to mint a new key');
+        return;
+      }
+
       const { name } = await prompts({
         type: 'text',
         name: 'name',
@@ -100,14 +107,17 @@ program
       
       const response = await fetch(`${options.url}/api/v1/keys`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminKey}`,
+        },
         body: JSON.stringify({ name }),
       });
       
       const data: any = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to create API key');
+        throw new Error(data.error || 'Failed to create API key');
       }
       
       const config = loadConfig();

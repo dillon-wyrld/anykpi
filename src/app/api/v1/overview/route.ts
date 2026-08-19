@@ -3,6 +3,8 @@ import { db } from '@/core/db';
 import * as schema from '@/core/schema';
 import { eq } from 'drizzle-orm';
 import { OverviewResponseSchema } from '@/core/contracts';
+import { authForwardHeaders, requireAuth } from '@/core/auth';
+import { internalError, logServerError } from '@/core/errors';
 
 /**
  * GET /api/v1/overview
@@ -13,6 +15,9 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const workspace = searchParams.get('workspace') || 'demo';
+    const denied = await requireAuth(request, { workspace, write: false });
+    if (denied) return denied;
+    const viewHeaders = authForwardHeaders(request);
     
     // Get user counts
     const users = await db.select().from(schema.users).where(eq(schema.users.workspaceId, workspace));
@@ -42,15 +47,15 @@ export async function GET(request: NextRequest) {
     ).size;
     
     // Check for smile (PMF signal)
-    const cohortData = await fetch(`${request.nextUrl.origin}/api/views/cohorts?workspace=${workspace}`).then(r => r.json());
+    const cohortData = await fetch(`${request.nextUrl.origin}/api/views/cohorts?workspace=${workspace}`, { headers: viewHeaders }).then(r => r.json());
     const smileDetected = cohortData.cohorts?.some((c: any) => c.smileDetected) || false;
     
     // Get WBR exceptions
-    const wbrData = await fetch(`${request.nextUrl.origin}/api/views/wbr?workspace=${workspace}`).then(r => r.json());
+    const wbrData = await fetch(`${request.nextUrl.origin}/api/views/wbr?workspace=${workspace}`, { headers: viewHeaders }).then(r => r.json());
     const exceptionsCount = wbrData.metrics?.filter((m: any) => m.status !== 'ok').length || 0;
     
     // Get upcoming calendar events
-    const calendarData = await fetch(`${request.nextUrl.origin}/api/views/calendar?workspace=${workspace}`).then(r => r.json());
+    const calendarData = await fetch(`${request.nextUrl.origin}/api/views/calendar?workspace=${workspace}`, { headers: viewHeaders }).then(r => r.json());
     const upcomingEvents = calendarData.events?.filter((e: any) => e.isFuture).length || 0;
     
     const retentionRate = weeklyActiveCount > 0 ? Math.round((weeklyActiveCount / totalUsers) * 100) : 0;
@@ -68,10 +73,8 @@ export async function GET(request: NextRequest) {
     });
     
     return NextResponse.json(response);
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: error instanceof Error ? error.message : 'Unknown error', statusCode: 500 },
-      { status: 500 }
-    );
+  } catch {
+    logServerError('Overview query failed');
+    return internalError();
   }
 }

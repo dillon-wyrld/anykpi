@@ -54,7 +54,11 @@ Every view has a shareable URL.
 ### REST API
 
 ```bash
+# Demo workspace is public-read. Live data and all writes need a key.
 curl http://localhost:3000/api/v1/overview?workspace=demo
+
+curl http://localhost:3000/api/v1/overview?workspace=live \
+  -H "Authorization: Bearer $ANYKPI_API_KEY"
 ```
 
 Returns:

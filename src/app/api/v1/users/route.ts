@@ -3,6 +3,8 @@ import { db } from '@/core/db';
 import * as schema from '@/core/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
 import { QueryUsersRequestSchema, UsersListResponseSchema } from '@/core/contracts';
+import { requireAuth } from '@/core/auth';
+import { badRequest, internalError, logServerError } from '@/core/errors';
 
 /**
  * GET /api/v1/users
@@ -12,9 +14,12 @@ import { QueryUsersRequestSchema, UsersListResponseSchema } from '@/core/contrac
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const workspace = searchParams.get('workspace') || 'demo';
+    const denied = await requireAuth(request, { workspace, write: false });
+    if (denied) return denied;
     
     const params = QueryUsersRequestSchema.parse({
-      workspace: searchParams.get('workspace') || 'demo',
+      workspace,
       cluster: searchParams.get('cluster') || undefined,
       platform: searchParams.get('platform') || undefined,
       signupAfter: searchParams.get('signupAfter') || undefined,
@@ -71,16 +76,11 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json(response);
   } catch (error) {
-    if (error instanceof Error && error.message.includes('parse')) {
-      return NextResponse.json(
-        { error: 'Bad Request', message: error.message, statusCode: 400 },
-        { status: 400 }
-      );
+    if (error instanceof Error && error.name === 'ZodError') {
+      return badRequest();
     }
-    
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: error instanceof Error ? error.message : 'Unknown error', statusCode: 500 },
-      { status: 500 }
-    );
+
+    logServerError('Users query failed');
+    return internalError();
   }
 }
