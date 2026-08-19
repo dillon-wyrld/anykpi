@@ -96,8 +96,33 @@ export async function GET(request: NextRequest) {
     .where(eq(schema.activity.workspaceId, workspace))
     .all();
 
-  const baseDate = new Date("2024-01-01");
-  const totalDays = 168;
+  // Derive date window from actual data, not hardcoded 2024-01-01
+  let minTimestamp = new Date();
+  let maxTimestamp = new Date(0);
+  
+  users.forEach(u => {
+    if (u.signupDate) {
+      if (u.signupDate < minTimestamp) minTimestamp = u.signupDate;
+      if (u.signupDate > maxTimestamp) maxTimestamp = u.signupDate;
+    }
+  });
+  
+  activities.forEach(a => {
+    if (a.timestamp < minTimestamp) minTimestamp = a.timestamp;
+    if (a.timestamp > maxTimestamp) maxTimestamp = a.timestamp;
+  });
+  
+  // Start at UTC midnight of earliest date
+  const baseDate = new Date(Date.UTC(
+    minTimestamp.getUTCFullYear(),
+    minTimestamp.getUTCMonth(),
+    minTimestamp.getUTCDate()
+  ));
+  
+  const totalDays = Math.max(
+    168,
+    Math.ceil((maxTimestamp.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  );
 
   const enrichedUsers = users
     .filter((u) => u.signupDate)

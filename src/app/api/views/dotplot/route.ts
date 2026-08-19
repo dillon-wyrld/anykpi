@@ -13,9 +13,46 @@ export async function GET(request: NextRequest) {
     .where(eq(schema.users.workspaceId, workspace))
     .all();
 
-  const baseDate = new Date("2024-01-01T00:00:00Z");
-  const endDate = new Date(baseDate);
-  endDate.setDate(endDate.getDate() + 28);
+  // Derive date window from actual data, not hardcoded 2024-01-01
+  let minTimestamp = new Date();
+  let maxTimestamp = new Date(0);
+  
+  users.forEach(u => {
+    if (u.signupDate) {
+      if (u.signupDate < minTimestamp) minTimestamp = u.signupDate;
+      if (u.signupDate > maxTimestamp) maxTimestamp = u.signupDate;
+    }
+  });
+  
+  // Query all activities to find the full date range
+  const allActivities = await db
+    .select()
+    .from(schema.activity)
+    .where(eq(schema.activity.workspaceId, workspace))
+    .all();
+  
+  allActivities.forEach(a => {
+    if (a.timestamp < minTimestamp) minTimestamp = a.timestamp;
+    if (a.timestamp > maxTimestamp) maxTimestamp = a.timestamp;
+  });
+  
+  // Start at UTC midnight of earliest date
+  const baseDate = new Date(Date.UTC(
+    minTimestamp.getUTCFullYear(),
+    minTimestamp.getUTCMonth(),
+    minTimestamp.getUTCDate()
+  ));
+  
+  const endDate = new Date(Date.UTC(
+    maxTimestamp.getUTCFullYear(),
+    maxTimestamp.getUTCMonth(),
+    maxTimestamp.getUTCDate() + 1
+  ));
+  
+  const totalDays = Math.max(
+    28,
+    Math.ceil((endDate.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24))
+  );
 
   const activityRecords = await db
     .select()
@@ -47,7 +84,7 @@ export async function GET(request: NextRequest) {
         )
       : 0;
 
-    const activity = Array.from({ length: 28 }, (_, day) =>
+    const activity = Array.from({ length: totalDays }, (_, day) =>
       activityMap.get(user.personId)?.has(day) || false
     );
 
