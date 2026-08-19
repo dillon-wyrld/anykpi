@@ -89,8 +89,12 @@ describe("GET /api/v1/users pagination", () => {
         break;
       }
 
-      expect(page.nextOffset).toBe(offset + page.users.length);
-      offset = page.nextOffset;
+      const next = page.nextOffset;
+      expect(next).toBe(offset + page.users.length);
+      if (next === null) {
+        throw new Error("expected nextOffset when hasMore is true");
+      }
+      offset = next;
     }
 
     expect(seen.size).toBe(USER_COUNT);
