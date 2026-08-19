@@ -3,6 +3,7 @@ import * as schema from "@/core/schema";
 import type { SyncResult } from "@/core/contracts";
 import { upsertSyncState } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
+import { failedSync } from "./http-status";
 
 export async function syncAmplitude(
   workspaceId: string = "live",
@@ -38,7 +39,13 @@ export async function syncAmplitude(
     );
 
     if (!usersResponse.ok) {
-      throw new Error(`Amplitude API error: ${usersResponse.statusText}`);
+      return failedSync({
+        source: "amplitude",
+        sourceName: "Amplitude",
+        workspaceId,
+        status: usersResponse.status,
+        rowsSynced,
+      });
     }
 
     const usersData = await usersResponse.json();
@@ -88,7 +95,13 @@ export async function syncAmplitude(
     );
 
     if (!eventsResponse.ok) {
-      throw new Error(`Amplitude export API error: ${eventsResponse.statusText}`);
+      return failedSync({
+        source: "amplitude",
+        sourceName: "Amplitude",
+        workspaceId,
+        status: eventsResponse.status,
+        rowsSynced,
+      });
     }
 
     const eventsText = await eventsResponse.text();

@@ -1,0 +1,22 @@
+{
+  "source": "mixpanel",
+  "description": "429 on engage",
+  "fixtures": [
+    {
+      "name": "engage-rate-limited",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/engage"
+      },
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "1"
+        },
+        "body": {
+          "error": "rate limited"
+        }
+      }
+    }
+  ]
+}

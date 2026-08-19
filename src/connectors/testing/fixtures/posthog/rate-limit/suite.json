@@ -1,0 +1,23 @@
+{
+  "source": "posthog",
+  "description": "429 on persons list",
+  "fixtures": [
+    {
+      "name": "persons-rate-limited",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/persons/"
+      },
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "1"
+        },
+        "body": {
+          "type": "rate_limit_error",
+          "code": "rate_limited"
+        }
+      }
+    }
+  ]
+}

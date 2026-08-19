@@ -3,6 +3,7 @@ import * as schema from "@/core/schema";
 import type { SyncResult } from "@/core/contracts";
 import { upsertSyncState } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
+import { failedSync } from "./http-status";
 
 export async function syncMixpanel(
   workspaceId: string = "live",
@@ -31,7 +32,13 @@ export async function syncMixpanel(
     );
 
     if (!usersResponse.ok) {
-      throw new Error(`Mixpanel API error: ${usersResponse.statusText}`);
+      return failedSync({
+        source: "mixpanel",
+        sourceName: "Mixpanel",
+        workspaceId,
+        status: usersResponse.status,
+        rowsSynced,
+      });
     }
 
     const usersData = await usersResponse.json();
@@ -81,7 +88,13 @@ export async function syncMixpanel(
     );
 
     if (!eventsResponse.ok) {
-      throw new Error(`Mixpanel export API error: ${eventsResponse.statusText}`);
+      return failedSync({
+        source: "mixpanel",
+        sourceName: "Mixpanel",
+        workspaceId,
+        status: eventsResponse.status,
+        rowsSynced,
+      });
     }
 
     const eventsText = await eventsResponse.text();

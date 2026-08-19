@@ -1,0 +1,19 @@
+{
+  "source": "mixpanel",
+  "description": "401 on engage",
+  "fixtures": [
+    {
+      "name": "engage-unauthorized",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/engage"
+      },
+      "response": {
+        "status": 401,
+        "body": {
+          "error": "unauthorized"
+        }
+      }
+    }
+  ]
+}

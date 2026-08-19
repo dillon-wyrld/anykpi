@@ -3,6 +3,7 @@ import * as schema from "@/core/schema";
 import type { SyncResult } from "@/core/contracts";
 import { upsertSyncState } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
+import { failedSync } from "./http-status";
 
 export async function syncPostHog(
   workspaceId: string = "live",
@@ -31,7 +32,13 @@ export async function syncPostHog(
     );
 
     if (!personsResponse.ok) {
-      throw new Error(`PostHog API error: ${personsResponse.statusText}`);
+      return failedSync({
+        source: "posthog",
+        sourceName: "PostHog",
+        workspaceId,
+        status: personsResponse.status,
+        rowsSynced,
+      });
     }
 
     const personsData = await personsResponse.json();
@@ -78,7 +85,13 @@ export async function syncPostHog(
     );
 
     if (!eventsResponse.ok) {
-      throw new Error(`PostHog events API error: ${eventsResponse.statusText}`);
+      return failedSync({
+        source: "posthog",
+        sourceName: "PostHog",
+        workspaceId,
+        status: eventsResponse.status,
+        rowsSynced,
+      });
     }
 
     const eventsData = await eventsResponse.json();

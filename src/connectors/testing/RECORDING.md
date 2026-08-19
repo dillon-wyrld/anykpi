@@ -24,6 +24,13 @@ vendor — match on method + URL, return the recorded body.
    and project id can change in tests.
 5. Re-run the same test *without* the env var. It must pass offline.
 
+Error-path suites (401, 429) live in a sibling directory so they do not
+share URL locators with the happy-path `suite.json`:
+
+`fixtures/<source>/unauthorized/` and `fixtures/<source>/rate-limit/`.
+
+Contract tests for the shipped sources are `src/connectors/<source>.test.ts`.
+
 ## Adding a new connector
 
 1. Implement `Connector` (`source`, `name`, `sync` → `SyncResult`).

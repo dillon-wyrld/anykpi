@@ -1,0 +1,19 @@
+{
+  "source": "amplitude",
+  "description": "401 on user search",
+  "fixtures": [
+    {
+      "name": "usersearch-unauthorized",
+      "request": {
+        "method": "POST",
+        "urlIncludes": "/usersearch"
+      },
+      "response": {
+        "status": 401,
+        "body": {
+          "error": "unauthorized"
+        }
+      }
+    }
+  ]
+}
