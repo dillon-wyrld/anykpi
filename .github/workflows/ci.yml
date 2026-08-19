@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       
+      - name: Build native modules
+        run: pnpm rebuild better-sqlite3
+      
       - name: Typecheck
         run: pnpm tsc --noEmit
       
