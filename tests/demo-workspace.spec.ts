@@ -104,7 +104,8 @@ test.describe('Demo Workspace - Canonical Dataset', () => {
 
   test('calendar is read-only with zero authoring controls', async ({ page }) => {
     await page.goto('http://localhost:3000/dashboard?workspace=demo&view=calendar');
-    await page.waitForSelector('[class*="space-y"]', { timeout: 10000 });
+    await page.waitForSelector('h2:has-text("Calendar")', { timeout: 10000 });
+    await expect(page).toHaveURL(/view=calendar/);
     
     const content = await page.content();
     

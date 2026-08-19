@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import { describe, expect, it } from "vitest";
 
@@ -15,6 +15,14 @@ describe("out-of-the-box docs tell the truth", () => {
 
   it("excludes spec/ from GitHub language statistics", () => {
     expect(gitattributes).toMatch(/spec\/\*\*\s+linguist-documentation/);
+  });
+
+  it("README shows the captured demo screenshot and five-view GIF", () => {
+    expect(readme).toContain("docs/assets/dotplot.png");
+    expect(readme).toContain("docs/assets/tour.gif");
+    expect(readme).toContain("pnpm readme:assets");
+    expect(existsSync(resolve(root, "docs/assets/dotplot.png"))).toBe(true);
+    expect(existsSync(resolve(root, "docs/assets/tour.gif"))).toBe(true);
   });
 
   it("README hosted-version copy points at the quickstart and Discussions", () => {

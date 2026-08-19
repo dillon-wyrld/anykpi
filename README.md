@@ -10,6 +10,8 @@ Founder metrics: users, retention, PMF signals, WBR.
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black)
 
+![Dot Plot — every named user, every day, from the seeded demo workspace](docs/assets/dotplot.png)
+
 ## What It Is
 
 ANYKPI is an open-source dashboard. The only step is connecting data.
@@ -33,6 +35,10 @@ Both paths are first-class.
 5. **PMF+** — Research users, draft outreach (queued, never auto-sent).
 
 Every view has a shareable URL.
+
+![Tour of the five views on the seeded demo workspace](docs/assets/tour.gif)
+
+Recapture the stills and GIF from the seeded `demo` workspace with `pnpm readme:assets`. Steps live next to the files in [docs/assets](docs/assets/README.md).
 
 ## Install
 

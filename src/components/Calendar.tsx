@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format, addDays, startOfWeek, endOfMonth, isSameDay, differenceInDays } from "date-fns";
 import {
@@ -95,6 +95,7 @@ export default function Calendar({ workspace }: CalendarProps) {
   const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
+  const initialSyncDone = useRef(false);
 
   useEffect(() => {
     fetch(`/api/views/calendar?workspace=${workspace}`)
@@ -116,10 +117,33 @@ export default function Calendar({ workspace }: CalendarProps) {
   }, [workspace, today]);
 
   useEffect(() => {
+    // Skip the URL sync on initial mount so workspace= and view= stay put
+    if (!initialSyncDone.current) {
+      initialSyncDone.current = true;
+      return;
+    }
+
     const encoded = encodeViewState(viewState);
-    const currentPath = window.location.pathname;
-    router.replace(currentPath + encoded, { scroll: false });
-  }, [viewState, router]);
+    const params = new URLSearchParams(searchParams.toString());
+    const viewStateKeys = ["v", "o", "x", "f"];
+
+    if (encoded) {
+      const newParams = new URLSearchParams(encoded.slice(1));
+      newParams.forEach((value, key) => {
+        params.set(key, value);
+      });
+      viewStateKeys.forEach((key) => {
+        if (!newParams.has(key)) params.delete(key);
+      });
+    } else {
+      viewStateKeys.forEach((key) => params.delete(key));
+    }
+
+    const newSearch = params.toString();
+    if (newSearch !== searchParams.toString()) {
+      router.replace(`/dashboard?${newSearch}`, { scroll: false });
+    }
+  }, [viewState, router, searchParams]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
