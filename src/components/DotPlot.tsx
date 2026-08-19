@@ -1,255 +1,982 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 
 interface User {
   personId: string;
   name: string;
+  email: string | null;
+  avatar: string | null;
   emoji: string;
   platform: string;
+  country: string;
+  cluster: string | null;
+  accountId: string | null;
+  workspaceId: string;
+  incomeBand: string | null;
+  traits: string | null;
   signupOffset: number;
   activity: boolean[];
-  streak?: number;
+  cohortMonth: number;
+  activeCount: number;
+  streak: number;
+  lastSeen: number;
+  isNew: boolean;
+  paid: boolean;
+  churned: boolean;
+}
+
+interface Group {
+  name: string;
+  users: User[];
+  hue: string;
+  collapsed: boolean;
+}
+
+interface Filter {
+  label: string;
+  test: (user: User) => boolean;
+}
+
+interface CellConfig {
+  shape: "circle" | "blob" | "rd" | "sq" | "dia" | "hollow";
+  encode: "events" | "minutes" | "fixed";
+  scale: number;
+  color: string;
+  layout: "emoji" | "dot" | "streak" | "dense" | "bars" | "stack" | "heat";
+  emoset: "mood" | "you" | "what" | "life";
+  marks: boolean;
+  num: boolean;
+  tint: boolean;
+  tinta: number;
+  grid: "none" | "row" | "col" | "both";
+  lanes: boolean;
+  rh: number;
+  clay: boolean;
+  paper: boolean;
+}
+
+interface ViewState {
+  zoom: "day" | "week" | "month";
+  group: "cluster" | "cohort" | "account" | "none";
+  vibe: boolean;
+  wall: boolean;
+  win: number;
+  winLen: number;
+  filters: Filter[];
+  collapsed: Set<string>;
+  cc: CellConfig;
 }
 
 interface DotPlotProps {
   workspace: string;
 }
 
-function computeStreak(activity: boolean[]): number {
-  let streak = 0;
-  for (let d = activity.length - 1; d >= 0 && activity[d]; d--) {
-    streak++;
-  }
-  return streak;
-}
+const DAYS = 28;
+const LBL = 180;
+const CW = 18;
+const RH = 26;
+const TOP = 24;
+const PAD = 2.6;
 
-function findStreaks(activity: boolean[]): Array<{ start: number; len: number }> {
-  const streaks: Array<{ start: number; len: number }> = [];
-  let start = -1;
-  let len = 0;
-  
-  for (let i = 0; i < activity.length; i++) {
-    if (activity[i]) {
-      if (start === -1) start = i;
-      len++;
-    } else {
-      if (len > 0) {
-        streaks.push({ start, len });
-      }
-      start = -1;
-      len = 0;
-    }
-  }
-  if (len > 0) {
-    streaks.push({ start, len });
-  }
-  
-  return streaks;
-}
+const DOTCOLORS: Record<string, string> = {
+  indigo: "#5e6ad2",
+  violet: "#8b5cf6",
+  teal: "#0d9488",
+  amber: "#d97917",
+  pink: "#e05fa0",
+  slate: "#475569",
+  holo: "#a78bfa",
+  candy: "#ff5c8a",
+};
+
+const ARCHHUE: Record<string, string> = {
+  daily: "#ff4d8d",
+  weekday: "#5e6ad2",
+  weekender: "#ff9a1f",
+  casual: "#12b8a0",
+  monthly: "#8b5cf6",
+  burst: "#ff7a2f",
+  churned: "#9aa4b2",
+  newbie: "#22c55e",
+};
+
+const LANEHUE = [
+  "#5e6ad2",
+  "#ff9a1f",
+  "#12b8a0",
+  "#ff4d8d",
+  "#8b5cf6",
+  "#3fa7d6",
+  "#26a465",
+  "#d97917",
+];
+
+const FLAGS: Record<string, string> = {
+  US: "🇺🇸",
+  FR: "🇫🇷",
+  DE: "🇩🇪",
+  GB: "🇬🇧",
+  BR: "🇧🇷",
+  JP: "🇯🇵",
+  IN: "🇮🇳",
+  CA: "🇨🇦",
+};
+
+const CLUSTERS: Record<string, string> = {
+  daily: "🔥 Power daily",
+  weekday: "💼 Weekday workers",
+  weekender: "🌴 Weekenders",
+  casual: "🌙 Occasional",
+  monthly: "🗓️ Monthly check-ins",
+  burst: "⚡ Bursty",
+  churned: "🫥 Fading away",
+  newbie: "🐣 Brand new",
+};
+
+const EMOSET = {
+  mood: (u: User, activity: boolean[]) => {
+    const k = u.activeCount / DAYS;
+    return k >= 0.8 ? "👑" : k >= 0.6 ? "🔥" : k >= 0.4 ? "🧡" : k >= 0.2 ? "💛" : "🌱";
+  },
+  you: (u: User) => u.emoji,
+  what: (u: User) => (u.paid ? "💸" : u.activeCount > 10 ? "💬" : "🔍"),
+  life: (u: User) =>
+    u.isNew ? "🐣" : u.paid ? "💎" : u.churned ? "👻" : "🌿",
+};
 
 export default function DotPlot({ workspace }: DotPlotProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewState, setViewState] = useState<ViewState>({
+    zoom: "day",
+    group: "cluster",
+    vibe: true,
+    wall: false,
+    win: 0,
+    winLen: DAYS,
+    filters: [],
+    collapsed: new Set<string>(),
+    cc: {
+      shape: "blob",
+      encode: "events",
+      scale: 100,
+      color: "indigo",
+      layout: "emoji",
+      emoset: "mood",
+      marks: true,
+      num: false,
+      tint: true,
+      tinta: 10,
+      grid: "row",
+      lanes: false,
+      rh: 28,
+      clay: true,
+      paper: false,
+    },
+  });
+
+  const [tooltip, setTooltip] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    content: string;
+  }>({ visible: false, x: 0, y: 0, content: "" });
+
+  const [userCard, setUserCard] = useState<{
+    visible: boolean;
+    x: number;
+    y: number;
+    user: User | null;
+  }>({ visible: false, x: 0, y: 0, user: null });
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     fetch(`/api/views/dotplot?workspace=${workspace}`)
       .then((res) => res.json())
       .then((data) => {
-        const usersWithStreaks = (data.users || []).map((u: User) => ({
-          ...u,
-          streak: computeStreak(u.activity),
-        }));
-        setUsers(usersWithStreaks);
+        setUsers(data.users || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [workspace]);
 
+  const getFilteredUsers = useCallback(() => {
+    let filtered = [...users];
+    viewState.filters.forEach((f) => {
+      filtered = filtered.filter(f.test);
+    });
+    return filtered;
+  }, [users, viewState.filters]);
+
+  const getGroups = useCallback((): Group[] => {
+    const filtered = getFilteredUsers();
+    
+    if (viewState.group === "none") {
+      return [{ name: "", users: filtered, hue: "", collapsed: false }];
+    }
+
+    if (viewState.group === "cluster") {
+      const byCluster = new Map<string, User[]>();
+      filtered.forEach((u) => {
+        const key = u.cluster || "unknown";
+        if (!byCluster.has(key)) byCluster.set(key, []);
+        byCluster.get(key)!.push(u);
+      });
+      
+      const groups: Group[] = [];
+      let hueIdx = 0;
+      Array.from(byCluster.entries())
+        .sort((a, b) => b[1].length - a[1].length)
+        .forEach(([name, users]) => {
+          groups.push({
+            name: CLUSTERS[name] || name,
+            users,
+            hue: ARCHHUE[name] || LANEHUE[hueIdx++ % LANEHUE.length],
+            collapsed: viewState.collapsed.has(name),
+          });
+        });
+      return groups;
+    }
+
+    if (viewState.group === "cohort") {
+      const byCohort = new Map<number, User[]>();
+      filtered.forEach((u) => {
+        const key = u.cohortMonth;
+        if (!byCohort.has(key)) byCohort.set(key, []);
+        byCohort.get(key)!.push(u);
+      });
+      
+      const groups: Group[] = [];
+      let hueIdx = 0;
+      Array.from(byCohort.entries())
+        .sort((a, b) => a[0] - b[0])
+        .forEach(([month, users]) => {
+          groups.push({
+            name: `Month ${month}`,
+            users,
+            hue: LANEHUE[hueIdx++ % LANEHUE.length],
+            collapsed: viewState.collapsed.has(`Month ${month}`),
+          });
+        });
+      return groups;
+    }
+
+    if (viewState.group === "account") {
+      const byAccount = new Map<string, User[]>();
+      filtered.forEach((u) => {
+        const key = u.accountId || "individual";
+        if (!byAccount.has(key)) byAccount.set(key, []);
+        byAccount.get(key)!.push(u);
+      });
+      
+      const groups: Group[] = [];
+      let hueIdx = 0;
+      Array.from(byAccount.entries())
+        .sort((a, b) => b[1].length - a[1].length)
+        .forEach(([name, users]) => {
+          groups.push({
+            name: name === "individual" ? "Individual users" : name,
+            users,
+            hue: LANEHUE[hueIdx++ % LANEHUE.length],
+            collapsed: viewState.collapsed.has(name),
+          });
+        });
+      return groups;
+    }
+
+    return [{ name: "", users: filtered, hue: "", collapsed: false }];
+  }, [getFilteredUsers, viewState.group, viewState.collapsed]);
+
+  const drawMinimap = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const groups = getGroups();
+    const flatUsers: User[] = [];
+    groups.forEach((g) => {
+      if (g.collapsed) {
+        flatUsers.push(g.users[0]);
+      } else {
+        flatUsers.push(...g.users);
+      }
+    });
+
+    const w = canvas.clientWidth || 900;
+    const h = canvas.clientHeight || 112;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, w, h);
+
+    const R = flatUsers.length || 1;
+    const rh = h / R;
+    const cwp = w / DAYS;
+
+    flatUsers.forEach((u, r) => {
+      ctx.fillStyle = DOTCOLORS[viewState.cc.color] || "#5e6ad2";
+      const y = r * rh;
+      const bh = Math.max(0.9, rh - (rh > 3 ? 1 : 0));
+
+      for (let d = 0; d < DAYS; d++) {
+        if (!u.activity[d]) continue;
+        ctx.globalAlpha = 0.6;
+        ctx.fillRect(d * cwp, y, Math.max(0.9, cwp - 0.4), bh);
+      }
+    });
+
+    ctx.globalAlpha = 1;
+  }, [getGroups, viewState.cc.color]);
+
+  useEffect(() => {
+    if (!loading && users.length > 0) {
+      drawMinimap();
+    }
+  }, [loading, users, drawMinimap]);
+
+  const toggleGroupCollapse = (groupName: string) => {
+    const newCollapsed = new Set(viewState.collapsed);
+    if (newCollapsed.has(groupName)) {
+      newCollapsed.delete(groupName);
+    } else {
+      newCollapsed.add(groupName);
+    }
+    setViewState({ ...viewState, collapsed: newCollapsed });
+  };
+
+  const addFilter = (filter: Filter) => {
+    setViewState({
+      ...viewState,
+      filters: [...viewState.filters, filter],
+    });
+  };
+
+  const removeFilter = (index: number) => {
+    const newFilters = [...viewState.filters];
+    newFilters.splice(index, 1);
+    setViewState({ ...viewState, filters: newFilters });
+  };
+
+  const setZoom = (zoom: "day" | "week" | "month") => {
+    setViewState({ ...viewState, zoom });
+  };
+
+  const setGroup = (group: "cluster" | "cohort" | "account" | "none") => {
+    setViewState({ ...viewState, group });
+  };
+
+  const updateCellConfig = (key: keyof CellConfig, value: any) => {
+    setViewState({
+      ...viewState,
+      cc: { ...viewState.cc, [key]: value },
+    });
+  };
+
+  const renderCell = (user: User, day: number, x: number, y: number) => {
+    const active = user.activity[day];
+    const isSignup = day === user.signupOffset;
+    const cw = CW;
+    const rh = viewState.cc.rh;
+
+    if (!active && !isSignup) {
+      if (day < user.signupOffset) {
+        return (
+          <rect
+            key={`${user.personId}-${day}`}
+            x={x}
+            y={y + 3.5}
+            width={cw}
+            height={rh - 7}
+            fill="url(#hz)"
+            opacity="0.4"
+          />
+        );
+      }
+      return null;
+    }
+
+    const cx = x + cw / 2;
+    const cy = y + rh / 2;
+
+    if (viewState.cc.layout === "emoji") {
+      return (
+        <text
+          key={`${user.personId}-${day}`}
+          x={cx}
+          y={cy + 5}
+          fontSize="14"
+          textAnchor="middle"
+        >
+          {EMOSET[viewState.cc.emoset](user, user.activity)}
+        </text>
+      );
+    }
+
+    if (viewState.cc.layout === "streak") {
+      if (!active) return null;
+      
+      const prevActive = day > 0 && user.activity[day - 1];
+      const nextActive = day < DAYS - 1 && user.activity[day + 1];
+      
+      const h = 9;
+      const rx = prevActive ? 0 : 4.6;
+      const rxEnd = nextActive ? 0 : 4.6;
+
+      return (
+        <g key={`${user.personId}-${day}`}>
+          <rect
+            x={x + PAD}
+            y={cy - h / 2}
+            width={cw - PAD * 2}
+            height={h}
+            rx={rx}
+            fill="var(--accent)"
+          />
+          {!nextActive && rxEnd > 0 && (
+            <circle
+              cx={x + cw - PAD}
+              cy={cy}
+              r={h / 2}
+              fill="var(--accent)"
+            />
+          )}
+        </g>
+      );
+    }
+
+    if (viewState.cc.layout === "heat") {
+      const size = Math.max(6, Math.min(cw - 4, rh - 8));
+      const opacity = 0.3 + (active ? 0.6 : 0);
+      
+      return (
+        <rect
+          key={`${user.personId}-${day}`}
+          x={cx - size / 2}
+          y={cy - size / 2}
+          width={size}
+          height={size}
+          rx="3"
+          fill={DOTCOLORS[viewState.cc.color]}
+          opacity={opacity}
+        />
+      );
+    }
+
+    const size = (viewState.cc.scale / 100) * (active ? 8 : 6);
+
+    return (
+      <g key={`${user.personId}-${day}`}>
+        <circle
+          cx={cx}
+          cy={cy}
+          r={size / 2}
+          fill={active ? "var(--accent)" : "none"}
+          stroke={isSignup ? "var(--accent)" : "none"}
+          strokeWidth={isSignup ? "1.6" : "0"}
+          opacity={active ? 0.85 : 0.6}
+        />
+      </g>
+    );
+  };
+
+  const renderRow = (user: User, rowIndex: number, group?: Group) => {
+    const y = TOP + rowIndex * viewState.cc.rh;
+    const cy = y + viewState.cc.rh / 2;
+
+    return (
+      <g key={user.personId}>
+        <text x="2" y={cy + 4.4} fontSize="14">
+          {user.emoji}
+        </text>
+        <text
+          x="28"
+          y={cy + 4}
+          fontFamily="IBM Plex Sans, sans-serif"
+          fontSize="11.5"
+          fontWeight="500"
+          fill="var(--text)"
+          onMouseEnter={(e) => {
+            const rect = (e.target as SVGElement).getBoundingClientRect();
+            setUserCard({
+              visible: true,
+              x: rect.left + 40,
+              y: rect.bottom + 6,
+              user,
+            });
+          }}
+          onMouseLeave={() => {
+            setUserCard({ visible: false, x: 0, y: 0, user: null });
+          }}
+        >
+          {user.name}
+        </text>
+        <text
+          x={LBL - 56}
+          y={cy + 3.4}
+          fontFamily="IBM Plex Mono, monospace"
+          fontSize="7.5"
+          fill="var(--faint)"
+          letterSpacing="0.06em"
+          style={{ textTransform: "uppercase" }}
+        >
+          {user.platform}
+        </text>
+        {user.streak >= 3 && (
+          <text
+            x={LBL - 16}
+            y={cy + 3.8}
+            fontFamily="IBM Plex Sans, sans-serif"
+            fontSize="10"
+            fontWeight="600"
+            fill="#ff4d8d"
+          >
+            🔥{user.streak}
+          </text>
+        )}
+
+        {Array.from({ length: DAYS }).map((_, d) => renderCell(user, d, LBL + d * CW, y))}
+      </g>
+    );
+  };
+
+  const renderGroupHeader = (group: Group, rowIndex: number) => {
+    const y = TOP + rowIndex * viewState.cc.rh;
+    const cy = y + viewState.cc.rh / 2;
+
+    return (
+      <g key={`group-${group.name}`}>
+        <rect
+          x="0"
+          y={y}
+          width={LBL + DAYS * CW + 4}
+          height={viewState.cc.rh}
+          fill="var(--hover)"
+          opacity="0.3"
+        />
+        <text
+          x="28"
+          y={cy + 4}
+          fontFamily="IBM Plex Sans, sans-serif"
+          fontSize="12"
+          fontWeight="600"
+          fill={group.hue}
+          onClick={() => toggleGroupCollapse(group.name)}
+          style={{ cursor: "pointer" }}
+        >
+          {group.collapsed ? "▸" : "▾"} {group.name}
+        </text>
+        <text
+          x={LBL - 56}
+          y={cy + 3.4}
+          fontFamily="IBM Plex Mono, monospace"
+          fontSize="9"
+          fill="var(--sub)"
+        >
+          {group.users.length} {group.users.length === 1 ? "user" : "users"}
+        </text>
+      </g>
+    );
+  };
+
+  const renderCollapsedRow = (group: Group, rowIndex: number) => {
+    const y = TOP + rowIndex * viewState.cc.rh;
+    const cy = y + viewState.cc.rh / 2;
+
+    return (
+      <g key={`collapsed-${group.name}`}>
+        <rect
+          x="0"
+          y={y}
+          width={LBL + DAYS * CW + 4}
+          height={viewState.cc.rh}
+          fill="var(--hover)"
+          opacity="0.15"
+        />
+        <text
+          x="28"
+          y={cy + 4}
+          fontFamily="IBM Plex Sans, sans-serif"
+          fontSize="11.5"
+          fontWeight="500"
+          fill={group.hue}
+          onClick={() => toggleGroupCollapse(group.name)}
+          style={{ cursor: "pointer" }}
+        >
+          ▸ {group.name} ({group.users.length})
+        </text>
+        {Array.from({ length: DAYS }).map((_, d) => {
+          const count = group.users.filter((u) => u.activity[d]).length;
+          if (count === 0) return null;
+
+          const x = LBL + d * CW;
+          const size = Math.min(CW - 4, viewState.cc.rh - 8);
+          const opacity = 0.3 + (count / group.users.length) * 0.6;
+
+          return (
+            <rect
+              key={`${group.name}-${d}`}
+              x={x + 2}
+              y={cy - size / 2}
+              width={size}
+              height={size}
+              rx="3"
+              fill={group.hue}
+              opacity={opacity}
+            />
+          );
+        })}
+      </g>
+    );
+  };
+
   if (loading) {
     return <div className="text-sub">Loading...</div>;
   }
 
-  const DAYS = 28;
-  const LBL = 180;
-  const CW = 18;
-  const RH = 26;
-  const TOP = 24;
-  const PAD = 2.6;
-
+  const groups = getGroups();
   const letters = ["M", "T", "W", "T", "F", "S", "S"];
+  
+  let rowIndex = 0;
+  const rows: React.ReactElement[] = [];
+  
+  groups.forEach((group) => {
+    if (group.name && viewState.group !== "none") {
+      rows.push(renderGroupHeader(group, rowIndex));
+      rowIndex++;
+      
+      if (group.collapsed) {
+        rows.push(renderCollapsedRow(group, rowIndex));
+        rowIndex++;
+        return;
+      }
+    }
+    
+    group.users.forEach((user) => {
+      rows.push(renderRow(user, rowIndex, group));
+      rowIndex++;
+    });
+  });
+
+  const totalHeight = TOP + rowIndex * viewState.cc.rh + 8;
 
   return (
     <div className="space-y-4">
-      <div className="bg-panel border border-border rounded-lg shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-rule bg-panel-2">
-          <span className="eyebrow text-[10px]">
-            {users.length} people · {DAYS} days
-          </span>
-        </div>
-
-        <div className="p-4 overflow-x-auto">
-          <svg
-            viewBox={`0 0 ${LBL + DAYS * CW + 4} ${TOP + users.length * RH + 8}`}
-            className="w-full min-w-[470px]"
-            role="img"
-            aria-label="Dot plot showing user activity"
+      {/* Controls */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex gap-1 border border-border rounded-lg overflow-hidden">
+          <button
+            onClick={() => setZoom("day")}
+            className={`px-3 py-1.5 text-xs font-medium ${
+              viewState.zoom === "day"
+                ? "bg-accent text-white"
+                : "bg-panel text-sub hover:text-text"
+            }`}
           >
-            <defs>
-              <pattern
-                id="hz"
-                width="4"
-                height="4"
-                patternTransform="rotate(45)"
-                patternUnits="userSpaceOnUse"
+            Day
+          </button>
+          <button
+            onClick={() => setZoom("week")}
+            className={`px-3 py-1.5 text-xs font-medium border-l border-border ${
+              viewState.zoom === "week"
+                ? "bg-accent text-white"
+                : "bg-panel text-sub hover:text-text"
+            }`}
+          >
+            Week
+          </button>
+          <button
+            onClick={() => setZoom("month")}
+            className={`px-3 py-1.5 text-xs font-medium border-l border-border ${
+              viewState.zoom === "month"
+                ? "bg-accent text-white"
+                : "bg-panel text-sub hover:text-text"
+            }`}
+          >
+            Month
+          </button>
+        </div>
+
+        <div className="flex gap-1 border border-border rounded-lg overflow-hidden">
+          <button
+            onClick={() => setGroup("cluster")}
+            className={`px-3 py-1.5 text-xs font-medium ${
+              viewState.group === "cluster"
+                ? "bg-accent text-white"
+                : "bg-panel text-sub hover:text-text"
+            }`}
+          >
+            Clusters
+          </button>
+          <button
+            onClick={() => setGroup("cohort")}
+            className={`px-3 py-1.5 text-xs font-medium border-l border-border ${
+              viewState.group === "cohort"
+                ? "bg-accent text-white"
+                : "bg-panel text-sub hover:text-text"
+            }`}
+          >
+            Cohorts
+          </button>
+          <button
+            onClick={() => setGroup("account")}
+            className={`px-3 py-1.5 text-xs font-medium border-l border-border ${
+              viewState.group === "account"
+                ? "bg-accent text-white"
+                : "bg-panel text-sub hover:text-text"
+            }`}
+          >
+            B2B
+          </button>
+          <button
+            onClick={() => setGroup("none")}
+            className={`px-3 py-1.5 text-xs font-medium border-l border-border ${
+              viewState.group === "none"
+                ? "bg-accent text-white"
+                : "bg-panel text-sub hover:text-text"
+            }`}
+          >
+            None
+          </button>
+        </div>
+
+        <button
+          onClick={() =>
+            addFilter({
+              label: "platform is iOS",
+              test: (u) => u.platform === "ios",
+            })
+          }
+          className="px-3 py-1.5 text-xs font-medium border border-border rounded-lg bg-panel text-sub hover:text-text"
+        >
+          + Add filter
+        </button>
+
+        <div className="flex gap-1 border border-border rounded-lg overflow-hidden">
+          <button
+            onClick={() => updateCellConfig("layout", "emoji")}
+            className={`px-3 py-1.5 text-xs font-medium ${
+              viewState.cc.layout === "emoji"
+                ? "bg-accent text-white"
+                : "bg-panel text-sub hover:text-text"
+            }`}
+          >
+            Emoji
+          </button>
+          <button
+            onClick={() => updateCellConfig("layout", "dot")}
+            className={`px-3 py-1.5 text-xs font-medium border-l border-border ${
+              viewState.cc.layout === "dot"
+                ? "bg-accent text-white"
+                : "bg-panel text-sub hover:text-text"
+            }`}
+          >
+            Dot
+          </button>
+          <button
+            onClick={() => updateCellConfig("layout", "streak")}
+            className={`px-3 py-1.5 text-xs font-medium border-l border-border ${
+              viewState.cc.layout === "streak"
+                ? "bg-accent text-white"
+                : "bg-panel text-sub hover:text-text"
+            }`}
+          >
+            Tape
+          </button>
+          <button
+            onClick={() => updateCellConfig("layout", "heat")}
+            className={`px-3 py-1.5 text-xs font-medium border-l border-border ${
+              viewState.cc.layout === "heat"
+                ? "bg-accent text-white"
+                : "bg-panel text-sub hover:text-text"
+            }`}
+          >
+            Heat
+          </button>
+        </div>
+
+        {viewState.cc.layout === "emoji" && (
+          <div className="flex gap-1 border border-border rounded-lg overflow-hidden">
+            <button
+              onClick={() => updateCellConfig("emoset", "mood")}
+              className={`px-3 py-1.5 text-xs font-medium ${
+                viewState.cc.emoset === "mood"
+                  ? "bg-accent text-white"
+                  : "bg-panel text-sub hover:text-text"
+              }`}
+            >
+              🔥 Heat
+            </button>
+            <button
+              onClick={() => updateCellConfig("emoset", "you")}
+              className={`px-3 py-1.5 text-xs font-medium border-l border-border ${
+                viewState.cc.emoset === "you"
+                  ? "bg-accent text-white"
+                  : "bg-panel text-sub hover:text-text"
+              }`}
+            >
+              🧢 Them
+            </button>
+            <button
+              onClick={() => updateCellConfig("emoset", "what")}
+              className={`px-3 py-1.5 text-xs font-medium border-l border-border ${
+                viewState.cc.emoset === "what"
+                  ? "bg-accent text-white"
+                  : "bg-panel text-sub hover:text-text"
+              }`}
+            >
+              💸 Did
+            </button>
+            <button
+              onClick={() => updateCellConfig("emoset", "life")}
+              className={`px-3 py-1.5 text-xs font-medium border-l border-border ${
+                viewState.cc.emoset === "life"
+                  ? "bg-accent text-white"
+                  : "bg-panel text-sub hover:text-text"
+              }`}
+            >
+              🐣 Stage
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Filter chips */}
+      {viewState.filters.length > 0 && (
+        <div className="flex gap-2 flex-wrap">
+          {viewState.filters.map((filter, idx) => (
+            <span
+              key={idx}
+              className="inline-flex items-center gap-2 px-3 py-1 text-xs bg-accent-soft text-accent rounded-lg"
+            >
+              {filter.label}
+              <button
+                onClick={() => removeFilter(idx)}
+                className="text-accent hover:text-text"
               >
-                <line
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="4"
-                  stroke="var(--hatch)"
-                  strokeWidth="2.6"
-                />
-              </pattern>
-            </defs>
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
 
-            {Array.from({ length: DAYS }).map((_, d) => {
-              const wk = d % 7 >= 5;
-              return (
-                <text
-                  key={`day-${d}`}
-                  x={LBL + d * CW + CW / 2}
-                  y="12"
-                  textAnchor="middle"
-                  fontFamily="IBM Plex Mono, monospace"
-                  fontSize="8.5"
-                  fill={wk ? "var(--accent)" : "var(--faint)"}
-                  opacity={wk ? 0.8 : 0.55}
-                >
-                  {letters[d % 7]}
-                </text>
-              );
-            })}
+      {/* Minimap */}
+      <div className="bg-panel border border-border rounded-lg p-3">
+        <canvas
+          ref={canvasRef}
+          className="w-full h-28 rounded border border-border"
+          style={{ imageRendering: "pixelated" }}
+        />
+        <div className="text-xs text-sub mt-2">
+          day 1–{DAYS} · {getFilteredUsers().length} users
+        </div>
+      </div>
 
-            {users.map((user, i) => {
-              const y = TOP + i * RH;
-              const cy = y + RH / 2;
+      {/* Main plot */}
+      <div
+        ref={scrollRef}
+        className="bg-panel border border-border rounded-lg shadow-sm overflow-auto"
+        style={{ maxHeight: "800px" }}
+      >
+        <svg
+          viewBox={`0 0 ${LBL + DAYS * CW + 4} ${totalHeight}`}
+          className="w-full min-w-[600px]"
+          role="img"
+          aria-label="Dot plot showing user activity"
+        >
+          <defs>
+            <pattern
+              id="hz"
+              width="4"
+              height="4"
+              patternTransform="rotate(45)"
+              patternUnits="userSpaceOnUse"
+            >
+              <line
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="4"
+                stroke="var(--hatch)"
+                strokeWidth="2.6"
+              />
+            </pattern>
+          </defs>
 
-              return (
-                <g key={user.personId}>
-                  <text
-                    x="2"
-                    y={cy + 4.4}
-                    fontSize="14"
-                  >
-                    {user.emoji}
-                  </text>
-                  <text
-                    x="28"
-                    y={cy + 4}
-                    fontFamily="IBM Plex Sans, sans-serif"
-                    fontSize="11.5"
-                    fontWeight="500"
-                    fill="var(--text)"
-                  >
-                    {user.name}
-                  </text>
-                  <text
-                    x={LBL - 56}
-                    y={cy + 3.4}
-                    fontFamily="IBM Plex Mono, monospace"
-                    fontSize="7.5"
-                    fill="var(--faint)"
-                    letterSpacing="0.06em"
-                    style={{ textTransform: 'uppercase' }}
-                  >
-                    {user.platform}
-                  </text>
-                  {user.streak && user.streak >= 3 && (
-                    <text
-                      x={LBL - 16}
-                      y={cy + 3.8}
-                      fontFamily="IBM Plex Sans, sans-serif"
-                      fontSize="10"
-                      fontWeight="600"
-                      fill="#ff4d8d"
-                    >
-                      🔥{user.streak}
-                    </text>
-                  )}
+          {Array.from({ length: DAYS }).map((_, d) => {
+            const wk = d % 7 >= 5;
+            return (
+              <text
+                key={`day-${d}`}
+                x={LBL + d * CW + CW / 2}
+                y="12"
+                textAnchor="middle"
+                fontFamily="IBM Plex Mono, monospace"
+                fontSize="8.5"
+                fill={wk ? "var(--accent)" : "var(--faint)"}
+                opacity={wk ? 0.8 : 0.55}
+              >
+                {letters[d % 7]}
+              </text>
+            );
+          })}
 
-                  {user.signupOffset > 0 && (
-                    <rect
-                      x={LBL}
-                      y={y + 3.5}
-                      width={user.signupOffset * CW}
-                      height={RH - 7}
-                      rx="3"
-                      fill="url(#hz)"
-                    />
-                  )}
+          {rows}
+        </svg>
+      </div>
 
-                  {(() => {
-                    const strips: React.ReactElement[] = [];
-                    let d = 0;
-                    while (d < DAYS) {
-                      if (user.activity[d]) {
-                        const start = d;
-                        while (d < DAYS && user.activity[d]) d++;
-                        const w = (d - start) * CW - PAD * 2;
-                        strips.push(
-                          <rect
-                            key={`${user.personId}-${start}`}
-                            x={LBL + start * CW + PAD}
-                            y={cy - 4.6}
-                            width={w}
-                            height="9.2"
-                            rx="4.6"
-                            fill="var(--accent)"
-                          />
-                        );
-                      } else {
-                        d++;
-                      }
-                    }
-                    return strips;
-                  })()}
+      {/* User card tooltip */}
+      {userCard.visible && userCard.user && (
+        <div
+          className="fixed z-50 bg-panel border border-border rounded-lg shadow-lg p-3 min-w-[200px]"
+          style={{
+            left: `${userCard.x}px`,
+            top: `${userCard.y}px`,
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-2xl">{userCard.user.emoji}</span>
+            <div>
+              <div className="font-semibold text-sm">{userCard.user.name}</div>
+              <div className="text-xs text-sub">
+                {userCard.user.platform} · {FLAGS[userCard.user.country] || ""}{" "}
+                {userCard.user.country}
+              </div>
+            </div>
+          </div>
+          <div className="text-xs text-sub space-y-1">
+            <div>🔥 streak {userCard.user.streak}</div>
+            <div>📅 {userCard.user.activeCount} active days</div>
+            {userCard.user.paid && <div>💸 paid</div>}
+            {userCard.user.isNew && <div>🐣 new</div>}
+            {userCard.user.churned && <div>👻 churned</div>}
+          </div>
+        </div>
+      )}
 
-                  {user.signupOffset > 0 && (
-                    <circle
-                      cx={LBL + user.signupOffset * CW + CW / 2}
-                      cy={cy}
-                      r="6.4"
-                      fill="none"
-                      stroke="var(--accent)"
-                      strokeWidth="1.6"
-                      opacity="0.85"
-                    />
-                  )}
-                </g>
-              );
-            })}
+      {/* Legend */}
+      <div className="flex flex-wrap gap-4 text-xs text-sub">
+        <span className="flex items-center gap-2">
+          <i className="w-6 h-2 rounded-full bg-accent" />
+          consecutive days
+        </span>
+        <span className="flex items-center gap-2">
+          <i className="w-2 h-2 rounded-full border-2 border-accent" />
+          signup day
+        </span>
+        <span className="flex items-center gap-2">
+          <svg width="16" height="12" className="inline-block">
+            <rect width="16" height="12" fill="url(#hz)" opacity="0.4" />
           </svg>
-        </div>
-
-        <div className="flex flex-wrap gap-2 px-4 py-3 border-t border-rule">
-          <span className="flex items-center gap-2 text-[11px] font-mono text-sub">
-            <i className="w-[22px] h-[9px] rounded-full bg-accent" />
-            a streak
-          </span>
-          <span className="flex items-center gap-2 text-[11px] font-mono text-sub">
-            <i className="w-[9px] h-[9px] rounded-full bg-accent" />
-            a single day
-          </span>
-          <span className="flex items-center gap-2 text-[11px] font-mono text-sub">
-            <i className="w-[11px] h-[11px] rounded-full border-[1.8px] border-accent" />
-            the day they joined
-          </span>
-          <span className="text-[11px] font-mono text-sub">
-            hatched = not signed up yet
-          </span>
-        </div>
+          not signed up yet
+        </span>
       </div>
     </div>
   );

@@ -51,18 +51,42 @@ export async function GET(request: NextRequest) {
       activityMap.get(user.personId)?.has(day) || false
     );
 
+    const activeCount = activity.filter(Boolean).length;
+    let streak = 0;
+    for (let d = activity.length - 1; d >= 0 && activity[d]; d--) streak++;
+    
+    let lastSeen = -1;
+    for (let d = activity.length - 1; d >= 0; d--) {
+      if (activity[d]) {
+        lastSeen = activity.length - 1 - d;
+        break;
+      }
+    }
+
     return {
       personId: user.personId,
       name: user.name,
+      email: user.email,
+      avatar: user.avatar,
       emoji: user.emoji,
       platform: user.platform,
       country: user.country,
       cluster: user.cluster,
+      accountId: user.accountId,
+      workspaceId: user.workspaceId,
+      incomeBand: user.incomeBand,
+      traits: user.traits,
       signupOffset,
       activity,
       cohortMonth: Math.floor(signupOffset / 28),
+      activeCount,
+      streak,
+      lastSeen,
+      isNew: signupOffset > 21,
+      paid: false,
+      churned: lastSeen > 14,
     };
   });
 
-  return NextResponse.json({ users: result });
+  return NextResponse.json({ users: result, days: 28, baseDate: baseDate.toISOString() });
 }
