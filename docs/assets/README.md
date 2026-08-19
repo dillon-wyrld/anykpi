@@ -27,7 +27,7 @@ pnpm readme:assets
 Playwright records a Chromium video of the tour (Dot Plot → Cohorts → WBR → Calendar → PMF+). The script then encodes `tour.gif` with `ffmpeg`:
 
 ```bash
-ffmpeg -y -i tour.webm \
+ffmpeg -y -ss 1.25 -i tour.webm \
   -vf "fps=8,scale=1100:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=96[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3" \
   -loop 0 docs/assets/tour.gif
 ```

@@ -100,6 +100,7 @@ async function ensureServer(): Promise<ChildProcess | null> {
 }
 
 async function waitForView(page: Page, view: View): Promise<void> {
+  await page.waitForURL(new RegExp(`view=${view.id}`), { timeout: 30_000 });
   await page.waitForSelector(view.ready, { timeout: 30_000 });
   await page.locator("text=Loading...").waitFor({ state: "hidden", timeout: 15_000 }).catch(() => {
     // Some views never render the loading node after navigation.
@@ -152,6 +153,8 @@ function encodeGifFromVideo(webmPath: string, gifPath: string): boolean {
 
   const args = [
     "-y",
+    "-ss",
+    "1.25",
     "-i",
     webmPath,
     "-vf",
