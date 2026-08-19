@@ -8,6 +8,8 @@ import {
   WBRResponseSchema,
   CalendarResponseSchema,
   SyncResponseSchema,
+  SyncTriggerRequestSchema,
+  SyncTriggerResponseSchema,
   QueryUsersRequestSchema,
   APIKeyCreateRequestSchema,
   APIKeyResponseSchema,
@@ -231,6 +233,45 @@ export async function GET(request: NextRequest) {
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(SyncResponseSchema)
+                }
+              }
+            }
+          }
+        },
+        post: {
+          tags: ['Sync'],
+          summary: 'Trigger a sync',
+          description: 'Run one registered source or all sources. Requires an API key.',
+          requestBody: {
+            required: false,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(SyncTriggerRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Per-source results and updated sync states',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(SyncTriggerResponseSchema)
+                }
+              }
+            },
+            400: {
+              description: 'Unknown source or invalid body',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Missing or invalid API key',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
                 }
               }
             }

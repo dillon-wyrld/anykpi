@@ -101,4 +101,37 @@ describe("CLI ingest client", () => {
     expect(urls).toContain("http://instance.test/api/ingest/identify");
     expect(urls.some((url) => url.includes("/api/v1/ingest/"))).toBe(false);
   });
+
+  it("sync POSTs /api/v1/sync with workspace and optional source", async () => {
+    isolatedHome();
+    process.env.ANYKPI_API_KEY = "test-key";
+    process.env.ANYKPI_API_URL = "http://instance.test";
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        workspace: "demo",
+        results: [{ source: "posthog", rowsSynced: 0, health: "ok" }],
+        states: [],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const program = createProgram();
+    program.exitOverride();
+
+    await program.parseAsync(
+      ["sync", "--source", "posthog", "--workspace", "demo", "--json"],
+      { from: "user" }
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("http://instance.test/api/v1/sync");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(String(init.body))).toEqual({
+      workspace: "demo",
+      source: "posthog",
+    });
+  });
 });

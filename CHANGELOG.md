@@ -31,6 +31,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- `POST /api/v1/sync` triggers one registered source or all, with
+  `pending → success/error` state transitions and in-process coalescing of
+  concurrent runs for the same source. CLI: `anykpi sync`.
 - Working ESLint configuration; CI now gates on lint, unit tests, and a build.
 - Contributor docs (`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`) and issue/PR
   templates.

@@ -29,6 +29,7 @@ describe("published CLI surface", () => {
     expect(fromHelp).toContain("cohorts");
     expect(fromHelp).toContain("wbr");
     expect(fromHelp).toContain("calendar");
+    expect(fromHelp).toContain("sync");
     expect(fromHelp).toContain("identify");
     expect(fromHelp).toContain("track");
     expect(fromHelp).toContain("workspaces");
