@@ -171,10 +171,11 @@ Data lives in the SQLite file at `DATABASE_PATH` (default `./data/anykpi.db`, or
 - [x] Core dashboard on demo data
 - [x] PostHog, Mixpanel, Amplitude connectors
 - [x] Stripe connector
+- [x] RevenueCat connector
 - [x] ICS calendar sync (read-only)
 - [x] ANYKPI SDK for direct event ingestion
 - [x] MCP server for agents
-- [ ] RevenueCat, Mercury connectors
+- [ ] Mercury connectors
 - [ ] GitHub releases
 - [ ] Milestone detector (1000th signup, company birthday, streaks)
 - [ ] Semantic user clustering
