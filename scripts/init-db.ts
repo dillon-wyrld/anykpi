@@ -19,11 +19,12 @@ try {
 }
 
 console.log("Seeding demo data...");
-try {
-  seedDemo();
-  console.log("Database initialized successfully!");
-  process.exit(0);
-} catch (error) {
-  console.error("Failed to seed demo data:", error);
-  process.exit(1);
-}
+seedDemo()
+  .then(() => {
+    console.log("Database initialized successfully!");
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error("Failed to seed demo data:", error);
+    process.exit(1);
+  });
