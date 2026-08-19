@@ -1,8 +1,9 @@
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { expectUserVisibleViaRestAndMcp } from "./helpers/verify-ingest";
 
 const API_URL = "http://localhost:3000";
 const API_KEY = process.env.ANYKPI_API_KEY || "anykpi-e2e-admin";
@@ -80,12 +81,5 @@ await client.track("sdk_npm_again", { platform });
     throw new Error(`SDK consumer failed\n${run.stdout}\n${run.stderr}`);
   }
 
-  const users = await request.get(
-    `/api/v1/users?workspace=demo&platform=${encodeURIComponent(platform)}`
-  );
-  expect(users.ok()).toBeTruthy();
-  const body = await users.json();
-  expect(body.users.map((user: { personId: string }) => user.personId)).toContain(
-    `person_${userId}`
-  );
+  await expectUserVisibleViaRestAndMcp(request, { userId, platform });
 });
