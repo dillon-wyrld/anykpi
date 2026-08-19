@@ -1,6 +1,9 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
+import { formatSyncAge } from "@/core/views/calendar-math";
+
+export { classifyCalendarDate, formatSyncAge } from "@/core/views/calendar-math";
 
 export async function loadCalendarView(workspace: string) {
   const events = await db
@@ -17,19 +20,11 @@ export async function loadCalendarView(workspace: string) {
     .all();
 
   const syncMap = new Map(syncStates.map((s) => [s.source, s]));
+  const now = new Date();
 
   return {
     events: events.map((e) => {
       const sync = syncMap.get(e.source);
-      const ageMs = sync?.lastSync ? Date.now() - sync.lastSync.getTime() : 0;
-      const ageStr =
-        ageMs < 60000
-          ? "live"
-          : ageMs < 3600000
-            ? `${Math.floor(ageMs / 60000)}m ago`
-            : ageMs < 86400000
-              ? `${Math.floor(ageMs / 3600000)}h ago`
-              : `${Math.floor(ageMs / 86400000)}d ago`;
 
       return {
         id: e.id,
@@ -42,7 +37,7 @@ export async function loadCalendarView(workspace: string) {
         title: e.title,
         badge: e.badge,
         detail: `${e.type} event from ${e.sourceName}`,
-        syncAge: ageStr,
+        syncAge: formatSyncAge(sync?.lastSync, now),
         isFuture: e.isFuture,
       };
     }),

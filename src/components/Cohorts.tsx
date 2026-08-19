@@ -2,6 +2,16 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  SMILE_COPY_DECAY,
+  SMILE_COPY_LEVEL,
+  CO_MINN,
+  bestVintage,
+  cohortBenchmark,
+  findLeak,
+  loyalCoreCount,
+  smileTest,
+} from "@/core/views/cohort-math";
 
 interface User {
   personId: string;
@@ -46,10 +56,8 @@ const GRAINS = {
   quarter: { d: 91, name: "Quarterly", short: "1q", unit: "quarter", units: "quarters", per: "Q", pre: "Q", cols: 8 },
 };
 
-const CO_DECAY = 0.035;
-const CO_LEVEL = 20;
-const CO_MINSIZE = 8;
-const CO_MINN = 15;
+const CO_DECAY = SMILE_COPY_DECAY;
+const CO_LEVEL = SMILE_COPY_LEVEL;
 
 const CO_W = 720;
 const CO_H = 390;
@@ -107,7 +115,6 @@ export default function Cohorts({ workspace }: CohortsProps) {
   const initialSyncDone = useRef(false);
   
   const curvesRef = useRef<SVGSVGElement>(null);
-  const totalDays = 168;
 
   useEffect(() => {
     fetch(`/api/views/cohorts?workspace=${workspace}&grain=${viewState.grain}`)
@@ -155,124 +162,6 @@ export default function Cohorts({ workspace }: CohortsProps) {
     }
   }, [viewState, router, searchParams]);
 
-  const computeCohorts = useCallback(() => {
-    if (users.length === 0) return [];
-    
-    const grain = GRAINS[viewState.grain];
-    const G = grain.d;
-    const rows: CohortRow[] = [];
-    
-    const maxPeriods = Math.ceil(totalDays / G);
-    
-    for (let b = 0; b < maxPeriods; b++) {
-      const start = b * G;
-      const cohortUsers = users.filter(
-        (u) => Math.floor(u.signupDay / G) === b
-      );
-      
-      if (cohortUsers.length === 0) continue;
-      
-      const retention: number[] = [];
-      const counts: number[] = [];
-      
-      for (let p = 0; p < maxPeriods - b; p++) {
-        const periodStart = start + p * G;
-        const periodEnd = Math.min(totalDays, periodStart + G);
-        
-        let activeCount = 0;
-        cohortUsers.forEach((u) => {
-          for (let d = periodStart; d < periodEnd; d++) {
-            if (u.dailyActivity[d]) {
-              activeCount++;
-              break;
-            }
-          }
-        });
-        
-        counts.push(activeCount);
-        retention.push(
-          cohortUsers.length > 0
-            ? Math.round((activeCount / cohortUsers.length) * 100)
-            : 0
-        );
-      }
-      
-      const grade = gradeCohort({ retention, size: cohortUsers.length }, G);
-      const label =
-        G === 1
-          ? `D${b + 1}`
-          : G === 7
-          ? `W${b + 1}`
-          : grain.pre === "W"
-          ? `W${start / 7 + 1}–${Math.min(24, start / 7 + G / 7)}`
-          : `${grain.pre}${b + 1}`;
-      
-      rows.push({
-        week: b,
-        label,
-        size: cohortUsers.length,
-        retention,
-        counts,
-        users: cohortUsers,
-        state: grade.state,
-        grade,
-      });
-    }
-    
-    return rows;
-  }, [users, viewState.grain, totalDays]);
-
-  function gradeCohort(
-    cohort: { retention: number[]; size: number },
-    G: number
-  ): {
-    state: "young" | "smile" | "low" | "sliding";
-    slope: number;
-    floor: number;
-    decay: number;
-    thin?: boolean;
-  } {
-    const ret = cohort.retention;
-    
-    if (cohort.size < CO_MINSIZE) {
-      return { state: "young", slope: 0, floor: 0, decay: 0, thin: true };
-    }
-    
-    if (ret.length < 4 || ret.length * G < 91) {
-      return { state: "young", slope: 0, floor: 0, decay: 0 };
-    }
-    
-    const from = Math.max(1, Math.round(28 / G));
-    const slope = leastSquaresSlope(ret, from);
-    const win = ret.slice(from);
-    const base = Math.max(1, win.reduce((a, b) => a + b, 0) / win.length);
-    const decay = ((slope * 7) / G) / base;
-    const floor = ret.slice(-5).reduce((a, b) => a + b, 0) / 5;
-    
-    const state: "young" | "smile" | "low" | "sliding" =
-      decay < -CO_DECAY ? "sliding" : floor < CO_LEVEL ? "low" : "smile";
-    
-    return { state, slope, floor, decay };
-  }
-
-  function leastSquaresSlope(ret: number[], from: number): number {
-    const n = ret.length - from;
-    if (n < 3) return 0;
-    
-    let sx = 0,
-      sy = 0,
-      sxy = 0,
-      sxx = 0;
-    for (let p = from; p < ret.length; p++) {
-      sx += p;
-      sy += ret[p];
-      sxy += p * ret[p];
-      sxx += p * p;
-    }
-    const d = n * sxx - sx * sx;
-    return d ? (n * sxy - sx * sy) / d : 0;
-  }
-
   useEffect(() => {
     const smilingCount = cohortRows.filter((r) => r.state === "smile").length;
     if (smilingCount >= 3 && viewState.celebrate && !confettiTriggered) {
@@ -290,9 +179,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
     
     const coX = (p: number) => CO_PL + (p / Math.max(1, maxObs - 1)) * (CO_W - CO_PL - CO_PR);
     const coY = (pct: number) => CO_H - CO_PB - (pct / 100) * (CO_H - CO_PB - CO_PT);
-    
-    const smilers = cohortRows.filter((r) => r.state === "smile");
-    
+
     return (
       <svg
         ref={curvesRef}
@@ -396,77 +283,14 @@ export default function Cohorts({ workspace }: CohortsProps) {
     if (cohortRows.length === 0) return null;
     
     const grain = GRAINS[viewState.grain];
-    const aged = cohortRows.filter((r) => r.state !== "young").length;
-    const smilers = cohortRows.filter((r) => r.state === "smile");
-    const lowCount = cohortRows.filter((r) => r.state === "low").length;
-    const slidingCount = cohortRows.filter((r) => r.state === "sliding").length;
-    
-    const pmfLit = aged > 0 && smilers.length / aged >= 0.5;
-    
-    const totalUsers = cohortRows.reduce((sum, r) => sum + r.size, 0);
-    const loyalCore = cohortRows
-      .filter((r) => r.retention.length >= 8)
-      .reduce(
-        (sum, r) =>
-          sum +
-          users.filter((u) => {
-            const cohortIdx = Math.floor(u.signupDay / (GRAINS[viewState.grain]?.d || 7));
-            return cohortIdx === r.week &&
-              u.dailyActivity.slice(u.signupDay, u.signupDay + 56).filter(Boolean).length >= 56;
-          }).length,
-        0
-      );
-    
-    const maxPeriods = Math.max(...cohortRows.map((r) => r.retention.length));
-    const benchmark: { pct: number; n: number }[] = [];
-    for (let p = 0; p < maxPeriods; p++) {
-      let num = 0,
-        den = 0,
-        k = 0;
-      cohortRows.forEach((c) => {
-        if (p < c.retention.length) {
-          num += c.counts[p];
-          den += c.size;
-          k++;
-        }
-      });
-      benchmark.push({ pct: den ? Math.round((100 * num) / den) : 0, n: k });
-    }
-    
-    const transitions: { p: number; drop: number }[] = [];
-    for (let p = 1; p < maxPeriods; p++) {
-      let d = 0,
-        k = 0;
-      cohortRows.forEach((c) => {
-        if (p < c.retention.length) {
-          d += c.retention[p - 1] - c.retention[p];
-          k++;
-        }
-      });
-      if (k >= Math.max(2, Math.ceil(cohortRows.length * 0.2))) {
-        transitions.push({ p, drop: d / k });
-      }
-    }
-    
-    const leak =
-      transitions.length > 1
-        ? {
-            cliff: transitions[0],
-            worst: transitions.slice(1).reduce((a, b) => (b.drop > a.drop ? b : a), transitions[1]),
-          }
-        : null;
-    
-    const bestPeriod = Math.min(3, maxPeriods - 1);
-    let bestVintage: CohortRow | null = null;
-    if (bestPeriod >= 1) {
-      cohortRows.forEach((r) => {
-        if (r.retention.length > bestPeriod && r.size >= CO_MINN) {
-          if (!bestVintage || r.retention[bestPeriod] > bestVintage.retention[bestPeriod]) {
-            bestVintage = r;
-          }
-        }
-      });
-    }
+    const { aged, smilers, pmfLit } = smileTest(cohortRows);
+    const loyalCore = loyalCoreCount(
+      users,
+      cohortRows,
+      GRAINS[viewState.grain]?.d || 7
+    );
+    const leak = findLeak(cohortRows);
+    const vintage = bestVintage(cohortRows, CO_MINN);
     
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
@@ -479,7 +303,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
         >
           <div className="text-[10px] uppercase tracking-wider text-sub mb-1">The smile test</div>
           <div className="text-lg font-semibold">
-            {aged === 0 ? "—" : `${smilers.length} of ${aged}`}
+            {aged === 0 ? "—" : `${smilers} of ${aged}`}
           </div>
           <div className="text-xs text-sub mt-1">
             {aged === 0
@@ -506,11 +330,11 @@ export default function Cohorts({ workspace }: CohortsProps) {
         <div className="bg-panel border border-border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-sub mb-1">Best vintage</div>
           <div className="text-lg font-semibold">
-            {bestVintage !== null ? (bestVintage as CohortRow).label : "—"}
+            {vintage !== null ? vintage.vintage.label : "—"}
           </div>
           <div className="text-xs text-sub mt-1">
-            {bestVintage !== null
-              ? `${(bestVintage as CohortRow).retention[bestPeriod]}% at ${grain.per} ${bestPeriod} · ${(bestVintage as CohortRow).size} joined`
+            {vintage !== null
+              ? `${vintage.vintage.retention[vintage.period]}% at ${grain.per} ${vintage.period} · ${vintage.vintage.size} joined`
               : `no ${grain.unit} has ${CO_MINN}+ signups yet`}
           </div>
         </div>
@@ -522,7 +346,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
         </div>
       </div>
     );
-  }, [cohortRows, viewState.grain, viewState.celebrate]);
+  }, [cohortRows, users, viewState.grain, viewState.celebrate]);
 
   const renderTable = useCallback(() => {
     if (cohortRows.length === 0) return null;
@@ -532,19 +356,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
     
     const maxVal = Math.max(...cohortRows.flatMap((r) => r.retention.slice(1)));
     const heatOpacity = (v: number) => 0.05 + 0.8 * Math.pow(Math.max(0, v) / Math.max(1, maxVal), 0.85);
-    
-    const benchmark: number[] = [];
-    for (let p = 0; p < cols; p++) {
-      let num = 0,
-        den = 0;
-      cohortRows.forEach((c) => {
-        if (p < c.retention.length) {
-          num += c.counts[p];
-          den += c.size;
-        }
-      });
-      benchmark.push(den ? Math.round((100 * num) / den) : 0);
-    }
+    const benchmark = cohortBenchmark(cohortRows, cols);
     
     return (
       <div className="overflow-x-auto max-h-[520px] overflow-y-auto">

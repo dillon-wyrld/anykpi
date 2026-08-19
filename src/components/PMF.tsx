@@ -1,51 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-
-interface PMFPerson {
-  personId: string;
-  name: string;
-  emoji: string;
-  platform: string;
-  country: string;
-  income: string;
-  verified: boolean;
-  role?: string;
-  org?: string;
-  city?: string;
-  interests: string[];
-  links: Array<{ type: string; value: string }>;
-  claims: Array<{ title: string; source: string; confidence: "high" | "medium" | "low"; content: boolean }>;
-  behavior: string;
-  signal: string;
-  read: string;
-  play: string;
-  questions: string[];
-}
-
-interface Draft {
-  personId: string;
-  message: string;
-  state: "waiting" | "edited" | "approved";
-}
-
-interface PMFRun {
-  id: string;
-  title: string;
-  emoji: string;
-  status: "researching" | "done";
-  progress: number;
-  totalPeople: number;
-  people: PMFPerson[];
-  queue: Draft[];
-  isGroup: boolean;
-  groupRollup?: {
-    segments: Array<{ name: string; count: number }>;
-    stillHere: number;
-    gone: number;
-    resonatingWith?: string;
-  };
-}
+import {
+  generatePmfQueue,
+  pmfProgressPct,
+  pmfRunTotals,
+  type PmfRun,
+} from "@/core/views/pmf";
 
 interface PMFProps {
   workspace: string;
@@ -60,7 +21,7 @@ const STANDARD_QUESTIONS = [
 ];
 
 export default function PMF({ workspace }: PMFProps) {
-  const [runs, setRuns] = useState<PMFRun[]>([]);
+  const [runs, setRuns] = useState<PmfRun[]>([]);
   const [loading, setLoading] = useState(true);
   const [includeGift, setIncludeGift] = useState(true);
   const [giftAmount, setGiftAmount] = useState("25");
@@ -77,27 +38,9 @@ export default function PMF({ workspace }: PMFProps) {
       .catch(() => setLoading(false));
   }, [workspace]);
 
-  const generateQueue = (run: PMFRun) => {
-    const giftLine = !includeGift
-      ? ""
-      : giftType === "swag box"
-      ? " (we'll send a swag box for your trouble either way.)"
-      : ` (there's a $${giftAmount} ${giftType} for your time too — though I'd be asking regardless.)`;
-
-    const queue: Draft[] = run.people.map((person) => {
-      const first = person.name.split(" ")[0];
-      const message = `hey ${first} — I'd love to understand how this is actually fitting into your week (or not fitting). any chance you'd give me 15 minutes? it would genuinely mean the world.${giftLine}`;
-
-      return {
-        personId: person.personId,
-        message,
-        state: "waiting" as const,
-      };
-    });
-
-    setRuns(
-      runs.map((r) => (r.id === run.id ? { ...r, queue } : r))
-    );
+  const generateQueue = (run: PmfRun) => {
+    const queue = generatePmfQueue(run, { includeGift, giftAmount, giftType });
+    setRuns(runs.map((r) => (r.id === run.id ? { ...r, queue } : r)));
   };
 
   const approveDraft = (runId: string, personId: string) => {
@@ -139,19 +82,15 @@ export default function PMF({ workspace }: PMFProps) {
     return <div className="text-sub">Loading...</div>;
   }
 
-  const queuedTotal = runs.reduce((sum, r) => r.queue.length, 0);
-  const waitingCount = runs.reduce(
-    (sum, r) => sum + r.queue.filter((d) => d.state === "waiting").length,
-    0
-  );
+  const { runCount, peopleResearched, queuedTotal, waitingCount } = pmfRunTotals(runs);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
         <h2 className="text-lg font-semibold">PMF+</h2>
         <span className="text-sm text-sub">
-          {runs.length} run{runs.length !== 1 ? "s" : ""} ·{" "}
-          {runs.reduce((sum, r) => sum + r.people.length, 0)} people researched
+          {runCount} run{runCount !== 1 ? "s" : ""} ·{" "}
+          {peopleResearched} people researched
         </span>
       </div>
 
@@ -240,7 +179,7 @@ export default function PMF({ workspace }: PMFProps) {
                       <div className="w-32 h-2 bg-panel-2 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-accent transition-all"
-                          style={{ width: `${(run.progress / run.totalPeople) * 100}%` }}
+                          style={{ width: `${pmfProgressPct(run.progress, run.totalPeople)}%` }}
                         />
                       </div>
                       <span className="text-xs text-sub">{run.progress}/{run.totalPeople}</span>

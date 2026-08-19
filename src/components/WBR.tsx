@@ -2,6 +2,15 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  sheetPct,
+  sheetRoll,
+  sheetTint,
+  wbrBox,
+  wbrStat,
+  wfmt,
+  wsign,
+} from "@/core/views/wbr-math";
 
 interface Metric {
   id: string;
@@ -14,7 +23,7 @@ interface Metric {
   target: number;
   wow: number;
   yoy: number;
-  status: "on" | "watch" | "off";
+  status: "ok" | "watch" | "off";
   statusReason?: string;
   unit?: string;
   goodDir: number;
@@ -64,85 +73,6 @@ function decodeViewState(searchParams: URLSearchParams): Partial<ViewState> {
   return vs;
 }
 
-function wfmt(v: number, m: Metric): string {
-  const dp = m.dp || 0;
-  const s = Number(v).toFixed(dp);
-  return (m.unit === "$" ? "$" : "") + s + (m.unit && m.unit !== "$" ? m.unit : "");
-}
-
-function wsign(v: number): string {
-  return (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v) + "%";
-}
-
-function wsd(a: number[]): number {
-  const mu = a.reduce((s, v) => s + v, 0) / a.length;
-  return Math.sqrt(a.reduce((s, v) => s + (v - mu) ** 2, 0) / a.length);
-}
-
-function wbrStat(m: Metric): { k: "ok" | "watch" | "off"; why: string } {
-  const w = m.weeks;
-  const n = w.length;
-  const lw = w[n - 1];
-  const t = m.target;
-  const dir = m.goodDir;
-  const hits = (v: number) => (dir > 0 ? v >= t : v <= t);
-  const F = (v: number) => wfmt(v, m);
-  const G = (v: number) =>
-    m.unit === "%" ? Number(v).toFixed(m.dp || 0) + " points" : F(v);
-
-  let miss = 0;
-  for (let i = n - 1; i >= 0 && !hits(w[i]); i--) miss++;
-
-  const worse = (lw - w[n - 3]) * dir < 0;
-  const sd = wsd(w);
-  const margin = Math.abs(lw - t);
-  const priorMiss = w.slice(0, n - 1).filter((v) => !hits(v)).length;
-
-  if (miss >= 2) {
-    return {
-      k: "off",
-      why: `${miss} weeks off target${
-        worse
-          ? `, and still going the wrong way (${w.slice(n - 3).map(F).join(" → ")})`
-          : ""
-      }. That is exceptional variation, not the usual wobble.`,
-    };
-  }
-
-  if (miss === 1) {
-    return {
-      k: "watch",
-      why: `first week off target (${F(lw)} against ${F(t)}). One week is not a trend — watch it, don't theorise about it.`,
-    };
-  }
-
-  if (m.type === "input" && margin < sd) {
-    return {
-      k: "watch",
-      why: `on the right side of target for the first time in ${priorMiss + 1} weeks, but by only ${G(margin)} — less than one normal week's wobble (±${G(Number(sd.toFixed(m.dp || 0)))}). Not a real win yet.`,
-    };
-  }
-
-  if (m.type === "input" && worse) {
-    return {
-      k: "watch",
-      why: `still on target but turning the wrong way across three weeks (${w.slice(n - 3).map(F).join(" → ")}). Inputs get discussed early, while they are still cheap to move.`,
-    };
-  }
-
-  return {
-    k: "ok",
-    why: `on target and inside its usual range — a one-second glance, no discussion.`,
-  };
-}
-
-function wbrBox(m: Metric): { lw: number; wow: number; yoy: number; on: boolean } {
-  const lw = m.weeks[5];
-  const wow = Math.round(((lw - m.weeks[4]) / m.weeks[4]) * 100);
-  const yoy = Math.round(((lw - m.prevWeeks[5]) / m.prevWeeks[5]) * 100);
-  const on = m.goodDir > 0 ? lw >= m.target : lw <= m.target;
-  return { lw, wow, yoy, on };
-}
 
 export default function WBR({ workspace }: WBRProps) {
   const router = useRouter();
@@ -407,19 +337,8 @@ export default function WBR({ workspace }: WBRProps) {
   const renderDataSheet = useCallback((m: Metric & { stat: ReturnType<typeof wbrStat> }) => {
     const wk = [27, 28, 29, 30, 31, 32];
     const isAvg = (m.unit && m.unit !== "$") || m.dp > 0;
-    const roll = (a: number[]) => {
-      const t = a.reduce((s, v) => s + v, 0);
-      return isAvg ? t / a.length : t;
-    };
-    const t12 = roll(m.months);
-    const p12 = roll(m.prevMonths);
-    const pct = (a: number, b: number) => (b ? Math.round(((a - b) / Math.abs(b)) * 100) : null);
-    const tint = (p: number | null) => {
-      if (p === null) return "";
-      const good = p * m.goodDir >= 0;
-      const a = ((Math.min(Math.abs(p), 60) / 60) * 0.32 + 0.07).toFixed(2);
-      return `rgba(${good ? "94,106,210" : "212,61,81"},${a})`;
-    };
+    const t12 = sheetRoll(m.months, m);
+    const p12 = sheetRoll(m.prevMonths, m);
     const F = (v: number) => wfmt(v, m);
 
     return (
@@ -506,24 +425,24 @@ export default function WBR({ workspace }: WBRProps) {
                 % PoP
               </td>
               {m.weeks.map((v, i) => {
-                const p = i ? pct(v, m.weeks[i - 1]) : null;
+                const p = i ? sheetPct(v, m.weeks[i - 1]) : null;
                 return (
                   <td
                     key={`wp${i}`}
                     className={`text-right py-2 px-3 tabular-nums ${i === 0 ? "border-l border-rule" : ""} ${i === 5 ? "font-semibold" : ""}`}
-                    style={p !== null ? { backgroundColor: tint(p) } : undefined}
+                    style={p !== null ? { backgroundColor: sheetTint(p, m.goodDir) } : undefined}
                   >
                     {p !== null ? wsign(p) : ""}
                   </td>
                 );
               })}
               {m.months.map((v, i) => {
-                const p = i ? pct(v, m.months[i - 1]) : null;
+                const p = i ? sheetPct(v, m.months[i - 1]) : null;
                 return (
                   <td
                     key={`mp${i}`}
                     className={`text-right py-2 px-3 tabular-nums ${i === 0 ? "border-l border-rule" : ""}`}
-                    style={p !== null ? { backgroundColor: tint(p) } : undefined}
+                    style={p !== null ? { backgroundColor: sheetTint(p, m.goodDir) } : undefined}
                   >
                     {p !== null ? wsign(p) : ""}
                   </td>
@@ -539,24 +458,24 @@ export default function WBR({ workspace }: WBRProps) {
                 % YoY
               </td>
               {m.weeks.map((v, i) => {
-                const p = pct(v, m.prevWeeks[i]);
+                const p = sheetPct(v, m.prevWeeks[i]);
                 return (
                   <td
                     key={`wy${i}`}
                     className={`text-right py-2 px-3 tabular-nums ${i === 0 ? "border-l border-rule" : ""} ${i === 5 ? "font-semibold" : ""}`}
-                    style={p !== null ? { backgroundColor: tint(p) } : undefined}
+                    style={p !== null ? { backgroundColor: sheetTint(p, m.goodDir) } : undefined}
                   >
                     {p !== null ? wsign(p) : ""}
                   </td>
                 );
               })}
               {m.months.map((v, i) => {
-                const p = pct(v, m.prevMonths[i]);
+                const p = sheetPct(v, m.prevMonths[i]);
                 return (
                   <td
                     key={`my${i}`}
                     className={`text-right py-2 px-3 tabular-nums ${i === 0 ? "border-l border-rule" : ""}`}
-                    style={p !== null ? { backgroundColor: tint(p) } : undefined}
+                    style={p !== null ? { backgroundColor: sheetTint(p, m.goodDir) } : undefined}
                   >
                     {p !== null ? wsign(p) : ""}
                   </td>
@@ -564,9 +483,9 @@ export default function WBR({ workspace }: WBRProps) {
               })}
               <td
                 className="border-l border-rule text-right py-2 px-3 tabular-nums font-semibold"
-                style={{ backgroundColor: tint(pct(t12, p12)) }}
+                style={{ backgroundColor: sheetTint(sheetPct(t12, p12), m.goodDir) }}
               >
-                {wsign(pct(t12, p12)!)}
+                {wsign(sheetPct(t12, p12)!)}
               </td>
             </tr>
           </tbody>
