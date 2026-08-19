@@ -43,6 +43,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   fields, cohort retention/smile/grade, WBR exception engine / YoY / PoP,
   calendar past/future, and PMF card fields. View math lives in
   `src/core/views/*` as pure functions.
+- README hero screenshot and five-view demo GIF, recaptured from the seeded
+  `demo` workspace with `pnpm readme:assets` (ANY-08).
 
 ### Changed
 - Removed internal design notes and competitor/brand references from the public

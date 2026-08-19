@@ -16,6 +16,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/demo/seed.ts",
+    "readme:assets": "tsx scripts/capture-readme-assets.ts",
     "cli": "pnpm --filter @anykpi/cli exec node dist/index.js",
     "cli:build": "pnpm --filter @anykpi/cli build",
     "anykpi": "pnpm --filter @anykpi/cli exec node dist/index.js"
