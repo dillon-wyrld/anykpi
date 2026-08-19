@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
+import { persistWorkspaceMilestones, MILESTONE_SOURCE } from "@/core/milestones";
 import { loadSourceCiphertext, saveSourceConfig } from "@/core/sources";
 import { loadCalendarView } from "@/core/views/calendar";
 import { GET as getCalendar } from "@/app/api/v1/calendar/route";
@@ -160,6 +161,45 @@ describe("ICS connector contract", () => {
       );
       expect(body.view_url).toContain("view=calendar");
     });
+  });
+
+  it("keeps ANY-21 milestone rows when ICS events are written", async () => {
+    await db.insert(schema.users).values(
+      Array.from({ length: 100 }, (_, i) => ({
+        personId: `${WS}-p${String(i + 1).padStart(3, "0")}`,
+        name: `Person ${i + 1}`,
+        signupDate: new Date(Date.UTC(2026, 0, 1 + i)),
+        workspaceId: WS,
+      }))
+    );
+    const persisted = await persistWorkspaceMilestones(WS, NOW);
+    const milestoneTitles = persisted.detected.map((row) => row.title);
+    expect(milestoneTitles).toContain("100th signup");
+
+    await saveSourceConfig(WS, ICS_SOURCE, { icsUrl: ICS_URL });
+    await withOfflineSuite("ics", ["ics"], async () => {
+      const result = await sync("ics", WS);
+      expect(result.health).toBe("ok");
+      expect(result.rowsSynced).toBe(9);
+    });
+
+    const rows = await db
+      .select()
+      .from(schema.calEvents)
+      .where(eq(schema.calEvents.workspaceId, WS))
+      .all();
+    expect(rows.filter((row) => row.source === ICS_SOURCE)).toHaveLength(9);
+    expect(
+      rows.filter((row) => row.source === MILESTONE_SOURCE).map((row) => row.title)
+    ).toEqual(expect.arrayContaining(["100th signup"]));
+
+    const view = await loadCalendarView(WS);
+    expect(view.events.some((event) => event.source === ICS_SOURCE)).toBe(true);
+    expect(
+      view.events.filter(
+        (event) => event.source === MILESTONE_SOURCE && event.title === "100th signup"
+      )
+    ).toHaveLength(1);
   });
 
   it("returns health error on 401 and does not wipe existing events", async () => {

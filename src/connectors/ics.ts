@@ -533,6 +533,8 @@ async function persistEvents(
   events: ExpandedIcsEvent[],
   now: Date
 ): Promise<number> {
+  // Replace only this source. Milestone rows (ANY-21, source=anykpi)
+  // and other calendar sources stay put.
   await db
     .delete(schema.calEvents)
     .where(

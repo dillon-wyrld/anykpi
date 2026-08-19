@@ -19,8 +19,8 @@ import {
 export { classifyCalendarDate, formatSyncAge } from "@/core/views/calendar-math";
 
 /**
- * Read-only calendar fill. Rows come from connectors and demo seed.
- * There is no authoring path — this loader only projects stored events.
+ * Read-only calendar fill. Rows come from connectors (including ICS),
+ * demo seed, and ANY-21 milestone detection. There is no authoring path.
  */
 export async function loadCalendarView(workspace: string) {
   const events = await db
