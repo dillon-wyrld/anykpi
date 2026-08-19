@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface User {
   personId: string;
@@ -145,10 +146,83 @@ const EMOSET = {
     u.isNew ? "🐣" : u.paid ? "💎" : u.churned ? "👻" : "🌿",
 };
 
+function encodeViewState(vs: ViewState): string {
+  const params = new URLSearchParams();
+  if (vs.zoom !== "day") params.set("z", vs.zoom);
+  if (vs.group !== "cluster") params.set("g", vs.group);
+  if (!vs.vibe) params.set("v", "0");
+  if (vs.wall) params.set("w", "1");
+  if (vs.win !== 0) params.set("win", vs.win.toString());
+  if (vs.winLen !== DAYS) params.set("wl", vs.winLen.toString());
+  if (vs.collapsed.size > 0) params.set("c", Array.from(vs.collapsed).join(","));
+  
+  const cc = vs.cc;
+  if (cc.shape !== "blob") params.set("cs", cc.shape);
+  if (cc.encode !== "events") params.set("ce", cc.encode);
+  if (cc.scale !== 100) params.set("csc", cc.scale.toString());
+  if (cc.color !== "indigo") params.set("cc", cc.color);
+  if (cc.layout !== "emoji") params.set("cl", cc.layout);
+  if (cc.emoset !== "mood") params.set("cem", cc.emoset);
+  if (!cc.marks) params.set("cm", "0");
+  if (cc.num) params.set("cn", "1");
+  if (!cc.tint) params.set("ct", "0");
+  if (cc.tinta !== 10) params.set("cta", cc.tinta.toString());
+  if (cc.grid !== "row") params.set("cg", cc.grid);
+  if (cc.lanes) params.set("cln", "1");
+  if (cc.rh !== 28) params.set("crh", cc.rh.toString());
+  if (!cc.clay) params.set("ccl", "0");
+  if (cc.paper) params.set("cp", "1");
+  
+  if (vs.filters.length > 0) {
+    params.set("f", vs.filters.map(f => f.label).join("|"));
+  }
+  
+  const str = params.toString();
+  return str ? `?${str}` : "";
+}
+
+function decodeViewState(searchParams: URLSearchParams): Partial<ViewState> {
+  const vs: Partial<ViewState> = {};
+  
+  if (searchParams.has("z")) vs.zoom = searchParams.get("z") as any;
+  if (searchParams.has("g")) vs.group = searchParams.get("g") as any;
+  if (searchParams.has("v")) vs.vibe = searchParams.get("v") === "1";
+  if (searchParams.has("w")) vs.wall = searchParams.get("w") === "1";
+  if (searchParams.has("win")) vs.win = parseInt(searchParams.get("win")!);
+  if (searchParams.has("wl")) vs.winLen = parseInt(searchParams.get("wl")!);
+  if (searchParams.has("c")) {
+    vs.collapsed = new Set(searchParams.get("c")!.split(","));
+  }
+  
+  const cc: Partial<CellConfig> = {};
+  if (searchParams.has("cs")) cc.shape = searchParams.get("cs") as any;
+  if (searchParams.has("ce")) cc.encode = searchParams.get("ce") as any;
+  if (searchParams.has("csc")) cc.scale = parseInt(searchParams.get("csc")!);
+  if (searchParams.has("cc")) cc.color = searchParams.get("cc")!;
+  if (searchParams.has("cl")) cc.layout = searchParams.get("cl") as any;
+  if (searchParams.has("cem")) cc.emoset = searchParams.get("cem") as any;
+  if (searchParams.has("cm")) cc.marks = searchParams.get("cm") === "1";
+  if (searchParams.has("cn")) cc.num = searchParams.get("cn") === "1";
+  if (searchParams.has("ct")) cc.tint = searchParams.get("ct") === "1";
+  if (searchParams.has("cta")) cc.tinta = parseInt(searchParams.get("cta")!);
+  if (searchParams.has("cg")) cc.grid = searchParams.get("cg") as any;
+  if (searchParams.has("cln")) cc.lanes = searchParams.get("cln") === "1";
+  if (searchParams.has("crh")) cc.rh = parseInt(searchParams.get("crh")!);
+  if (searchParams.has("ccl")) cc.clay = searchParams.get("ccl") === "1";
+  if (searchParams.has("cp")) cc.paper = searchParams.get("cp") === "1";
+  
+  if (Object.keys(cc).length > 0) vs.cc = cc as any;
+  
+  return vs;
+}
+
 export default function DotPlot({ workspace }: DotPlotProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewState, setViewState] = useState<ViewState>({
+  
+  const defaultViewState: ViewState = {
     zoom: "day",
     group: "cluster",
     vibe: true,
@@ -174,6 +248,13 @@ export default function DotPlot({ workspace }: DotPlotProps) {
       clay: true,
       paper: false,
     },
+  };
+  
+  const urlState = decodeViewState(searchParams);
+  const [viewState, setViewState] = useState<ViewState>({
+    ...defaultViewState,
+    ...urlState,
+    cc: { ...defaultViewState.cc, ...(urlState.cc || {}) },
   });
 
   const [tooltip, setTooltip] = useState<{
@@ -202,6 +283,12 @@ export default function DotPlot({ workspace }: DotPlotProps) {
       })
       .catch(() => setLoading(false));
   }, [workspace]);
+
+  useEffect(() => {
+    const encoded = encodeViewState(viewState);
+    const currentPath = window.location.pathname;
+    router.replace(currentPath + encoded, { scroll: false });
+  }, [viewState, router]);
 
   const getFilteredUsers = useCallback(() => {
     let filtered = [...users];
@@ -339,7 +426,26 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     if (!loading && users.length > 0) {
       drawMinimap();
     }
-  }, [loading, users, drawMinimap]);
+  }, [loading, users, drawMinimap, viewState.group, viewState.collapsed]);
+
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+
+    const handleScroll = () => {
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+          const scrollFraction = scrollHeight > clientHeight 
+            ? scrollTop / (scrollHeight - clientHeight) 
+            : 0;
+        }
+      });
+    };
+
+    scrollEl.addEventListener("scroll", handleScroll, { passive: true });
+    return () => scrollEl.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const toggleGroupCollapse = (groupName: string) => {
     const newCollapsed = new Set(viewState.collapsed);
@@ -363,6 +469,75 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     newFilters.splice(index, 1);
     setViewState({ ...viewState, filters: newFilters });
   };
+  
+  const getAvailableFilters = useCallback((): Array<{label: string; filter: Filter}> => {
+    if (users.length === 0) return [];
+    
+    const platforms = Array.from(new Set(users.map(u => u.platform)));
+    const countries = Array.from(new Set(users.map(u => u.country)));
+    const clusters = Array.from(new Set(users.map(u => u.cluster).filter(Boolean)));
+    
+    const filters: Array<{label: string; filter: Filter}> = [];
+    
+    platforms.forEach(p => {
+      filters.push({
+        label: `Platform: ${p}`,
+        filter: { label: `platform is ${p}`, test: (u) => u.platform === p }
+      });
+    });
+    
+    countries.forEach(c => {
+      filters.push({
+        label: `Country: ${c}`,
+        filter: { label: `country is ${c}`, test: (u) => u.country === c }
+      });
+    });
+    
+    clusters.forEach(c => {
+      filters.push({
+        label: `Cluster: ${c}`,
+        filter: { label: `cluster is ${c}`, test: (u) => u.cluster === c }
+      });
+    });
+    
+    filters.push({
+      label: "New users",
+      filter: { label: "is new", test: (u) => u.isNew }
+    });
+    
+    filters.push({
+      label: "Paid users",
+      filter: { label: "is paid", test: (u) => u.paid }
+    });
+    
+    filters.push({
+      label: "Churned users",
+      filter: { label: "has churned", test: (u) => u.churned }
+    });
+    
+    filters.push({
+      label: "Active streak 3+",
+      filter: { label: "streak >= 3", test: (u) => u.streak >= 3 }
+    });
+    
+    return filters;
+  }, [users]);
+
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const filterMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node)) {
+        setShowFilterMenu(false);
+      }
+    };
+
+    if (showFilterMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showFilterMenu]);
 
   const setZoom = (zoom: "day" | "week" | "month") => {
     setViewState({ ...viewState, zoom });
@@ -747,15 +922,30 @@ export default function DotPlot({ workspace }: DotPlotProps) {
         </div>
 
         <button
-          onClick={() =>
-            addFilter({
-              label: "platform is iOS",
-              test: (u) => u.platform === "ios",
-            })
-          }
-          className="px-3 py-1.5 text-xs font-medium border border-border rounded-lg bg-panel text-sub hover:text-text"
+          onClick={() => setShowFilterMenu(!showFilterMenu)}
+          className="px-3 py-1.5 text-xs font-medium border border-border rounded-lg bg-panel text-sub hover:text-text relative"
         >
           + Add filter
+          {showFilterMenu && (
+            <div
+              ref={filterMenuRef}
+              className="absolute top-full left-0 mt-1 bg-panel border border-border rounded-lg shadow-lg z-50 min-w-[200px] max-h-[300px] overflow-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {getAvailableFilters().map((item, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    addFilter(item.filter);
+                    setShowFilterMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs hover:bg-hover border-b border-border last:border-b-0"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          )}
         </button>
 
         <div className="flex gap-1 border border-border rounded-lg overflow-hidden">
