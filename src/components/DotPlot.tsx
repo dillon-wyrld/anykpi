@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, type MouseEvent } from "react";
+import { useEffect, useState, useRef, useCallback, type MouseEvent as ReactMouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PersonPanel from "@/components/PersonPanel";
 
@@ -604,7 +604,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
   };
 
   const cellOpenProps = (user: User) => ({
-    onClick: (event: MouseEvent) => {
+    onClick: (event: ReactMouseEvent) => {
       event.stopPropagation();
       openPerson(user.personId);
     },
