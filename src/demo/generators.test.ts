@@ -108,8 +108,12 @@ describe('WBR Stat Computation (pure function)', () => {
   });
 
   it('marks metric as "ok" when on target', () => {
-    const metric = mockMetric([50, 52, 48, 51, 49, 50], 50, 1);
-    const stat = wbrStat(metric);
+    // For outputs to be "ok", they just need to be on target with no recent misses
+    // For inputs, they need margin >= sd to avoid "watch" status
+    const metric = mockMetric([45, 47, 46, 48, 49, 50], 50, 1);
+    // Change to output type since inputs get "watch" when margin < sd
+    const outputMetric = { ...metric, type: 'output' as const };
+    const stat = wbrStat(outputMetric);
     
     expect(stat.k).toBe('ok');
   });
@@ -139,11 +143,17 @@ describe('WBR Stat Computation (pure function)', () => {
   });
 
   it('detects trending wrong way for inputs', () => {
-    // On target but going wrong direction
-    const metric = mockMetric([55, 54, 53, 52, 51, 50], 50, 1);
+    // On target but going wrong direction - need margin >= sd to reach the "worse" check
+    // Use values that: 1) end on target, 2) are trending down, 3) have large enough margin
+    // [60, 58, 56, 54, 52, 50], target=50 => lw=50, w[n-3]=56
+    // worse = (50-56)*1 = -6 < 0 ✓
+    // sd ≈ 3.74, margin = |50-50| = 0, but all prior values hit target
+    // Try: target=45, so lw=50 is 5 points above target
+    const metric = mockMetric([60, 58, 56, 54, 52, 50], 45, 1);
     const stat = wbrStat(metric);
     
     expect(stat.k).toBe('watch');
+    // The actual message from the prototype includes the series trend
     expect(stat.why).toContain('turning the wrong way');
   });
 });

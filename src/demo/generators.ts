@@ -74,9 +74,9 @@ export function buildCohorts(): Cohort[] {
     for (let u = 0; u < size; u++) {
       const loyal = rnd() < quality;
       const named = cast[u]; // Get named user from filtered cast
-      const weeks: boolean[] = [];
+      const weeks: boolean[] = [true]; // Week 0 is always active (signup week)
       
-      for (let w = 0; w < CWEEKS - c; w++) {
+      for (let w = 1; w < CWEEKS - c; w++) {
         const t = w / (CWEEKS - c);
         let p = loyal ? (0.85 - t * 0.30) : (0.60 - t * 0.55);
         p -= asym * w;
