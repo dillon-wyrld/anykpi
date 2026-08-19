@@ -21,6 +21,8 @@ const CohortsStateSchema = z.object({
   view: z.literal("cohorts"),
   grain: z.enum(["week", "month"]).optional(),
   filters: z.array(FilterSchema).optional(),
+  split: z.enum(["platform", "country", "cluster"]).optional(),
+  series: z.array(z.string()).max(3).optional(),
 });
 
 const WBRStateSchema = z.object({

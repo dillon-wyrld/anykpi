@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gate } from "@/core/auth";
-import { internalError, logServerError } from "@/core/errors";
-import { loadCohortsView } from "@/core/views/cohorts";
+import { badRequest, internalError, logServerError } from "@/core/errors";
+import {
+  CohortCompareError,
+  loadCohortsView,
+  parseCohortCompareOptions,
+} from "@/core/views/cohorts";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -13,10 +17,21 @@ export async function GET(request: NextRequest) {
   if (!gated.ok) return gated.response;
 
   try {
+    const compare = parseCohortCompareOptions({
+      split: searchParams.get("split"),
+      series: searchParams.get("series"),
+    });
     return NextResponse.json(
-      await loadCohortsView(gated.workspace, grainParam, { payers })
+      await loadCohortsView(gated.workspace, grainParam, {
+        payers,
+        split: compare.split,
+        series: compare.series,
+      })
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof CohortCompareError) {
+      return badRequest(error.message);
+    }
     logServerError("Cohorts view failed");
     return internalError();
   }

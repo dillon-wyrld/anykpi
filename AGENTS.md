@@ -24,7 +24,7 @@ Demo workspace is public-read. Live workspaces and all writes require a key (`Au
 
 - `GET /api/v1/overview` — company snapshot
 - `GET /api/v1/users` — query users (cluster, platform, dates, limit, offset)
-- `GET /api/v1/cohorts` — retention with smile detection
+- `GET /api/v1/cohorts` — retention with smile detection; optional `split` by platform, country, or cluster (max 3 series)
 - `GET /api/v1/wbr` — Weekly Business Review
 - `GET /api/v1/calendar` — multi-source timeline
 - `GET /api/v1/sync` — connector status

@@ -30,7 +30,7 @@ OpenAPI spec: /api/openapi
 
 - GET /api/v1/overview — company snapshot (users, activity, retention, PMF signal, exceptions)
 - GET /api/v1/users — query users (cluster, platform, signup dates, limit, offset; total + hasMore + nextOffset)
-- GET /api/v1/cohorts — retention curves with smile detection
+- GET /api/v1/cohorts — retention curves with smile detection; optional split by platform, country, or cluster (max 3 series)
 - GET /api/v1/wbr — Weekly Business Review (6 weeks, 12 months YOY, exceptions)
 - GET /api/v1/calendar — multi-source event timeline
 - GET /api/v1/sync — connector sync status
@@ -50,7 +50,7 @@ Tools:
 
 - \`get_overview\` — snapshot: headline metrics, exception count, sync health
 - \`query_users\` — filter users (platform, country, limit)
-- \`get_cohorts\` — retention, smile flags, PMF verdict
+- \`get_cohorts\` — retention, smile flags, PMF verdict; optional split (max 3 series)
 - \`get_wbr\` — WBR metrics and exception sentences
 - \`get_calendar\` — events in range by source
 - \`install_sdk\` — SDK snippet for a web app (stdio MCP)

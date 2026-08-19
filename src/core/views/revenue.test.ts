@@ -135,6 +135,21 @@ describe("loadCohortsView — payer filter", () => {
       new Set(visiblePayers)
     );
   });
+
+  it("still filters to payers when a compare split is set", async () => {
+    const { visiblePayers } = await seedMini();
+    const payers = await loadCohortsView(WS, "week", {
+      payers: true,
+      split: "platform",
+    });
+    expect(payers.payers).toBe(true);
+    expect(payers.split).toBe("platform");
+    expect(payers.users.every((u) => u.isPayer)).toBe(true);
+    expect(new Set(payers.users.map((u) => u.personId))).toEqual(
+      new Set(visiblePayers)
+    );
+    expect(payers.series.length).toBeLessThanOrEqual(3);
+  });
 });
 
 describe("loadPersonRevenueBlock", () => {

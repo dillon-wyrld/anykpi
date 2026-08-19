@@ -6,11 +6,18 @@ import {
   SMILE_COPY_DECAY,
   SMILE_COPY_LEVEL,
   CO_MINN,
+  COHORT_COMPARE_MAX_SERIES,
+  COHORT_SPLIT_FIELDS,
   bestVintage,
+  capCohortSeries,
   cohortBenchmark,
   findLeak,
+  listSplitKeys,
   loyalCoreCount,
+  parseCohortSplit,
+  pickCompareSeriesKeys,
   smileTest,
+  type CohortSplitField,
 } from "@/core/views/cohort-math";
 
 interface User {
@@ -19,6 +26,15 @@ interface User {
   emoji: string;
   signupDay: number;
   dailyActivity: boolean[];
+  platform?: string | null;
+  country?: string | null;
+  cluster?: string | null;
+}
+
+interface CompareSeries {
+  key: string;
+  size: number;
+  cohorts: CohortRow[];
 }
 
 interface CohortRow {
@@ -37,12 +53,16 @@ interface CohortRow {
   };
 }
 
+type GrainKey = "day" | "week" | "biweek" | "month" | "quarter";
+
 interface ViewState {
-  grain: "day" | "week" | "biweek" | "month" | "quarter";
+  grain: GrainKey;
   cell: "pct" | "num" | "emoji";
   celebrate: boolean;
   align: "signup" | "cal";
   payers: boolean;
+  split: CohortSplitField | null;
+  series: string[];
 }
 
 interface CohortsProps {
@@ -71,6 +91,8 @@ function emojiFor(p: number): string {
   return p > 60 ? "🔥" : p > 45 ? "😄" : p > 30 ? "🙂" : p > 20 ? "😐" : p > 10 ? "🥱" : "💀";
 }
 
+const VIEW_STATE_KEYS = ["g", "c", "cel", "a", "p", "split", "series"] as const;
+
 function encodeViewState(vs: ViewState): string {
   const params = new URLSearchParams();
   if (vs.grain !== "week") params.set("g", vs.grain);
@@ -78,17 +100,32 @@ function encodeViewState(vs: ViewState): string {
   if (!vs.celebrate) params.set("cel", "0");
   if (vs.align !== "signup") params.set("a", vs.align);
   if (vs.payers) params.set("p", "1");
+  if (vs.split) {
+    params.set("split", vs.split);
+    if (vs.series.length > 0) {
+      params.set("series", vs.series.slice(0, COHORT_COMPARE_MAX_SERIES).join(","));
+    }
+  }
   const str = params.toString();
   return str ? `?${str}` : "";
 }
 
 function decodeViewState(searchParams: URLSearchParams): Partial<ViewState> {
   const vs: Partial<ViewState> = {};
-  if (searchParams.has("g")) vs.grain = searchParams.get("g") as any;
-  if (searchParams.has("c")) vs.cell = searchParams.get("c") as any;
+  if (searchParams.has("g")) vs.grain = searchParams.get("g") as GrainKey;
+  if (searchParams.has("c")) vs.cell = searchParams.get("c") as ViewState["cell"];
   if (searchParams.has("cel")) vs.celebrate = searchParams.get("cel") === "1";
-  if (searchParams.has("a")) vs.align = searchParams.get("a") as any;
+  if (searchParams.has("a")) vs.align = searchParams.get("a") as ViewState["align"];
   if (searchParams.has("p")) vs.payers = searchParams.get("p") === "1";
+  try {
+    const split = parseCohortSplit(searchParams.get("split"));
+    if (split) {
+      vs.split = split;
+      vs.series = capCohortSeries(searchParams.get("series"));
+    }
+  } catch {
+    // Invalid split in the URL is ignored; the picker stays on "all".
+  }
   return vs;
 }
 
@@ -102,6 +139,8 @@ export default function Cohorts({ workspace }: CohortsProps) {
     celebrate: true,
     align: "signup",
     payers: false,
+    split: null,
+    series: [],
   };
   
   const urlState = decodeViewState(searchParams);
@@ -113,6 +152,8 @@ export default function Cohorts({ workspace }: CohortsProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [cohortRows, setCohortRows] = useState<CohortRow[]>([]);
+  const [compareSeries, setCompareSeries] = useState<CompareSeries[]>([]);
+  const [capNotice, setCapNotice] = useState(false);
   const [highlightedRow, setHighlightedRow] = useState(-1);
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiTriggered, setConfettiTriggered] = useState(false);
@@ -121,15 +162,42 @@ export default function Cohorts({ workspace }: CohortsProps) {
   const curvesRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    fetch(`/api/views/cohorts?workspace=${workspace}&grain=${viewState.grain}${viewState.payers ? "&payers=1" : ""}`)
+    const params = new URLSearchParams({
+      workspace,
+      grain: viewState.grain,
+    });
+    if (viewState.payers) params.set("payers", "1");
+    if (viewState.split) {
+      params.set("split", viewState.split);
+      if (viewState.series.length > 0) {
+        params.set(
+          "series",
+          viewState.series.slice(0, COHORT_COMPARE_MAX_SERIES).join(",")
+        );
+      }
+    }
+    fetch(`/api/views/cohorts?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
         setUsers(data.users || []);
-        setCohortRows(data.cohorts || []); // Use precomputed cohorts from server
+        setCohortRows(data.cohorts || []);
+        setCompareSeries(data.series || []);
+        if (
+          viewState.split &&
+          Array.isArray(data.series) &&
+          data.series.length > 0 &&
+          viewState.series.length === 0
+        ) {
+          setViewState((current) =>
+            current.split === viewState.split && current.series.length === 0
+              ? { ...current, series: data.series.map((s: CompareSeries) => s.key) }
+              : current
+          );
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [workspace, viewState.grain, viewState.payers]);
+  }, [workspace, viewState.grain, viewState.payers, viewState.split, viewState.series]);
 
   useEffect(() => {
     // Skip the URL sync on initial mount to avoid loops
@@ -139,22 +207,14 @@ export default function Cohorts({ workspace }: CohortsProps) {
     }
     
     const encoded = encodeViewState(viewState);
-    if (!encoded) {
-      // All defaults, no need to sync
-      return;
-    }
-    
     const params = new URLSearchParams(searchParams.toString());
-    const newParams = new URLSearchParams(encoded.slice(1));
-    
-    // Merge view-state params
+    const newParams = new URLSearchParams(encoded.startsWith("?") ? encoded.slice(1) : encoded);
+
     newParams.forEach((value, key) => {
       params.set(key, value);
     });
-    
-    // Remove view-state keys that are at defaults (not in newParams)
-    const viewStateKeys = ['g', 'c', 'cel', 'a', 'p'];
-    viewStateKeys.forEach(key => {
+
+    VIEW_STATE_KEYS.forEach((key) => {
       if (!newParams.has(key)) {
         params.delete(key);
       }
@@ -175,11 +235,11 @@ export default function Cohorts({ workspace }: CohortsProps) {
     }
   }, [cohortRows, viewState.celebrate, confettiTriggered]);
 
-  const renderCurves = useCallback(() => {
-    if (cohortRows.length === 0) return null;
+  const renderCurves = useCallback((rows: CohortRow[] = cohortRows) => {
+    if (rows.length === 0) return null;
     
     const grain = GRAINS[viewState.grain];
-    const maxObs = Math.max(...cohortRows.map((r) => r.retention.length));
+    const maxObs = Math.max(...rows.map((r) => r.retention.length));
     
     const coX = (p: number) => CO_PL + (p / Math.max(1, maxObs - 1)) * (CO_W - CO_PL - CO_PR);
     const coY = (pct: number) => CO_H - CO_PB - (pct / 100) * (CO_H - CO_PB - CO_PT);
@@ -190,7 +250,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
         viewBox={`0 0 ${CO_W} ${CO_H}`}
         className="w-full h-auto"
         role="img"
-        aria-label={`Retention curves for ${cohortRows.length} ${grain.name.toLowerCase()} cohorts`}
+        aria-label={`Retention curves for ${rows.length} ${grain.name.toLowerCase()} cohorts`}
       >
         {[0, 25, 50, 75, 100].map((pct) => (
           <g key={pct}>
@@ -237,7 +297,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
           flat above {CO_LEVEL}% is a smile
         </text>
         
-        {cohortRows.map((row) => {
+        {rows.map((row) => {
           const points = row.retention
             .map((v, p) => `${coX(p)},${coY(v)}`)
             .join(" ");
@@ -282,6 +342,41 @@ export default function Cohorts({ workspace }: CohortsProps) {
       </svg>
     );
   }, [cohortRows, viewState.grain, viewState.celebrate, highlightedRow]);
+
+  const setSplit = (split: CohortSplitField | null) => {
+    if (split === viewState.split) {
+      setViewState({ ...viewState, split: null, series: [] });
+      return;
+    }
+    if (!split) {
+      setViewState({ ...viewState, split: null, series: [] });
+      return;
+    }
+    setViewState({
+      ...viewState,
+      split,
+      series: pickCompareSeriesKeys(users, split),
+    });
+  };
+
+  const toggleSeries = (key: string) => {
+    if (!viewState.split) return;
+    if (viewState.series.includes(key)) {
+      const next = viewState.series.filter((item) => item !== key);
+      setViewState({
+        ...viewState,
+        split: next.length === 0 ? null : viewState.split,
+        series: next,
+      });
+      return;
+    }
+    if (viewState.series.length >= COHORT_COMPARE_MAX_SERIES) {
+      setCapNotice(true);
+      window.setTimeout(() => setCapNotice(false), 1600);
+      return;
+    }
+    setViewState({ ...viewState, series: [...viewState.series, key] });
+  };
 
   const renderInsights = useCallback(() => {
     if (cohortRows.length === 0) return null;
@@ -486,7 +581,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
           {Object.entries(GRAINS).map(([key, g]) => (
             <button
               key={key}
-              onClick={() => setViewState({ ...viewState, grain: key as any })}
+              onClick={() => setViewState({ ...viewState, grain: key as GrainKey })}
               className={`px-3 py-1.5 text-xs font-medium ${
                 viewState.grain === key
                   ? "bg-accent text-white"
@@ -564,6 +659,32 @@ export default function Cohorts({ workspace }: CohortsProps) {
           💸 payers
         </button>
 
+        <div className="flex gap-1 border border-border rounded-lg overflow-hidden">
+          <button
+            onClick={() => setSplit(null)}
+            className={`px-3 py-1.5 text-xs font-medium ${
+              viewState.split === null
+                ? "bg-accent text-white"
+                : "bg-panel text-sub hover:text-text"
+            }`}
+          >
+            all
+          </button>
+          {COHORT_SPLIT_FIELDS.map((field) => (
+            <button
+              key={field}
+              onClick={() => setSplit(field)}
+              className={`px-3 py-1.5 text-xs font-medium border-l border-border ${
+                viewState.split === field
+                  ? "bg-accent text-white"
+                  : "bg-panel text-sub hover:text-text"
+              }`}
+            >
+              {field}
+            </button>
+          ))}
+        </div>
+
         <button
           onClick={() => setViewState({ ...viewState, celebrate: !viewState.celebrate })}
           className={`px-3 py-1.5 text-xs font-medium border border-border rounded-lg ${
@@ -574,8 +695,78 @@ export default function Cohorts({ workspace }: CohortsProps) {
         </button>
       </div>
 
+      {viewState.split && (
+        <div className="flex items-center gap-2 flex-wrap text-xs">
+          <span className="text-sub uppercase tracking-wider">series</span>
+          {listSplitKeys(users, viewState.split).map((key) => {
+            const selected = viewState.series.includes(key);
+            const blocked =
+              !selected && viewState.series.length >= COHORT_COMPARE_MAX_SERIES;
+            return (
+              <button
+                key={key}
+                onClick={() => toggleSeries(key)}
+                disabled={blocked}
+                title={
+                  blocked
+                    ? "three series is the cap"
+                    : selected
+                    ? `hide ${key}`
+                    : `compare ${key}`
+                }
+                className={`px-2.5 py-1 rounded-full border ${
+                  selected
+                    ? "bg-accent text-white border-accent"
+                    : blocked
+                    ? "bg-panel text-faint border-border cursor-not-allowed"
+                    : "bg-panel text-sub border-border hover:text-text"
+                }`}
+              >
+                {key}
+              </button>
+            );
+          })}
+          {capNotice && (
+            <span className="text-amber" role="status">
+              three series is the cap
+            </span>
+          )}
+        </div>
+      )}
+
       {renderInsights()}
-      
+
+      {viewState.split && compareSeries.length > 0 ? (
+        <div className="space-y-4">
+          <div
+            className={`grid grid-cols-1 gap-3 ${
+              compareSeries.length === 1
+                ? ""
+                : compareSeries.length === 2
+                ? "md:grid-cols-2"
+                : "md:grid-cols-2 xl:grid-cols-3"
+            }`}
+          >
+            {compareSeries.map((series) => (
+              <div
+                key={series.key}
+                className="bg-panel border border-border rounded-lg p-3"
+              >
+                <div className="mb-2 flex items-baseline justify-between gap-2">
+                  <div className="text-sm font-semibold">{series.key}</div>
+                  <div className="text-[10px] text-sub uppercase tracking-wider">
+                    {series.size} users · {series.cohorts.length} cohorts
+                  </div>
+                </div>
+                {renderCurves(series.cohorts)}
+              </div>
+            ))}
+          </div>
+          <div className="bg-panel border border-border rounded-lg p-3 overflow-hidden">
+            {renderTable()}
+          </div>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4 items-start">
         <div className="bg-panel border border-border rounded-lg p-3 overflow-hidden">
           {renderTable()}
@@ -604,6 +795,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
           {renderCurves()}
         </div>
       </div>
+      )}
     </div>
   );
 }

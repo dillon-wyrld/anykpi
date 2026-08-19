@@ -5,7 +5,12 @@ import { and, eq } from "drizzle-orm";
 import { buildViewUrl, publicBaseUrl, queryUsersPayload } from "@/core/view-state";
 import { gate, isReadOnlyMcpTool } from "@/core/auth";
 import { logServerError } from "@/core/errors";
-import { loadCohortsView } from "@/core/views/cohorts";
+import {
+  CohortCompareError,
+  cohortsDashboardQuery,
+  loadCohortsView,
+  parseCohortCompareOptions,
+} from "@/core/views/cohorts";
 import { loadWbrView } from "@/core/views/wbr";
 import { loadCalendarView } from "@/core/views/calendar";
 
@@ -17,6 +22,8 @@ type ToolArgs = {
   startDate?: string;
   endDate?: string;
   payers?: boolean;
+  split?: string;
+  series?: string | string[];
 };
 
 async function handleMCPRequest(
@@ -64,7 +71,7 @@ async function handleMCPRequest(
         {
           name: "get_cohorts",
           description:
-            "Get cohort retention data with smile flags and PMF verdict. Set payers to filter to people on the revenue join.",
+            "Get cohort retention data with smile flags and PMF verdict. Set payers to filter to people on the revenue join. Set split to compare up to 3 series by platform, country, or cluster.",
           inputSchema: {
             type: "object",
             properties: {
@@ -72,6 +79,16 @@ async function handleMCPRequest(
               payers: {
                 type: "boolean",
                 description: "When true, keep only paying people",
+              },
+              split: {
+                type: "string",
+                enum: ["platform", "country", "cluster"],
+                description: "Compare retention curves by this field (max 3 series)",
+              },
+              series: {
+                type: "string",
+                description:
+                  "Comma-separated split values, max 3. A fourth series is refused.",
               },
             },
           },
@@ -158,8 +175,14 @@ async function handleMCPRequest(
       }
 
       case "get_cohorts": {
+        const compare = parseCohortCompareOptions({
+          split: args?.split,
+          series: args?.series,
+        });
         const data = await loadCohortsView(workspace, "week", {
           payers: Boolean(args?.payers),
+          split: compare.split,
+          series: compare.series,
         });
         const smilingCount = data.cohorts.filter((c) => c.smileDetected).length;
 
@@ -172,7 +195,14 @@ async function handleMCPRequest(
                 smilingCount,
                 pmfForming: smilingCount >= 3,
                 payers: data.payers,
-                viewUrl: buildViewUrl(`${baseUrl}/dashboard`, { view: "cohorts" }),
+                split: data.split,
+                series: data.series,
+                viewUrl: `${baseUrl}/dashboard?${cohortsDashboardQuery({
+                  workspace,
+                  payers: data.payers,
+                  split: data.split,
+                  series: compare.series.length > 0 ? compare.series : undefined,
+                })}`,
               }),
             },
           ],
@@ -275,7 +305,17 @@ export async function POST(request: NextRequest) {
       id: body.id || null,
       result,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof CohortCompareError) {
+      return NextResponse.json(
+        {
+          jsonrpc: "2.0",
+          id: null,
+          error: { code: -32602, message: error.message },
+        },
+        { status: 400 }
+      );
+    }
     logServerError("MCP request failed");
     return NextResponse.json(
       {

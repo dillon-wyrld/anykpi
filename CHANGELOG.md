@@ -79,6 +79,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   longest streak, company birthday, and first cohort smile. Detection is
   idempotent on `(workspaceId, kind, subject)` and lands as one-shot
   calendar rows. Demo seed includes at least one.
+- Cohort compare mode (ANY-23): side-by-side retention curves split by
+  platform, country, or cluster. State lives in the URL (`split`,
+  `series`). `GET /api/v1/cohorts` and `get_cohorts` accept the same
+  split. A fourth series is refused.
 
 ### Changed
 - Removed internal design notes and competitor/brand references from the public

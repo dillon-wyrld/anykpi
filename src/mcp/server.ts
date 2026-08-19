@@ -9,6 +9,11 @@ import * as schema from "@/core/schema";
 import { upsertConfig } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
 import { buildViewUrl, queryUsersPayload } from "@/core/view-state";
+import {
+  CohortCompareError,
+  cohortsDashboardQuery,
+  parseCohortCompareOptions,
+} from "@/core/views/cohort-math";
 
 const BASE_URL = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -71,13 +76,27 @@ export function createMCPServer() {
         {
           name: "get_cohorts",
           description:
-            "Get cohort retention data with smile flags and PMF verdict. Returns data + view URL",
+            "Get cohort retention data with smile flags and PMF verdict. Set split to compare up to 3 series by platform, country, or cluster. Returns data + view URL",
           inputSchema: {
             type: "object",
             properties: {
               workspace: {
                 type: "string",
                 description: "Workspace ID (default: demo)",
+              },
+              payers: {
+                type: "boolean",
+                description: "When true, keep only paying people",
+              },
+              split: {
+                type: "string",
+                enum: ["platform", "country", "cluster"],
+                description: "Compare retention curves by this field (max 3 series)",
+              },
+              series: {
+                type: "string",
+                description:
+                  "Comma-separated split values, max 3. A fourth series is refused.",
               },
             },
           },
@@ -261,10 +280,31 @@ export function createMCPServer() {
         }
 
         case "get_cohorts": {
+          const compare = parseCohortCompareOptions({
+            split: (args as { split?: string })?.split,
+            series: (args as { series?: string | string[] })?.series,
+          });
+          const payers = Boolean((args as { payers?: boolean })?.payers);
+          const viewQuery = new URLSearchParams({ workspace });
+          if (payers) viewQuery.set("payers", "1");
+          if (compare.split) viewQuery.set("split", compare.split);
+          if (compare.series.length) viewQuery.set("series", compare.series.join(","));
+
           const response = await fetch(
-            `${BASE_URL}/api/views/cohorts?workspace=${workspace}`
+            `${BASE_URL}/api/views/cohorts?${viewQuery.toString()}`
           );
           const data = await response.json();
+          if (!response.ok) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify({ error: data.error || "Cohorts request failed" }),
+                },
+              ],
+              isError: true,
+            };
+          }
 
           return {
             content: [
@@ -275,9 +315,15 @@ export function createMCPServer() {
                     cohorts: data.cohorts,
                     smilingCount: data.cohorts.filter((c: any) => c.smileDetected).length,
                     pmfForming: data.cohorts.filter((c: any) => c.smileDetected).length >= 3,
-                    viewUrl: buildViewUrl(`${BASE_URL}/dashboard`, {
-                      view: "cohorts",
-                    }),
+                    payers,
+                    split: data.split ?? null,
+                    series: data.series ?? [],
+                    viewUrl: `${BASE_URL}/dashboard?${cohortsDashboardQuery({
+                      workspace,
+                      payers,
+                      split: compare.split,
+                      series: compare.series.length > 0 ? compare.series : undefined,
+                    })}`,
                   },
                   null,
                   2
@@ -414,6 +460,12 @@ export function createMCPServer() {
           throw new Error(`Unknown tool: ${name}`);
       }
     } catch (error) {
+      if (error instanceof CohortCompareError) {
+        return {
+          content: [{ type: "text", text: error.message }],
+          isError: true,
+        };
+      }
       return {
         content: [
           {
