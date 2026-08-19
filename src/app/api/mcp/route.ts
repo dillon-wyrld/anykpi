@@ -136,10 +136,23 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const result = await handleMCPRequest(body);
-    return NextResponse.json(result);
+    
+    // Wrap response in JSON-RPC format
+    return NextResponse.json({
+      jsonrpc: "2.0",
+      id: body.id || null,
+      result: result,
+    });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unknown error" },
+      { 
+        jsonrpc: "2.0",
+        id: null,
+        error: {
+          code: -32603,
+          message: error instanceof Error ? error.message : "Unknown error"
+        }
+      },
       { status: 500 }
     );
   }

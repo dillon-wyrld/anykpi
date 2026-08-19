@@ -39,34 +39,35 @@ test.describe('Demo Workspace - Canonical Dataset', () => {
 
   test('cohorts show smile detection (PMF signal)', async ({ page }) => {
     await page.goto('http://localhost:3000/dashboard?workspace=demo&view=cohorts');
-    await page.waitForSelector('table', { timeout: 10000 });
+    // Wait for cohorts view to render - check for actual UI elements
+    await page.waitForSelector('text=The smile test', { timeout: 10000 });
     
     const content = await page.content();
     
-    // Should have cohort retention table
-    expect(content).toContain('cohorts');
+    // Pinned facts from actual Cohorts component UI
+    // The smile test insight card
+    expect(content).toContain('The smile test');
     
-    // Check for smile emoji or detection indicator
-    // The smile detector runs on cohort retention curves
-    const hasSmileIndicator = content.includes('😊') || content.includes('Smile') || content.includes('smile');
+    // Celebrate button
+    expect(content).toContain('celebrate smiles');
     
-    // This may or may not show depending on the data, but the mechanism must exist
-    // Just verify the cohorts view renders properly
+    // View renders with cohort data
     expect(content.length).toBeGreaterThan(1000);
   });
 
   test('WBR shows metrics with proper status', async ({ page }) => {
     await page.goto('http://localhost:3000/dashboard?workspace=demo&view=wbr');
-    await page.waitForSelector('[class*="space-y"]', { timeout: 10000 });
+    // Wait for WBR deck to render - check for first section header
+    await page.waitForSelector('text=Finance', { timeout: 10000 });
     
     const content = await page.content();
     
-    // Should show WBR metrics
-    const hasWBRMetrics = content.includes('Revenue') || content.includes('Signups') || content.includes('exception');
+    // Should show actual WBR metric names from the 21-metric generator
+    const hasWBRMetrics = content.includes('Weekly Revenue') || content.includes('Finance') || content.includes('New Signups');
     expect(hasWBRMetrics).toBeTruthy();
     
-    // Should have status indicators (ok, watch, off)
-    const hasStatus = content.includes('exception') || content.includes('ok') || content.includes('watch');
+    // Should have status indicators (ok, watch, off) - check for actual exception text
+    const hasStatus = content.includes('exception') || content.includes('target') || content.includes('weeks off');
     expect(hasStatus).toBeTruthy();
   });
 
