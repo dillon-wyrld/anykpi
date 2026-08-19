@@ -37,6 +37,7 @@ import * as schema from "@/core/schema";
 import { loadSourceConfig } from "@/core/sources";
 import { upsertSyncState } from "@/core/upsert";
 import { syncAmplitude } from "./amplitude";
+import { ICS_SOURCE, ICS_SOURCE_NAME, syncIcs } from "./ics";
 import { withSourceLock } from "./lock";
 import { syncMixpanel } from "./mixpanel";
 import { syncPostHog } from "./posthog";
@@ -50,6 +51,7 @@ export type { SyncResult, ConnectorHealth } from "@/core/contracts";
 export { SyncResultSchema, ConnectorHealthSchema } from "@/core/contracts";
 
 export { syncAmplitude } from "./amplitude";
+export { syncIcs } from "./ics";
 export { syncMixpanel } from "./mixpanel";
 export { syncPostHog } from "./posthog";
 export { syncRevenueCat } from "./revenuecat";
@@ -91,6 +93,12 @@ export const revenuecatConnector: Connector = {
   sync: syncRevenueCat,
 };
 
+export const icsConnector: Connector = {
+  source: ICS_SOURCE,
+  name: ICS_SOURCE_NAME,
+  sync: syncIcs,
+};
+
 /** Registry keyed by `Connector.source`. */
 export const registry: Record<string, Connector> = {
   posthog: posthogConnector,
@@ -98,6 +106,7 @@ export const registry: Record<string, Connector> = {
   amplitude: amplitudeConnector,
   stripe: stripeConnector,
   revenuecat: revenuecatConnector,
+  ics: icsConnector,
 };
 
 export function listConnectors(): Connector[] {

@@ -33,6 +33,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- ICS calendar connector: paste a feed URL (stored via the ANY-46
+  sources table), poll on `POST /api/v1/sync`, and fill the read-only
+  Calendar view / `get_calendar`. Recurring expansion stays on the local
+  wall clock across DST (ANY-10). No schema migration.
 - Dashboard views poll `GET /api/v1/freshness` (~30s, paused when the
   tab is hidden) and refetch in place when last-ingest or a source
   last-sync stamp moves. No spinner on refresh (ANY-49).

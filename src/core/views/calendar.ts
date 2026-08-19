@@ -1,7 +1,11 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
-import { formatSyncAge } from "@/core/views/calendar-math";
+import {
+  classifyCalendarDate,
+  formatSyncAge,
+  startOfLocalDay,
+} from "@/core/views/calendar-math";
 import {
   detectWorkspaceMilestones,
   eventMilestoneKey,
@@ -14,6 +18,10 @@ import {
 
 export { classifyCalendarDate, formatSyncAge } from "@/core/views/calendar-math";
 
+/**
+ * Read-only calendar fill. Rows come from connectors (including ICS),
+ * demo seed, and ANY-21 milestone detection. There is no authoring path.
+ */
 export async function loadCalendarView(workspace: string) {
   const events = await db
     .select()
@@ -30,10 +38,12 @@ export async function loadCalendarView(workspace: string) {
 
   const syncMap = new Map(syncStates.map((s) => [s.source, s]));
   const now = new Date();
+  const today = startOfLocalDay(now);
   const anykpiSync = syncMap.get(MILESTONE_SOURCE);
 
   const mapped = events.map((e) => {
     const sync = syncMap.get(e.source);
+    const classified = classifyCalendarDate(e.eventDate, today);
 
     return {
       id: e.id,
@@ -50,7 +60,7 @@ export async function loadCalendarView(workspace: string) {
           ? e.badge
           : `${e.type} event from ${e.sourceName}`,
       syncAge: formatSyncAge(sync?.lastSync, now),
-      isFuture: e.isFuture,
+      isFuture: classified.isFuture,
     };
   });
 
@@ -77,7 +87,7 @@ export async function loadCalendarView(workspace: string) {
       badge: milestone.rule,
       detail: milestone.rule,
       syncAge: formatSyncAge(anykpiSync?.lastSync, now),
-      isFuture: row.isFuture,
+      isFuture: classifyCalendarDate(milestone.occurredAt, today).isFuture,
     });
   }
 

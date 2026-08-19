@@ -1,0 +1,20 @@
+{
+  "source": "ics",
+  "description": "Read-only ICS feed with a weekly series across a DST boundary",
+  "fixtures": [
+    {
+      "name": "calendar-feed",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "calendar.ics"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "text/calendar; charset=utf-8"
+        },
+        "body": "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//ANYKPI//ICS fixture//EN\nCALSCALE:GREGORIAN\nBEGIN:VEVENT\nUID:weekly-standup@example.test\nDTSTART;TZID=America/New_York:20260301T100000\nDTEND;TZID=America/New_York:20260301T103000\nRRULE:FREQ=WEEKLY;COUNT=8\nSUMMARY:Weekly standup\nEND:VEVENT\nBEGIN:VEVENT\nUID:one-off-review@example.test\nDTSTART:20260819T150000Z\nDTEND:20260819T160000Z\nSUMMARY:Launch review\nEND:VEVENT\nEND:VCALENDAR\n"
+      }
+    }
+  ]
+}
