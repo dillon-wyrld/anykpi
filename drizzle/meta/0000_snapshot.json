@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4326d313-221d-429f-80b0-4a8713f145d2",
+  "id": "acf5b164-54a1-4839-9a8e-d3a14c2186bf",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "accounts": {
@@ -28,12 +28,29 @@
           "notNull": false,
           "autoincrement": false
         },
-        "activation_state": {
-          "name": "activation_state",
-          "type": "text",
+        "seats": {
+          "name": "seats",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": 0
+        },
+        "activated": {
+          "name": "activated",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
+        },
+        "mrr": {
+          "name": "mrr",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "default": 0
         },
         "renewal_date": {
           "name": "renewal_date",
@@ -82,52 +99,33 @@
           "notNull": true,
           "autoincrement": false
         },
-        "date": {
-          "name": "date",
+        "timestamp": {
+          "name": "timestamp",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "core_count": {
-          "name": "core_count",
-          "type": "integer",
+        "event_name": {
+          "name": "event_name",
+          "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": 0
+          "notNull": true,
+          "autoincrement": false
         },
-        "search_count": {
-          "name": "search_count",
-          "type": "integer",
+        "event_class": {
+          "name": "event_class",
+          "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": 0
+          "notNull": true,
+          "autoincrement": false
         },
-        "share_count": {
-          "name": "share_count",
-          "type": "integer",
+        "platform": {
+          "name": "platform",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false,
-          "default": 0
-        },
-        "pay_count": {
-          "name": "pay_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": 0
-        },
-        "minutes": {
-          "name": "minutes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": 0
+          "autoincrement": false
         },
         "workspace_id": {
           "name": "workspace_id",
@@ -139,11 +137,11 @@
         }
       },
       "indexes": {
-        "activity_person_date_idx": {
-          "name": "activity_person_date_idx",
+        "activity_person_timestamp_idx": {
+          "name": "activity_person_timestamp_idx",
           "columns": [
             "person_id",
-            "date"
+            "timestamp"
           ],
           "isUnique": false
         },
@@ -260,6 +258,14 @@
           "notNull": true,
           "autoincrement": false
         },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'live'"
+        },
         "created_at": {
           "name": "created_at",
           "type": "integer",
@@ -298,6 +304,20 @@
           "notNull": true,
           "autoincrement": false
         },
+        "source_name": {
+          "name": "source_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source_color": {
+          "name": "source_color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "type": {
           "name": "type",
           "type": "text",
@@ -305,9 +325,9 @@
           "notNull": true,
           "autoincrement": false
         },
-        "date": {
-          "name": "date",
-          "type": "integer",
+        "emoji": {
+          "name": "emoji",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -319,33 +339,27 @@
           "notNull": true,
           "autoincrement": false
         },
-        "amount": {
-          "name": "amount",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "badge": {
           "name": "badge",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
-        "url": {
-          "name": "url",
-          "type": "text",
+        "event_date": {
+          "name": "event_date",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
-        "external_id": {
-          "name": "external_id",
-          "type": "text",
+        "is_future": {
+          "name": "is_future",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": false
         },
         "workspace_id": {
           "name": "workspace_id",
@@ -360,7 +374,7 @@
         "cal_events_date_idx": {
           "name": "cal_events_date_idx",
           "columns": [
-            "date"
+            "event_date"
           ],
           "isUnique": false
         },
@@ -420,8 +434,8 @@
     "metric_defs": {
       "name": "metric_defs",
       "columns": {
-        "id": {
-          "name": "id",
+        "metric_id": {
+          "name": "metric_id",
           "type": "text",
           "primaryKey": true,
           "notNull": true,
@@ -441,18 +455,25 @@
           "notNull": true,
           "autoincrement": false
         },
-        "type": {
-          "name": "type",
+        "section_order": {
+          "name": "section_order",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "good_direction": {
-          "name": "good_direction",
+        "owner": {
+          "name": "owner",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
           "autoincrement": false
         },
         "unit": {
@@ -462,14 +483,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "decimals": {
-          "name": "decimals",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": 0
-        },
         "target": {
           "name": "target",
           "type": "real",
@@ -477,18 +490,25 @@
           "notNull": false,
           "autoincrement": false
         },
-        "source_spec": {
-          "name": "source_spec",
+        "good_dir": {
+          "name": "good_dir",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status_reason": {
+          "name": "status_reason",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
-        },
-        "order": {
-          "name": "order",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
           "autoincrement": false
         },
         "workspace_id": {
@@ -501,11 +521,10 @@
         }
       },
       "indexes": {
-        "metric_defs_workspace_order_idx": {
-          "name": "metric_defs_workspace_order_idx",
+        "metric_defs_workspace_idx": {
+          "name": "metric_defs_workspace_idx",
           "columns": [
-            "workspace_id",
-            "order"
+            "workspace_id"
           ],
           "isUnique": false
         }
@@ -532,16 +551,9 @@
           "notNull": true,
           "autoincrement": false
         },
-        "grain": {
-          "name": "grain",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "period": {
-          "name": "period",
-          "type": "text",
+        "timestamp": {
+          "name": "timestamp",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -551,6 +563,13 @@
           "type": "real",
           "primaryKey": false,
           "notNull": false,
+          "autoincrement": false
+        },
+        "grain": {
+          "name": "grain",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
           "autoincrement": false
         },
         "workspace_id": {
@@ -563,11 +582,11 @@
         }
       },
       "indexes": {
-        "metric_points_metric_period_idx": {
-          "name": "metric_points_metric_period_idx",
+        "metric_points_metric_timestamp_idx": {
+          "name": "metric_points_metric_timestamp_idx",
           "columns": [
             "metric_id",
-            "period"
+            "timestamp"
           ],
           "isUnique": false
         },
@@ -648,15 +667,29 @@
     "sync_state": {
       "name": "sync_state",
       "columns": {
-        "connector": {
-          "name": "connector",
-          "type": "text",
+        "id": {
+          "name": "id",
+          "type": "integer",
           "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "last_synced_at": {
-          "name": "last_synced_at",
+        "source_name": {
+          "name": "source_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "last_sync": {
+          "name": "last_sync",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,
@@ -671,13 +704,6 @@
         },
         "error": {
           "name": "error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "stats": {
-          "name": "stats",
           "type": "text",
           "primaryKey": false,
           "notNull": false,

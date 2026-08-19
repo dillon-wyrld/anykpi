@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     const smileDetected = cohortData.cohorts?.some((c) => c.smileDetected) || false;
 
     const wbrData = await loadWbrView(workspace);
-    const exceptionsCount = wbrData.metrics?.filter((m) => m.status !== 'ok' && m.status !== 'on').length || 0;
+    const exceptionsCount = wbrData.metrics?.filter((m) => m.status !== 'ok').length || 0;
 
     const calendarData = await loadCalendarView(workspace);
     const upcomingEvents = calendarData.events?.filter((e) => e.isFuture).length || 0;

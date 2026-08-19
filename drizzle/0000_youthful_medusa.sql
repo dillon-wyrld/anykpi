@@ -2,7 +2,9 @@ CREATE TABLE `accounts` (
 	`account_id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`entity` text,
-	`activation_state` text,
+	`seats` integer DEFAULT 0,
+	`activated` integer DEFAULT 0,
+	`mrr` real DEFAULT 0,
 	`renewal_date` integer,
 	`workspace_id` text DEFAULT 'demo' NOT NULL
 );
@@ -11,16 +13,14 @@ CREATE INDEX `accounts_workspace_idx` ON `accounts` (`workspace_id`);--> stateme
 CREATE TABLE `activity` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`person_id` text NOT NULL,
-	`date` integer NOT NULL,
-	`core_count` integer DEFAULT 0,
-	`search_count` integer DEFAULT 0,
-	`share_count` integer DEFAULT 0,
-	`pay_count` integer DEFAULT 0,
-	`minutes` integer DEFAULT 0,
+	`timestamp` integer NOT NULL,
+	`event_name` text NOT NULL,
+	`event_class` text NOT NULL,
+	`platform` text,
 	`workspace_id` text DEFAULT 'demo' NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `activity_person_date_idx` ON `activity` (`person_id`,`date`);--> statement-breakpoint
+CREATE INDEX `activity_person_timestamp_idx` ON `activity` (`person_id`,`timestamp`);--> statement-breakpoint
 CREATE INDEX `activity_workspace_idx` ON `activity` (`workspace_id`);--> statement-breakpoint
 CREATE TABLE `annotations` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -38,6 +38,7 @@ CREATE TABLE `api_keys` (
 	`id` text PRIMARY KEY NOT NULL,
 	`hashed_key` text NOT NULL,
 	`name` text NOT NULL,
+	`workspace_id` text DEFAULT 'live' NOT NULL,
 	`created_at` integer NOT NULL,
 	`last_used_at` integer
 );
@@ -45,17 +46,18 @@ CREATE TABLE `api_keys` (
 CREATE TABLE `cal_events` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`source` text NOT NULL,
+	`source_name` text NOT NULL,
+	`source_color` text NOT NULL,
 	`type` text NOT NULL,
-	`date` integer NOT NULL,
+	`emoji` text NOT NULL,
 	`title` text NOT NULL,
-	`amount` real,
-	`badge` text,
-	`url` text,
-	`external_id` text,
+	`badge` text NOT NULL,
+	`event_date` integer NOT NULL,
+	`is_future` integer DEFAULT false,
 	`workspace_id` text DEFAULT 'demo' NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `cal_events_date_idx` ON `cal_events` (`date`);--> statement-breakpoint
+CREATE INDEX `cal_events_date_idx` ON `cal_events` (`event_date`);--> statement-breakpoint
 CREATE INDEX `cal_events_workspace_idx` ON `cal_events` (`workspace_id`);--> statement-breakpoint
 CREATE TABLE `config` (
 	`key` text PRIMARY KEY NOT NULL,
@@ -65,30 +67,31 @@ CREATE TABLE `config` (
 --> statement-breakpoint
 CREATE INDEX `config_workspace_idx` ON `config` (`workspace_id`);--> statement-breakpoint
 CREATE TABLE `metric_defs` (
-	`id` text PRIMARY KEY NOT NULL,
+	`metric_id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`section` text NOT NULL,
+	`section_order` text NOT NULL,
+	`owner` text NOT NULL,
 	`type` text NOT NULL,
-	`good_direction` text,
 	`unit` text,
-	`decimals` integer DEFAULT 0,
 	`target` real,
-	`source_spec` text,
-	`order` integer NOT NULL,
+	`good_dir` text NOT NULL,
+	`status` text NOT NULL,
+	`status_reason` text,
 	`workspace_id` text DEFAULT 'demo' NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `metric_defs_workspace_order_idx` ON `metric_defs` (`workspace_id`,`order`);--> statement-breakpoint
+CREATE INDEX `metric_defs_workspace_idx` ON `metric_defs` (`workspace_id`);--> statement-breakpoint
 CREATE TABLE `metric_points` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`metric_id` text NOT NULL,
-	`grain` text NOT NULL,
-	`period` text NOT NULL,
+	`timestamp` integer NOT NULL,
 	`value` real,
+	`grain` text NOT NULL,
 	`workspace_id` text DEFAULT 'demo' NOT NULL
 );
 --> statement-breakpoint
-CREATE INDEX `metric_points_metric_period_idx` ON `metric_points` (`metric_id`,`period`);--> statement-breakpoint
+CREATE INDEX `metric_points_metric_timestamp_idx` ON `metric_points` (`metric_id`,`timestamp`);--> statement-breakpoint
 CREATE INDEX `metric_points_workspace_idx` ON `metric_points` (`workspace_id`);--> statement-breakpoint
 CREATE TABLE `seats` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -101,11 +104,12 @@ CREATE TABLE `seats` (
 CREATE INDEX `seats_account_idx` ON `seats` (`account_id`);--> statement-breakpoint
 CREATE INDEX `seats_workspace_idx` ON `seats` (`workspace_id`);--> statement-breakpoint
 CREATE TABLE `sync_state` (
-	`connector` text PRIMARY KEY NOT NULL,
-	`last_synced_at` integer,
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`source` text NOT NULL,
+	`source_name` text NOT NULL,
+	`last_sync` integer,
 	`status` text NOT NULL,
 	`error` text,
-	`stats` text,
 	`workspace_id` text DEFAULT 'demo' NOT NULL
 );
 --> statement-breakpoint

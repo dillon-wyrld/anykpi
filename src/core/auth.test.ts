@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   authorize,
   extractApiKey,
@@ -47,7 +47,6 @@ describe("extractApiKey", () => {
 
 describe("authorize", () => {
   const originalKey = process.env.ANYKPI_API_KEY;
-  const originalNodeEnv = process.env.NODE_ENV;
 
   afterEach(() => {
     if (originalKey === undefined) {
@@ -55,12 +54,12 @@ describe("authorize", () => {
     } else {
       process.env.ANYKPI_API_KEY = originalKey;
     }
-    process.env.NODE_ENV = originalNodeEnv;
+    vi.unstubAllEnvs();
   });
 
   it("demo GET allowed without a key", async () => {
     delete process.env.ANYKPI_API_KEY;
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("NODE_ENV", "test");
 
     const result = await authorize(requestWith(), {
       workspace: "demo",
@@ -73,7 +72,7 @@ describe("authorize", () => {
 
   it("live GET without key → 401", async () => {
     delete process.env.ANYKPI_API_KEY;
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("NODE_ENV", "test");
 
     const result = await authorize(requestWith(), {
       workspace: "live",
@@ -86,7 +85,7 @@ describe("authorize", () => {
 
   it("ingest without key → 401", async () => {
     delete process.env.ANYKPI_API_KEY;
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("NODE_ENV", "test");
 
     const result = await authorize(requestWith(), { write: true });
 
@@ -96,7 +95,7 @@ describe("authorize", () => {
 
   it("valid key → 200", async () => {
     process.env.ANYKPI_API_KEY = "test-admin-key";
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("NODE_ENV", "test");
 
     const bearer = await authorize(
       requestWith({ Authorization: "Bearer test-admin-key" }),
@@ -115,7 +114,7 @@ describe("authorize", () => {
 
   it("wrong key → 401", async () => {
     process.env.ANYKPI_API_KEY = "test-admin-key";
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("NODE_ENV", "test");
 
     const result = await authorize(
       requestWith({ Authorization: "Bearer no-match" }),
@@ -155,7 +154,7 @@ describe("authorize", () => {
 
   it("production without ANYKPI_API_KEY refuses live reads and writes with 503", async () => {
     delete process.env.ANYKPI_API_KEY;
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
 
     const live = await authorize(requestWith(), { workspace: "live" });
     expect(statusOf(live)).toBe(503);

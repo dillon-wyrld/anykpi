@@ -27,24 +27,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y python3 make g++
       
+      # onlyBuiltDependencies in package.json lets pnpm compile better-sqlite3
+      # during install, so no manual native-build step is needed.
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
-      - name: Build better-sqlite3
-        run: cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3 && npm run build-release
-      
+
       - name: Typecheck
         run: pnpm tsc --noEmit
-      
-      - name: Create data directory
-        run: mkdir -p data
-      
+
+      - name: Lint
+        run: pnpm lint
+
       - name: Initialize database
         run: pnpm db:init
-      
+
       - name: Run unit tests
         run: pnpm test:unit
-      
+
+      - name: Build
+        run: pnpm build
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
       

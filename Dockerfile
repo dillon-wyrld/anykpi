@@ -25,6 +25,10 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Migrations + entrypoint so the container initializes its own schema on a fresh
+# volume (the standalone server does not run migrations itself).
+COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.mjs ./scripts/docker-entrypoint.mjs
 
 RUN mkdir -p /data && chmod 700 /data && chown nextjs:nodejs /data
 
@@ -36,4 +40,5 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV DATABASE_PATH=/data/anykpi.db
 
-CMD ["node", "server.js"]
+# Applies migrations if needed, then starts the Next standalone server.
+CMD ["node", "scripts/docker-entrypoint.mjs"]

@@ -36,7 +36,7 @@ export async function loadWbrView(workspace: string) {
     const wow = lastWeek !== 0 ? Math.round(((current - lastWeek) / lastWeek) * 100 * 10) / 10 : 0;
     const yoy = lastYear !== 0 ? Math.round(((current - lastYear) / lastYear) * 100 * 10) / 10 : 0;
 
-    const status = (def.status as "on" | "watch" | "off") || "on";
+    const status = (def.status as "ok" | "watch" | "off") || "ok";
     const dp = def.unit === "%" || def.unit === "$" ? 1 : 0;
 
     return {
