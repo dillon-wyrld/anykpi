@@ -73,10 +73,32 @@ export function wsd(a: number[]): number {
   return Math.sqrt(a.reduce((s, v) => s + (v - mu) ** 2, 0) / a.length);
 }
 
+/** Documented defaults — also the contents of `anykpi.config.example.json`. */
+export interface WbrExceptionRules {
+  consecutiveMissesForOff: number;
+  consecutiveMissesForWatch: number;
+  inputThinWinStdDevs: number;
+  wrongWayLookbackWeeks: number;
+}
+
+export const DEFAULT_WBR_EXCEPTION_RULES: WbrExceptionRules = {
+  consecutiveMissesForOff: 2,
+  consecutiveMissesForWatch: 1,
+  inputThinWinStdDevs: 1,
+  wrongWayLookbackWeeks: 3,
+};
+
+export type WbrStat = { k: WbrStatus; why: string; rule: string | null };
+
+function exception(k: WbrStatus, rule: string, detail: string): WbrStat {
+  return { k, rule, why: `Rule: ${rule}. ${detail}` };
+}
+
 /** The exception engine shown on the deck / focus / table. */
 export function wbrStat(
-  m: Pick<WbrMetricLike, "weeks" | "target" | "goodDir" | "type" | "unit" | "dp">
-): { k: WbrStatus; why: string } {
+  m: Pick<WbrMetricLike, "weeks" | "target" | "goodDir" | "type" | "unit" | "dp">,
+  rules: WbrExceptionRules = DEFAULT_WBR_EXCEPTION_RULES
+): WbrStat {
   const w = m.weeks;
   const n = w.length;
   const lw = w[n - 1];
@@ -90,45 +112,59 @@ export function wbrStat(
   let miss = 0;
   for (let i = n - 1; i >= 0 && !hits(w[i]); i--) miss++;
 
-  const worse = (lw - w[n - 3]) * dir < 0;
+  const lookback = Math.min(rules.wrongWayLookbackWeeks, n);
+  const worse = lookback >= 2 && (lw - w[n - lookback]) * dir < 0;
+  const trend = lookback >= 2 ? w.slice(n - lookback).map(F).join(" → ") : F(lw);
   const sd = wsd(w);
   const margin = Math.abs(lw - t);
   const priorMiss = w.slice(0, n - 1).filter((v) => !hits(v)).length;
+  const thinWinLimit = sd * rules.inputThinWinStdDevs;
 
-  if (miss >= 2) {
-    return {
-      k: "off",
-      why: `${miss} weeks off target${
-        worse
-          ? `, and still going the wrong way (${w.slice(n - 3).map(F).join(" → ")})`
-          : ""
-      }. That is exceptional variation, not the usual wobble.`,
-    };
+  if (miss >= rules.consecutiveMissesForOff) {
+    const rule = `${rules.consecutiveMissesForOff} or more consecutive weeks off target`;
+    return exception(
+      "off",
+      rule,
+      `${miss} weeks off target${
+        worse ? `, and still going the wrong way (${trend})` : ""
+      }. That is exceptional variation, not the usual wobble.`
+    );
   }
 
-  if (miss === 1) {
-    return {
-      k: "watch",
-      why: `first week off target (${F(lw)} against ${F(t)}). One week is not a trend — watch it, don't theorise about it.`,
-    };
+  if (miss >= rules.consecutiveMissesForWatch) {
+    const rule =
+      miss === 1 && rules.consecutiveMissesForWatch === 1
+        ? "first week off target"
+        : `${rules.consecutiveMissesForWatch} or more consecutive weeks off target (watch)`;
+    const detail =
+      miss === 1
+        ? `first week off target (${F(lw)} against ${F(t)}). One week is not a trend — watch it, don't theorise about it.`
+        : `${miss} weeks off target (${F(lw)} against ${F(t)}). Not yet the off threshold (${rules.consecutiveMissesForOff} weeks).`;
+    return exception("watch", rule, detail);
   }
 
-  if (m.type === "input" && margin < sd) {
-    return {
-      k: "watch",
-      why: `on the right side of target for the first time in ${priorMiss + 1} weeks, but by only ${G(margin)} — less than one normal week's wobble (±${G(Number(sd.toFixed(m.dp || 0)))}). Not a real win yet.`,
-    };
+  if (m.type === "input" && margin < thinWinLimit) {
+    const rule = `input on target by less than ${rules.inputThinWinStdDevs}× usual weekly wobble`;
+    return exception(
+      "watch",
+      rule,
+      `on the right side of target for the first time in ${priorMiss + 1} weeks, but by only ${G(margin)} — less than one normal week's wobble (±${G(Number(sd.toFixed(m.dp || 0)))}). Not a real win yet.`
+    );
   }
 
   if (m.type === "input" && worse) {
-    return {
-      k: "watch",
-      why: `still on target but turning the wrong way across three weeks (${w.slice(n - 3).map(F).join(" → ")}). Inputs get discussed early, while they are still cheap to move.`,
-    };
+    const weekWord = rules.wrongWayLookbackWeeks === 1 ? "week" : "weeks";
+    const rule = `input still on target but turning the wrong way across ${rules.wrongWayLookbackWeeks} ${weekWord}`;
+    return exception(
+      "watch",
+      rule,
+      `still on target but turning the wrong way across ${rules.wrongWayLookbackWeeks} weeks (${trend}). Inputs get discussed early, while they are still cheap to move.`
+    );
   }
 
   return {
     k: "ok",
+    rule: null,
     why: `on target and inside its usual range — a one-second glance, no discussion.`,
   };
 }

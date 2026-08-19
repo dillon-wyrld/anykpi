@@ -33,6 +33,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Configurable WBR exception rules in `anykpi.config.json` beside the
+  database (ANY-24). Defaults are documented in `anykpi.config.example.json`
+  and `docs/introduction.md`. Invalid config fails at boot and prints the
+  offending path. Every exception row names the rule that fired.
 - `POST /api/v1/connect` and `anykpi connect` store per-source credentials
   encrypted at rest. The registry decrypts config for `Connector.sync`.
   Env vars stay a deprecated read-only fallback (ANY-46).

@@ -54,7 +54,7 @@ Read responses include a view_url that opens `/dashboard` in the workspace and v
 ## Layout
 
 - `src/app/api` — HTTP routes (REST, MCP, views, OpenAPI, `/llms.txt`)
-- `src/core` — auth, Zod contracts, view-state, read-model loaders
+- `src/core` — auth, Zod contracts, view-state, read-model loaders, `anykpi.config.json` loader (WBR exception thresholds beside the database)
 - `src/mcp/server.ts` — stdio MCP server
 - `src/connectors` — PostHog, Mixpanel, Amplitude
 - `src/demo` — canonical demo dataset

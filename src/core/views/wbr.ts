@@ -1,11 +1,14 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
+import { getAnykpiConfig } from "@/core/config";
 import {
   round2,
   seriesWowYoy,
   wbrDecimals,
   wbrGoodDir,
+  wbrStat,
+  type WbrExceptionRules,
 } from "@/core/views/wbr-math";
 import { loadRevenueLanes, wbrSectionId } from "@/core/views/revenue";
 
@@ -17,7 +20,34 @@ export {
   wbrStat,
 } from "@/core/views/wbr-math";
 
+function gradeMetric<T extends {
+  weeks: number[];
+  target: number;
+  goodDir: number;
+  type: string;
+  unit: string;
+  dp: number;
+}>(metric: T, rules: WbrExceptionRules): T & {
+  status: "ok" | "watch" | "off";
+  statusReason: string;
+} {
+  const stat = wbrStat(
+    {
+      weeks: metric.weeks,
+      target: metric.target,
+      goodDir: metric.goodDir,
+      type: metric.type === "output" ? "output" : "input",
+      unit: metric.unit,
+      dp: metric.dp,
+    },
+    rules
+  );
+  return { ...metric, status: stat.k, statusReason: stat.why };
+}
+
 export async function loadWbrView(workspace: string) {
+  const rules = getAnykpiConfig().wbr.exceptions;
+
   const metricDefs = await db
     .select()
     .from(schema.metricDefs)
@@ -67,14 +97,14 @@ export async function loadWbrView(workspace: string) {
       section: wbrSectionId(def.section),
       sectionOrder: def.sectionOrder,
       owner: def.owner,
-      type: def.type,
+      type: def.type === "output" ? "output" : "input",
       current,
       target: round2(def.target || 0),
       wow,
       yoy,
       status,
-      statusReason: def.statusReason,
-      unit: def.unit,
+      statusReason: def.statusReason ?? undefined,
+      unit: def.unit ?? "",
       goodDir: wbrGoodDir(def.goodDir),
       dp,
       weeks,
@@ -89,9 +119,11 @@ export async function loadWbrView(workspace: string) {
   });
 
   const revenueLanes = await loadRevenueLanes(workspace);
-  const metrics = [...revenueLanes, ...fromDefs];
+  const metrics = [...revenueLanes, ...fromDefs].map((m) =>
+    gradeMetric(m, rules)
+  );
 
   metrics.sort((a, b) => a.sectionOrder.localeCompare(b.sectionOrder));
 
-  return { metrics };
+  return { metrics, exceptionRules: rules };
 }

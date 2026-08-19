@@ -146,7 +146,7 @@ Stays awake (`sleepApplication = false`) with a persistent volume at `/data`. Se
 
 In production, if `ANYKPI_API_KEY` is unset, writes and non-demo reads are refused (503). Copy `.env.example` and see [SECURITY.md](SECURITY.md).
 
-Data lives in the SQLite file at `DATABASE_PATH` (default `./data/anykpi.db`, or `/data/anykpi.db` in Docker). Back it up. It's yours.
+Data lives in the SQLite file at `DATABASE_PATH` (default `./data/anykpi.db`, or `/data/anykpi.db` in Docker). Back it up. It's yours. WBR exception thresholds live in `anykpi.config.json` beside that file (defaults in `anykpi.config.example.json`).
 
 ## Design Principles (binding)
 
