@@ -337,10 +337,9 @@ export async function runCsvImport(input: CsvImportInput): Promise<CsvImportOutc
       return { status: "invalid", errors };
     }
     const before = await countWorkspaceUsers(input.workspaceId);
-    await db.transaction(async (tx) => {
+    db.transaction((tx) => {
       for (const batch of chunk(rows, BATCH)) {
-        await tx
-          .insert(schema.users)
+        tx.insert(schema.users)
           .values(batch)
           .onConflictDoUpdate({
             target: schema.users.personId,
@@ -354,7 +353,8 @@ export async function runCsvImport(input: CsvImportInput): Promise<CsvImportOutc
               cluster: sql`excluded.cluster`,
               accountId: sql`excluded.account_id`,
             },
-          });
+          })
+          .run();
       }
     });
     const after = await countWorkspaceUsers(input.workspaceId);
@@ -399,20 +399,20 @@ export async function runCsvImport(input: CsvImportInput): Promise<CsvImportOutc
   }
 
   const before = await countWorkspaceActivity(input.workspaceId);
-  await db.transaction(async (tx) => {
+  db.transaction((tx) => {
     for (const batch of chunk([...stubs.values()], BATCH)) {
-      await tx
-        .insert(schema.users)
+      tx.insert(schema.users)
         .values(batch)
-        .onConflictDoNothing({ target: schema.users.personId });
+        .onConflictDoNothing({ target: schema.users.personId })
+        .run();
     }
     for (const batch of chunk(rows, BATCH)) {
-      await tx
-        .insert(schema.activity)
+      tx.insert(schema.activity)
         .values(batch)
         .onConflictDoNothing({
           target: [schema.activity.workspaceId, schema.activity.externalId],
-        });
+        })
+        .run();
     }
   });
   const after = await countWorkspaceActivity(input.workspaceId);
