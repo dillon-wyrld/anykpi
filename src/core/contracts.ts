@@ -86,6 +86,19 @@ export const SyncStateSchema = z.object({
   error: z.string().optional(),
 });
 
+/**
+ * One connector sync attempt. Cursor and health rules are documented on
+ * `Connector` in `src/connectors/index.ts` (incremental / scheduled sync).
+ */
+export const ConnectorHealthSchema = z.enum(['ok', 'degraded', 'error']);
+
+export const SyncResultSchema = z.object({
+  rowsSynced: z.number().int().nonnegative(),
+  nextCursor: z.string().nullable(),
+  health: ConnectorHealthSchema,
+  error: z.string().optional(),
+});
+
 export const AccountSchema = z.object({
   accountId: z.string(),
   name: z.string(),
@@ -209,6 +222,8 @@ export type Cohort = z.infer<typeof CohortSchema>;
 export type WBRMetric = z.infer<typeof WBRMetricSchema>;
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>;
 export type SyncState = z.infer<typeof SyncStateSchema>;
+export type ConnectorHealth = z.infer<typeof ConnectorHealthSchema>;
+export type SyncResult = z.infer<typeof SyncResultSchema>;
 export type Account = z.infer<typeof AccountSchema>;
 
 export type OverviewResponse = z.infer<typeof OverviewResponseSchema>;

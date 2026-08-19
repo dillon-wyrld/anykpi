@@ -26,6 +26,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Working ESLint configuration; CI now gates on lint, unit tests, and a build.
 - Contributor docs (`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`) and issue/PR
   templates.
+- Shared `Connector` interface and source-keyed registry (`sync("posthog")`)
+  with cursor + health `SyncResult`, plus an offline recorded-fixture harness
+  for connector tests (ANY-44).
 
 ### Changed
 - Removed internal design notes and competitor/brand references from the public
