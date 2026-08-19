@@ -158,6 +158,21 @@ export const SyncResponseSchema = z.object({
   workspace: z.string(),
 });
 
+export const SyncTriggerRequestSchema = z.object({
+  source: z.string().optional(),
+  workspace: z.string().optional(),
+});
+
+export const SyncTriggerResultSchema = SyncResultSchema.extend({
+  source: z.string(),
+});
+
+export const SyncTriggerResponseSchema = z.object({
+  results: z.array(SyncTriggerResultSchema),
+  states: z.array(SyncStateSchema),
+  workspace: z.string(),
+});
+
 // ========== API Requests ==========
 
 export const QueryUsersRequestSchema = z.object({
@@ -232,6 +247,9 @@ export type CohortsResponse = z.infer<typeof CohortsResponseSchema>;
 export type WBRResponse = z.infer<typeof WBRResponseSchema>;
 export type CalendarResponse = z.infer<typeof CalendarResponseSchema>;
 export type SyncResponse = z.infer<typeof SyncResponseSchema>;
+export type SyncTriggerRequest = z.infer<typeof SyncTriggerRequestSchema>;
+export type SyncTriggerResult = z.infer<typeof SyncTriggerResultSchema>;
+export type SyncTriggerResponse = z.infer<typeof SyncTriggerResponseSchema>;
 
 export type QueryUsersRequest = z.infer<typeof QueryUsersRequestSchema>;
 export type IngestIdentifyRequest = z.infer<typeof IngestIdentifyRequestSchema>;

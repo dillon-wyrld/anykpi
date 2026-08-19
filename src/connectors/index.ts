@@ -22,9 +22,14 @@
  *   reason. Do not advance the cursor; surface the source as unhealthy.
  */
 
+import { and, eq } from "drizzle-orm";
 import { refreshWorkspaceClusters } from "@/core/clustering";
 import { SyncResultSchema, type SyncResult } from "@/core/contracts";
+import { db } from "@/core/db";
+import * as schema from "@/core/schema";
+import { upsertSyncState } from "@/core/upsert";
 import { syncAmplitude } from "./amplitude";
+import { withSourceLock } from "./lock";
 import { syncMixpanel } from "./mixpanel";
 import { syncPostHog } from "./posthog";
 
@@ -78,6 +83,69 @@ export function getConnector(source: string): Connector | undefined {
   return registry[source];
 }
 
+export function resolveSources(source?: string | null): string[] {
+  if (!source || source === "all") {
+    return listConnectors().map((connector) => connector.source);
+  }
+  return [source];
+}
+
+async function markPending(connector: Connector, workspaceId: string): Promise<void> {
+  const existing = await db
+    .select()
+    .from(schema.syncState)
+    .where(
+      and(
+        eq(schema.syncState.workspaceId, workspaceId),
+        eq(schema.syncState.source, connector.source)
+      )
+    )
+    .get();
+
+  await upsertSyncState({
+    source: connector.source,
+    sourceName: connector.name,
+    lastSync: existing?.lastSync ?? null,
+    status: "pending",
+    error: null,
+    workspaceId,
+  });
+}
+
+async function markError(connector: Connector, workspaceId: string): Promise<void> {
+  await upsertSyncState({
+    source: connector.source,
+    sourceName: connector.name,
+    lastSync: new Date(),
+    status: "error",
+    error: "sync failed",
+    workspaceId,
+  });
+}
+
+async function runSource(
+  connector: Connector,
+  workspaceId: string,
+  opts?: SyncOpts
+): Promise<SyncResult> {
+  await markPending(connector, workspaceId);
+  try {
+    const result = SyncResultSchema.parse(await connector.sync(workspaceId, opts));
+    if (result.health === "ok") {
+      await refreshWorkspaceClusters(workspaceId);
+    }
+    return result;
+  } catch {
+    await markError(connector, workspaceId);
+    return {
+      rowsSynced: 0,
+      nextCursor: null,
+      health: "error",
+      error: "sync failed",
+    };
+  }
+}
+
 export async function sync(
   source: string,
   workspaceId: string = "live",
@@ -87,9 +155,7 @@ export async function sync(
   if (!connector) {
     throw new Error(`Unknown connector source: ${source}`);
   }
-  const result = SyncResultSchema.parse(await connector.sync(workspaceId, opts));
-  if (result.health === "ok") {
-    await refreshWorkspaceClusters(workspaceId);
-  }
-  return result;
+  return withSourceLock(workspaceId, source, () =>
+    runSource(connector, workspaceId, opts)
+  );
 }

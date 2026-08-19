@@ -15,6 +15,7 @@
  * - cohorts         Get retention data
  * - wbr             Get WBR metrics
  * - calendar        Get calendar events
+ * - sync            Trigger a connector sync
  */
 
 import { createProgram } from "./program";

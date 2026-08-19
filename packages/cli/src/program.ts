@@ -15,6 +15,7 @@ export const PUBLISHED_COMMANDS = [
   "cohorts",
   "wbr",
   "calendar",
+  "sync",
 ] as const;
 
 function workspaceOf(options: { workspace?: string }): string {
@@ -501,6 +502,66 @@ export function createProgram(): Command {
             console.log(chalk.dim("View:"), chalk.cyan(data.view_url));
           }
         }
+      } catch (error) {
+        spinner.fail((error as Error).message);
+        throw error;
+      }
+    });
+
+  program
+    .command("sync")
+    .description("Trigger a connector sync")
+    .option("--source <source>", "One source (omit to sync all)")
+    .option("--workspace <workspace>", "Workspace")
+    .option("--json", "Output as JSON")
+    .action(async (options) => {
+      const spinner = ora("Triggering sync...").start();
+
+      try {
+        const workspace = workspaceOf(options);
+        const data = (await apiRequest("/api/v1/sync", {
+          method: "POST",
+          body: JSON.stringify({
+            workspace,
+            ...(options.source ? { source: options.source } : {}),
+          }),
+        })) as {
+          workspace: string;
+          results: Array<{
+            source: string;
+            rowsSynced: number;
+            health: string;
+            error?: string;
+          }>;
+          states: Array<{
+            source: string;
+            sourceName: string;
+            status: string;
+            error?: string;
+          }>;
+        };
+
+        spinner.stop();
+
+        if (options.json) {
+          console.log(JSON.stringify(data, null, 2));
+          return;
+        }
+
+        console.log();
+        console.log(chalk.bold("Sync"), chalk.dim(data.workspace));
+        console.log();
+
+        for (const result of data.results) {
+          const ok = result.health === "ok";
+          const mark = ok ? chalk.green("✓") : chalk.red("✗");
+          const detail = ok
+            ? `${result.rowsSynced} rows`
+            : result.error || "sync failed";
+          console.log("  ", mark, chalk.bold(result.source), chalk.dim(detail));
+        }
+
+        console.log();
       } catch (error) {
         spinner.fail((error as Error).message);
         throw error;

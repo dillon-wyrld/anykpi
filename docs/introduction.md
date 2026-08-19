@@ -82,6 +82,7 @@ Returns:
 - `GET /api/v1/wbr` — Weekly Business Review metrics
 - `GET /api/v1/calendar` — Multi-source events
 - `GET /api/v1/sync` — Connector status
+- `POST /api/v1/sync` — Trigger a sync (one source or all; requires an API key)
 - `POST /api/v1/keys` — Generate API key
 - `POST /api/ingest/identify` — Identify user
 - `POST /api/ingest/event` — Track event
@@ -100,6 +101,7 @@ anykpi users --cluster='🔥 Power daily'
 anykpi cohorts --json
 anykpi wbr --section=Finance
 anykpi calendar --source=stripe
+anykpi sync --source=posthog
 
 # Ingest
 anykpi identify user123 --name="Jane Doe" --email="jane@example.com"
