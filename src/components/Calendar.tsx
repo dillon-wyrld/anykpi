@@ -277,7 +277,14 @@ export default function Calendar({ workspace }: CalendarProps) {
   }, [getDateRange, filteredEvents, today]);
 
   if (loading) {
-    return <div className="text-sub">Loading...</div>;
+    return (
+      <div className="space-y-4">
+        <div className="text-sm text-sub bg-panel border border-border rounded-lg p-3">
+          📖 <strong>Read-only</strong> — Calendar events are synced from your existing tools. Nothing here is typed in.
+        </div>
+        <div className="text-sub">Loading...</div>
+      </div>
+    );
   }
 
   const { from, to } = getDateRange();
