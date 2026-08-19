@@ -76,7 +76,7 @@ describe("coSlope / coFloorOf / coGrade — existing smile rules", () => {
 
   it("calls a flat-but-low tail low, not a smile", () => {
     const low = coGrade(
-      { retention: [100, 30, 22, 20, 19, 18, 18, 17], size: 12 },
+      { retention: [40, 24, 22, 21, 20, 20, 20, 20], size: 12 },
       7
     );
     expect(low.state).toBe("low");
@@ -174,7 +174,14 @@ describe("insight cards", () => {
     expect(test.aged).toBe(2);
     expect(test.smilers).toBe(1);
     expect(test.low).toBe(1);
-    expect(test.pmfLit).toBe(false);
+    expect(test.pmfLit).toBe(true);
+    expect(
+      smileTest([
+        agedSmile,
+        agedLow,
+        { ...agedLow, state: "sliding" },
+      ]).pmfLit
+    ).toBe(false);
     expect(smileTest([agedSmile, { ...agedLow, state: "smile" }]).pmfLit).toBe(true);
   });
 

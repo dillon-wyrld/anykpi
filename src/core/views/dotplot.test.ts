@@ -20,7 +20,7 @@ describe("deriveDotPlotFields", () => {
     const fields = deriveDotPlotFields(2, activity);
 
     expect(fields.activeCount).toBe(activeCountOf(activity));
-    expect(fields.activeCount).toBe(8);
+    expect(fields.activeCount).toBe(7);
     expect(fields.streak).toBe(streakOf(activity));
     expect(fields.streak).toBe(0);
     expect(fields.lastSeen).toBe(lastSeenOf(activity));

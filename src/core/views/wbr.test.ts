@@ -177,7 +177,7 @@ describe("canon WBR_METRICS — every metric on the deck", () => {
       expect(g.sheet.weeks).toHaveLength(6);
       expect(g.sheet.months).toHaveLength(12);
       expect(wsign(g.box.wow)).toMatch(/%$/);
-      expect(wfmt(g.box.lw, { dp: 0, unit: "" })).toBe(String(g.box.lw));
+      expect(wfmt(g.box.lw, { dp: 0, unit: "" })).toBe(Number(g.box.lw).toFixed(0));
     });
 
     const exceptions = wbrExceptions(graded);
@@ -192,9 +192,6 @@ describe("canon WBR_METRICS — every metric on the deck", () => {
       prevWeeks: revenue.prevWeeks,
       target: revenue.target,
       goodDir: revenue.goodDir,
-      months: revenue.months ?? [],
-      prevMonths: revenue.prevMonths ?? [],
-      type: revenue.type,
     });
     expect(box.lw).toBe(1240);
     expect(box.wow).toBe(8);

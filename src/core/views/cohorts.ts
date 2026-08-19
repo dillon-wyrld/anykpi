@@ -43,7 +43,7 @@ export async function loadCohortsView(workspace: string, grainParam = "week") {
         (user.signupDate!.getTime() - baseDate.getTime()) / (24 * 60 * 60 * 1000)
       );
 
-      const dailyActivity = new Array(totalDays).fill(false);
+      const dailyActivity = Array.from({ length: totalDays }, () => false);
 
       activities
         .filter((a) => a.personId === user.personId)
@@ -60,7 +60,7 @@ export async function loadCohortsView(workspace: string, grainParam = "week") {
       return {
         personId: user.personId,
         name: user.name,
-        emoji: user.emoji,
+        emoji: user.emoji ?? "",
         signupDay,
         dailyActivity,
       };
