@@ -286,26 +286,30 @@ export default function DotPlot({ workspace }: DotPlotProps) {
 
   useEffect(() => {
     const encoded = encodeViewState(viewState);
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(window.location.search);
     const newParams = new URLSearchParams(encoded.slice(1)); // Remove leading ?
     
     // Merge view-state params with existing params
     newParams.forEach((value, key) => {
-      if (value) {
-        params.set(key, value);
-      } else {
+      params.set(key, value);
+    });
+    
+    // Remove view-state keys that are defaults (not in newParams)
+    const viewStateKeys = ['z', 'g', 'v', 'w', 'win', 'wl', 'c', 'cs', 'ce', 'csc', 'cc', 'cl', 'cem', 'cey', 'cew', 'cel'];
+    viewStateKeys.forEach(key => {
+      if (!newParams.has(key)) {
         params.delete(key);
       }
     });
     
     const newSearch = params.toString();
-    const currentSearch = searchParams.toString();
+    const currentSearch = window.location.search.slice(1);
     
     // Only update if params actually changed
     if (newSearch !== currentSearch) {
       router.replace(`/dashboard?${newSearch}`, { scroll: false });
     }
-  }, [viewState, router, searchParams]);
+  }, [viewState, router]);
 
   const getFilteredUsers = useCallback(() => {
     let filtered = [...users];

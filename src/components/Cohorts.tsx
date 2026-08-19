@@ -121,26 +121,30 @@ export default function Cohorts({ workspace }: CohortsProps) {
 
   useEffect(() => {
     const encoded = encodeViewState(viewState);
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(window.location.search);
     const newParams = new URLSearchParams(encoded.slice(1)); // Remove leading ?
     
     // Merge view-state params with existing params
     newParams.forEach((value, key) => {
-      if (value) {
-        params.set(key, value);
-      } else {
+      params.set(key, value);
+    });
+    
+    // Remove view-state keys that are defaults (not in newParams)
+    const viewStateKeys = ['g', 'c', 'cel', 'a'];
+    viewStateKeys.forEach(key => {
+      if (!newParams.has(key)) {
         params.delete(key);
       }
     });
     
     const newSearch = params.toString();
-    const currentSearch = searchParams.toString();
+    const currentSearch = window.location.search.slice(1);
     
     // Only update if params actually changed
     if (newSearch !== currentSearch) {
       router.replace(`/dashboard?${newSearch}`, { scroll: false });
     }
-  }, [viewState, router, searchParams]);
+  }, [viewState, router]);
 
   const computeCohorts = useCallback(() => {
     if (users.length === 0) return [];
