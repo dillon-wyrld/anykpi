@@ -18,7 +18,10 @@
     "db:seed": "tsx src/demo/seed.ts",
     "sync:posthog": "tsx scripts/sync-posthog.ts",
     "sync:mixpanel": "tsx scripts/sync-mixpanel.ts",
-    "sync:amplitude": "tsx scripts/sync-amplitude.ts"
+    "sync:amplitude": "tsx scripts/sync-amplitude.ts",
+    "cli": "cd packages/cli && pnpm build && node dist/index.js",
+    "cli:build": "cd packages/cli && pnpm install && pnpm build",
+    "anykpi": "cd packages/cli && pnpm build && node dist/index.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
