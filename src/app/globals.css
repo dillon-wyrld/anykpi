@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #fbfbfb;
+  --panel: #ffffff;
+  --panel-2: #fafafa;
+  --border: #e4e4e7;
+  --rule: #f1f1f3;
+  --text: #18181b;
+  --sub: #6b6f76;
+  --faint: #9aa4b2;
+  --hover: #f4f4f5;
+  --accent: #5e6ad2;
+  --accent-soft: #eef0fb;
+  --accent-line: #d4d8f2;
+  --green: #26a465;
+  --green-soft: #ecfdf5;
+  --amber: #d97917;
+  --red: #d43d51;
+  --hatch: rgba(107, 111, 118, 0.15);
+}
+
+@layer utilities {
+  .eyebrow {
+    @apply font-mono text-[10px] uppercase tracking-wider text-faint font-medium;
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.animate-confetti {
+  animation: confetti-fall 2.5s ease-out forwards;
+}

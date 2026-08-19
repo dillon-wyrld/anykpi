@@ -1,0 +1,45 @@
+{
+  "name": "@anykpi/cli",
+  "version": "0.1.0",
+  "description": "Command-line interface for ANYKPI - the growth stack for modern builders",
+  "main": "dist/index.js",
+  "bin": {
+    "anykpi": "dist/index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm",
+    "dev": "tsup src/index.ts --format esm --watch",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "anykpi",
+    "cli",
+    "metrics",
+    "analytics"
+  ],
+  "author": "ANYKPI",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.1.1",
+    "prompts": "^2.4.2",
+    "node-fetch": "^3.3.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3",
+    "@types/node": "^22.10.5",
+    "@types/prompts": "^2.4.9"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dillon-wyrld/anykpi.git",
+    "directory": "packages/cli"
+  }
+}
