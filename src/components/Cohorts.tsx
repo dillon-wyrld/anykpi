@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 interface CohortData {
   cohort: string;
+  cohortDate: string;
+  size: number;
   weeks: number[];
   smileDetected: boolean;
 }
