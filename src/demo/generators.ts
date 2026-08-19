@@ -69,11 +69,11 @@ export function buildCohorts(): Cohort[] {
     const asym = 0.07 + 0.004 * c;
     
     const users: CohortUser[] = [];
-    let namedIdx = 0;
+    const cast = NAMED.filter(x => x[2] === c); // Named users for this cohort
     
     for (let u = 0; u < size; u++) {
       const loyal = rnd() < quality;
-      const named = (c < 12 && namedIdx < NAMED.length && NAMED[namedIdx][2] === c) ? NAMED[namedIdx++] : null;
+      const named = cast[u]; // Get named user from filtered cast
       const weeks: boolean[] = [];
       
       for (let w = 0; w < CWEEKS - c; w++) {
