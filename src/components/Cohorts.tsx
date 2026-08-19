@@ -113,6 +113,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
       .then((res) => res.json())
       .then((data) => {
         setUsers(data.users || []);
+        setCohortRows(data.cohorts || []); // Use precomputed cohorts from server
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -243,16 +244,13 @@ export default function Cohorts({ workspace }: CohortsProps) {
   }
 
   useEffect(() => {
-    const rows = computeCohorts();
-    setCohortRows(rows);
-    
-    const smilingCount = rows.filter((r) => r.state === "smile").length;
+    const smilingCount = cohortRows.filter((r) => r.state === "smile").length;
     if (smilingCount >= 3 && viewState.celebrate && !confettiTriggered) {
       setShowConfetti(true);
       setConfettiTriggered(true);
       setTimeout(() => setShowConfetti(false), 1800);
     }
-  }, [computeCohorts, viewState.celebrate, confettiTriggered]);
+  }, [cohortRows, viewState.celebrate, confettiTriggered]);
 
   const renderCurves = useCallback(() => {
     if (cohortRows.length === 0) return null;
@@ -381,9 +379,11 @@ export default function Cohorts({ workspace }: CohortsProps) {
       .reduce(
         (sum, r) =>
           sum +
-          r.users.filter(
-            (u) => u.dailyActivity.slice(u.signupDay, u.signupDay + 56).filter(Boolean).length >= 56
-          ).length,
+          users.filter((u) => {
+            const cohortIdx = Math.floor(u.signupDay / (GRAINS[viewState.grain]?.d || 7));
+            return cohortIdx === r.week &&
+              u.dailyActivity.slice(u.signupDay, u.signupDay + 56).filter(Boolean).length >= 56;
+          }).length,
         0
       );
     

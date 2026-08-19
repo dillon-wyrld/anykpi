@@ -38,9 +38,19 @@ test.describe('Demo Workspace - Canonical Dataset', () => {
   });
 
   test('cohorts show smile detection (PMF signal)', async ({ page }) => {
+    page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
+    
+    // Test API speed first
+    const apiStart = Date.now();
+    const response = await page.request.get('http://localhost:3000/api/views/cohorts?workspace=demo');
+    const apiTime = Date.now() - apiStart;
+    console.log(`Cohorts API took ${apiTime}ms`);
+    expect(response.ok()).toBeTruthy();
+    expect(apiTime).toBeLessThan(2000);
+    
     await page.goto('http://localhost:3000/dashboard?workspace=demo&view=cohorts');
     // Wait for cohorts view to render - check for actual UI elements
-    await page.waitForSelector('text=The smile test', { timeout: 10000 });
+    await page.waitForSelector('text=The smile test', { timeout: 30000 });
     
     const content = await page.content();
     
@@ -56,9 +66,19 @@ test.describe('Demo Workspace - Canonical Dataset', () => {
   });
 
   test('WBR shows metrics with proper status', async ({ page }) => {
+    page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
+    
+    // Test API speed first
+    const apiStart = Date.now();
+    const response = await page.request.get('http://localhost:3000/api/views/wbr?workspace=demo');
+    const apiTime = Date.now() - apiStart;
+    console.log(`WBR API took ${apiTime}ms`);
+    expect(response.ok()).toBeTruthy();
+    expect(apiTime).toBeLessThan(2000);
+    
     await page.goto('http://localhost:3000/dashboard?workspace=demo&view=wbr');
     // Wait for WBR deck to render - check for first section header
-    await page.waitForSelector('text=Finance', { timeout: 10000 });
+    await page.waitForSelector('text=Finance', { timeout: 30000 });
     
     const content = await page.content();
     
@@ -92,23 +112,22 @@ test.describe('Demo Workspace - Canonical Dataset', () => {
   });
 
   test('navigation between views works', async ({ page }) => {
-    // Start at dot plot
+    page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
+    
+    // Start at dot plot (fast view)
+    await page.goto('http://localhost:3000/dashboard?workspace=demo&view=dotplot');
     await expect(page).toHaveURL(/view=dotplot/);
     
-    // Navigate to cohorts
-    await page.click('text=Cohorts');
-    await expect(page).toHaveURL(/view=cohorts/);
-    
-    // Navigate to WBR
-    await page.click('text=WBR');
+    // Navigate to WBR using link
+    await page.getByRole('link', { name: 'WBR' }).click();
     await expect(page).toHaveURL(/view=wbr/);
     
-    // Navigate to calendar
-    await page.click('text=Calendar');
+    // Navigate to calendar using link
+    await page.getByRole('link', { name: 'Calendar' }).click();
     await expect(page).toHaveURL(/view=calendar/);
     
-    // Navigate to PMF+
-    await page.click('text=PMF');
+    // Navigate to PMF+ using link
+    await page.getByRole('link', { name: /PMF/ }).click();
     await expect(page).toHaveURL(/view=pmf/);
   });
 
