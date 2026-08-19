@@ -37,6 +37,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Shared `Connector` interface and source-keyed registry (`sync("posthog")`)
   with cursor + health `SyncResult`, plus an offline recorded-fixture harness
   for connector tests (ANY-44).
+- Offline contract tests for PostHog, Mixpanel, and Amplitude against recorded
+  fixtures, including 401 and rate-limit paths (ANY-41).
 - Tagged `v*` releases build and pack `@anykpi/cli`. Publish runs only when
   the `NPM_TOKEN` secret is present; otherwise the workflow logs a skip.
 - Tagged `v*` releases also push `linux/amd64` and `linux/arm64` images to

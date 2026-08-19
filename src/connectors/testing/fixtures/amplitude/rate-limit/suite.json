@@ -1,0 +1,22 @@
+{
+  "source": "amplitude",
+  "description": "429 on user search",
+  "fixtures": [
+    {
+      "name": "usersearch-rate-limited",
+      "request": {
+        "method": "POST",
+        "urlIncludes": "/usersearch"
+      },
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "1"
+        },
+        "body": {
+          "error": "rate limited"
+        }
+      }
+    }
+  ]
+}
