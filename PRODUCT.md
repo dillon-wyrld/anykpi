@@ -42,8 +42,11 @@ Ship the machine:
 
 - One-command install
 - Workspaces: `demo` (default) and `live`
-- Connect front door: tools (PostHog first, real sync) + agents (real MCP URL + key)
+- Connect front door: 
+  - **Path 1**: PostHog, Mixpanel, or Amplitude connector (real sync)
+  - **Path 2**: ANYKPI SDK (event ingestion, agent-installable snippet)
+  - Agents: real MCP URL + key
 - Five views reading only from read models
 - View-state URLs that are the shareable answer
-- Hosted waitlist link
+- Hosted waitlist link (extra, not the primary event path)
 - Playwright against the demo workspace

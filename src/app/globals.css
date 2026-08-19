@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #fbfbfb;
+  --panel: #ffffff;
+  --panel-2: #f6f6f8;
+  --border: #e4e4e7;
+  --rule: #ededf0;
+  --text: #18181b;
+  --sub: #6b6f76;
+  --faint: #9b9ba4;
+  --accent: #5e6ad2;
+  --accent-soft: #eef0fb;
+  --accent-line: #c9cef0;
+  --green: #26a465;
+  --green-soft: #e8f6ee;
+  --amber: #d97917;
+  --shadow: 0 1px 2px rgba(24, 24, 27, 0.04), 0 8px 24px -12px rgba(24, 24, 27, 0.1);
+  --hatch: #f0f0f4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d0d10;
+    --panel: #141418;
+    --panel-2: #1a1a1f;
+    --border: #27272e;
+    --rule: #212127;
+    --text: #eaeaef;
+    --sub: #9c9ca6;
+    --faint: #6e6e78;
+    --accent: #8f97ea;
+    --accent-soft: #1b1c30;
+    --accent-line: #3a3d63;
+    --green: #43c184;
+    --green-soft: #122318;
+    --amber: #e8952f;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+    --hatch: #1e1e25;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0d0d10;
+  --panel: #141418;
+  --panel-2: #1a1a1f;
+  --border: #27272e;
+  --rule: #212127;
+  --text: #eaeaef;
+  --sub: #9c9ca6;
+  --faint: #6e6e78;
+  --accent: #8f97ea;
+  --accent-soft: #1b1c30;
+  --accent-line: #3a3d63;
+  --green: #43c184;
+  --green-soft: #122318;
+  --amber: #e8952f;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --hatch: #1e1e25;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.eyebrow {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+@layer utilities {
+  .font-display {
+    font-family: "Bricolage Grotesque", "IBM Plex Sans", sans-serif;
+  }
+}
