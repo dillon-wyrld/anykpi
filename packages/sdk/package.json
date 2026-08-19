@@ -1,0 +1,48 @@
+{
+  "name": "@anykpi/sdk",
+  "version": "0.1.0",
+  "description": "Browser and Node SDK for sending events to a self-hosted ANYKPI instance",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/browser.global.js",
+  "jsdelivr": "./dist/browser.global.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsup && node scripts/copy-browser.mjs",
+    "prepublishOnly": "pnpm build"
+  },
+  "keywords": [
+    "anykpi",
+    "sdk",
+    "analytics",
+    "events"
+  ],
+  "author": "ANYKPI",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dillon-wyrld/anykpi.git",
+    "directory": "packages/sdk"
+  }
+}

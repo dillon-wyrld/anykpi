@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { browserSnippet } from "@/sdk";
 
 export default function ConnectPage() {
   const [selectedPath, setSelectedPath] = useState<"existing" | "sdk" | null>(null);
@@ -35,26 +36,14 @@ export default function ConnectPage() {
   };
 
   const handleGenerateSnippet = () => {
-    setSdkSnippet(`<script>
-  !function(){
-    var anykpi = window.anykpi = window.anykpi || [];
-    anykpi.init({
-      endpoint: "${window.location.origin}",
-      workspaceId: "live",
-      apiKey: "YOUR_API_KEY",
-      debug: true
-    });
-    anykpi.identify({ 
-      userId: "USER_ID", 
-      properties: { 
-        name: "User Name", 
-        email: "user@example.com",
-        platform: "WEB"
-      }
-    });
-  }();
-</script>
-<script src="${window.location.origin}/sdk.js" async></script>`);
+    setSdkSnippet(
+      browserSnippet({
+        endpoint: window.location.origin,
+        workspaceId: "live",
+        apiKey: "YOUR_API_KEY",
+        debug: true,
+      })
+    );
   };
 
   const analyticsTools = [

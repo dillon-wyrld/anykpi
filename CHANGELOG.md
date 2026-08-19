@@ -45,6 +45,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `ghcr.io/dillon-wyrld/anykpi` (`latest` plus the version tag).
 - CLI smoke coverage: every published `--help` command against a local
   instance, and `track` is visible via `/api/v1/users`.
+- `@anykpi/sdk` package with ESM, CJS, and browser IIFE builds. The
+  `/connect` snippet loads the locally built `/sdk.js` artifact. Types
+  ship with the package. Public npm publish of `@anykpi/sdk` is a
+  follow-up after the CLI release workflow lands its next change.
 - Unit-test net for every on-screen view number (ANY-40): DotPlot-derived
   fields, cohort retention/smile/grade, WBR exception engine / YoY / PoP,
   calendar past/future, and PMF card fields. View math lives in
