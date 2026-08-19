@@ -73,7 +73,7 @@ async function apiRequest(endpoint: string, options: any = {}) {
 
 program
   .name('anykpi')
-  .description('ANYKPI CLI - Unified insights for modern day builders')
+  .description('ANYKPI CLI - The growth stack for modern builders')
   .version('0.1.0');
 
 // ========== Login / Key ==========

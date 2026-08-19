@@ -1,7 +1,7 @@
 {
   "name": "@anykpi/cli",
   "version": "0.1.0",
-  "description": "Command-line interface for ANYKPI - unified insights for modern day builders",
+  "description": "Command-line interface for ANYKPI - the growth stack for modern builders",
   "main": "dist/index.js",
   "bin": {
     "anykpi": "dist/index.js"

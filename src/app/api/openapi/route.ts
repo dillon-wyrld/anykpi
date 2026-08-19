@@ -26,7 +26,7 @@ export async function GET() {
     info: {
       title: 'ANYKPI API',
       version: '1.0.0',
-      description: 'Unified insights API for modern day builders. Same resources humans see in the dashboard.',
+      description: 'The growth stack for modern builders. Same resources humans see in the dashboard.',
       contact: {
         name: 'ANYKPI',
         url: 'https://github.com/dillon-wyrld/anykpi'

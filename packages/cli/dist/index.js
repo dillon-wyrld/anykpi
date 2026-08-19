@@ -40,7 +40,7 @@ async function apiRequest(endpoint, options = {}) {
   }
   return response.json();
 }
-program.name("anykpi").description("ANYKPI CLI - Unified insights for modern day builders").version("0.1.0");
+program.name("anykpi").description("ANYKPI CLI - The growth stack for modern builders").version("0.1.0");
 program.command("login").description("Generate API key for agent access").option("--url <url>", "ANYKPI instance URL", "http://localhost:3000").action(async (options) => {
   const spinner = ora("Connecting to ANYKPI...").start();
   try {

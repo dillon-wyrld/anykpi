@@ -1,4 +1,4 @@
-# ANYKPI - Unified Insights for Modern Day Builders
+# ANYKPI - The Growth Stack for Modern Builders
 
 **Self-hosted dashboard + REST API + CLI + MCP**. Connect your tools or add ANYKPI to your product. Same resources humans see in the dashboard, agents can fetch via API.
 
@@ -166,14 +166,17 @@ docker run -p 3000:3000 -v anykpi-data:/app/data anykpi/anykpi
 - Vitest + Playwright
 - MIT License
 
-## Binding Rules
+## Philosophy
 
-✅ Calendar read-only forever  
-✅ No self-narrating chrome  
-✅ One-shot motion  
-✅ Demo ships forever  
-✅ Nothing sends on its own  
-✅ No telemetry
+**Tagline:** The growth stack for modern builders
+
+**Binding Rules:**
+- Calendar read-only forever (no event editor)
+- No self-narrating chrome (answer IS the view)
+- One-shot motion (no glows, no loops)
+- Demo ships forever as a workspace
+- Nothing sends on its own (PMF+ drafts wait)
+- No telemetry (person-level data never leaves machine)
 
 ## API Reference
 

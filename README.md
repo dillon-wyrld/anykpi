@@ -1,6 +1,6 @@
 # ANYKPI
 
-**Unified insights for modern day builders.**
+**The growth stack for modern builders.**
 
 Self-hosted dashboard + REST API + CLI + MCP. Connect your tools or add ANYKPI to your product. Same resources humans see in the dashboard, agents can fetch via API.
 

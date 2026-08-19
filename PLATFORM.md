@@ -1,6 +1,6 @@
 # ANYKPI Platform - Complete
 
-**Unified insights for modern day builders.**
+**The growth stack for modern builders.**
 
 Midday's completeness (app + API + CLI + MCP + docs), founder metrics domain.
 
@@ -271,7 +271,7 @@ docker run -p 3000:3000 -v anykpi-data:/app/data anykpi/anykpi
 
 ---
 
-**Positioning:** Unified insights for modern day builders  
+**Positioning:** The growth stack for modern builders  
 **Bar:** Midday-level completeness  
 **Status:** Production ready  
 **PR:** https://github.com/dillon-wyrld/anykpi/pull/1
