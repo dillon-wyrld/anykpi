@@ -36,6 +36,9 @@ jobs:
       - name: Typecheck
         run: pnpm tsc --noEmit
       
+      - name: Create data directory
+        run: mkdir -p data
+      
       - name: Initialize database
         run: pnpm db:init
       
