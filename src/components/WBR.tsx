@@ -185,9 +185,26 @@ export default function WBR({ workspace }: WBRProps) {
 
   useEffect(() => {
     const encoded = encodeViewState(viewState);
-    const currentPath = window.location.pathname;
-    router.replace(currentPath + encoded, { scroll: false });
-  }, [viewState, router]);
+    const params = new URLSearchParams(searchParams.toString());
+    const newParams = new URLSearchParams(encoded.slice(1)); // Remove leading ?
+    
+    // Merge view-state params with existing params
+    newParams.forEach((value, key) => {
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    });
+    
+    const newSearch = params.toString();
+    const currentSearch = searchParams.toString();
+    
+    // Only update if params actually changed
+    if (newSearch !== currentSearch) {
+      router.replace(`/dashboard?${newSearch}`, { scroll: false });
+    }
+  }, [viewState, router, searchParams]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
