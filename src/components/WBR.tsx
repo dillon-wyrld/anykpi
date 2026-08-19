@@ -249,6 +249,9 @@ export default function WBR({ workspace }: WBRProps) {
                             }`}
                           />
                         </td>
+                        <td className="py-2 px-4 text-center">
+                          {renderMiniChart(metric)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

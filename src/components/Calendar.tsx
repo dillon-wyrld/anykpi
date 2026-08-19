@@ -100,12 +100,6 @@ export default function Calendar({ workspace }: CalendarProps) {
           )}
         </div>
 
-        <div className="px-4 py-3 border-t border-rule text-xs text-sub">
-          <p>
-            This view is read-only forever. No event editor, no manual entry.
-            It's a lens over what your company already runs on.
-          </p>
-        </div>
       </div>
     </div>
   );
