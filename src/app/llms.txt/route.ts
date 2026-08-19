@@ -61,13 +61,13 @@ stdio server: src/mcp/server.ts. HTTP tools/list advertises the five read tools 
 
 npx @anykpi/cli
 
-Commands: login (alias: key), workspaces, connect, identify, track, overview, users, cohorts, wbr, calendar.
+Commands: login (alias: key), workspaces, identify, track, overview, users, cohorts, wbr, calendar.
 
-login mints a key via POST /api/v1/keys and requires ANYKPI_API_KEY or --key. connect accepts posthog, mixpanel, or amplitude. Query commands take --workspace and --json.
+login mints a key via POST /api/v1/keys and requires ANYKPI_API_KEY or --key. Query commands take --workspace and --json.
 
 ## Connectors
 
-Shipped: PostHog, Mixpanel, Amplitude. Sync is pull-only into local read models; ANYKPI never writes back.
+Shipped: PostHog, Mixpanel, Amplitude. Sync is pull-only into local read models; ANYKPI never writes back. Connector setup is the /connect UI until v0.5.
 
 ## More
 

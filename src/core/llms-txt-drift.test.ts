@@ -153,4 +153,13 @@ describe("llms.txt does not drift from OpenAPI or MCP tools", () => {
     expect(agents).toMatch(/no unauthenticated first-key endpoint/i);
     expect(agents).toContain("/llms.txt");
   });
+
+  it("does not list connect as a CLI command", async () => {
+    const text = await llmsTxt();
+    expect(sectionBody(text, "CLI")).not.toMatch(/\bconnect\b/);
+    const agents = readFileSync(resolve(root, "AGENTS.md"), "utf8");
+    expect(sectionBody(agents, "CLI")).not.toMatch(/\bconnect\b/);
+    expect(sectionBody(text, "Connectors")).toMatch(/\/connect.*UI until v0\.5/);
+    expect(sectionBody(agents, "Connectors")).toMatch(/\/connect.*UI until v0\.5/);
+  });
 });

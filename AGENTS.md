@@ -40,11 +40,11 @@ HTTP `POST /api/mcp`. stdio: `src/mcp/server.ts`. `tools/list` is open. `tools/c
 
 ## CLI
 
-`npx @anykpi/cli` (`packages/cli`): `login` (alias `key`), `workspaces`, `connect`, `identify`, `track`, `overview`, `users`, `cohorts`, `wbr`, `calendar`. `login` requires an operator key.
+`npx @anykpi/cli` (`packages/cli`): `login` (alias `key`), `workspaces`, `identify`, `track`, `overview`, `users`, `cohorts`, `wbr`, `calendar`. `login` requires an operator key.
 
 ## Connectors
 
-Shipped: PostHog, Mixpanel, Amplitude. Pull-only.
+Shipped: PostHog, Mixpanel, Amplitude. Pull-only. Connector setup is the `/connect` UI until v0.5.
 
 ## view_url
 
