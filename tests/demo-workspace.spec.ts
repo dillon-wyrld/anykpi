@@ -40,13 +40,20 @@ test.describe('Demo Workspace - Canonical Dataset', () => {
   test('cohorts show smile detection (PMF signal)', async ({ page }) => {
     page.on('pageerror', err => console.log('PAGE ERROR:', err.message));
     
-    // Test API speed first
+    // Test API speed first and dump response
     const apiStart = Date.now();
     const response = await page.request.get('http://localhost:3000/api/views/cohorts?workspace=demo');
     const apiTime = Date.now() - apiStart;
     console.log(`Cohorts API took ${apiTime}ms`);
     expect(response.ok()).toBeTruthy();
     expect(apiTime).toBeLessThan(2000);
+    
+    const apiData = await response.json();
+    console.log('Cohorts API response:', JSON.stringify({
+      cohortsCount: apiData.cohorts?.length || 0,
+      usersCount: apiData.users?.length || 0,
+      firstCohort: apiData.cohorts?.[0] || null,
+    }));
     
     await page.goto('http://localhost:3000/dashboard?workspace=demo&view=cohorts');
     
@@ -55,7 +62,8 @@ test.describe('Demo Workspace - Canonical Dataset', () => {
     
     // Log a slice of content to verify what's on the page
     const content = await page.content();
-    console.log('Page content slice:', content.slice(0, 2000));
+    const hasCohortData = content.includes('weekly cohorts') && !content.includes('0 weekly cohorts');
+    console.log('Has cohort data:', hasCohortData);
     
     // Pinned facts from actual Cohorts component UI
     // The smile test insight card
