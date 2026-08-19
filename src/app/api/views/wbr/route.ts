@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
     .select()
     .from(schema.metricDefs)
     .where(eq(schema.metricDefs.workspaceId, workspace))
-    .orderBy(schema.metricDefs.order)
     .all();
 
   const metricPoints = await db
@@ -35,8 +34,8 @@ export async function GET(request: NextRequest) {
 
   const metrics = metricDefs.map((def) => {
     const points = metricPoints
-      .filter((p) => p.metricId === def.id && p.grain === "week")
-      .sort((a, b) => b.period.localeCompare(a.period))
+      .filter((p) => p.metricId === def.metricId && p.grain === "week")
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
       .slice(0, 12);
 
     const current = points[0]?.value || 0;
@@ -47,20 +46,30 @@ export async function GET(request: NextRequest) {
     const yoy = lastYear !== 0 ? ((current - lastYear) / lastYear) * 100 : 0;
 
     const recentValues = points.slice(0, 3).map((p) => p.value || 0);
-    const status = wbrStat(current, def.target || 0, recentValues);
+    
+    // Use stored status from generator
+    const status = def.status as "on" | "watch" | "off" || "on";
 
     return {
-      id: def.id,
+      id: def.metricId,
       name: def.name,
       section: def.section,
-      current: Math.round(current),
-      target: Math.round(def.target || 0),
+      sectionOrder: def.sectionOrder,
+      owner: def.owner,
+      current: Math.round(current * 100) / 100,
+      target: Math.round((def.target || 0) * 100) / 100,
       wow: Math.round(wow * 10) / 10,
       yoy: Math.round(yoy * 10) / 10,
       status,
+      statusReason: def.statusReason,
       unit: def.unit,
+      source: "read model",
+      syncAge: "live"
     };
   });
+
+  // Sort by section order
+  metrics.sort((a, b) => a.sectionOrder.localeCompare(b.sectionOrder));
 
   return NextResponse.json({ metrics });
 }

@@ -11,13 +11,32 @@ export async function GET(request: NextRequest) {
     .select()
     .from(schema.calEvents)
     .where(eq(schema.calEvents.workspaceId, workspace))
-    .orderBy(schema.calEvents.date)
+    .orderBy(schema.calEvents.eventDate)
     .all();
 
+  // Get sync states for trust layer
+  const syncStates = await db
+    .select()
+    .from(schema.syncState)
+    .where(eq(schema.syncState.workspaceId, workspace))
+    .all();
+
+  const syncMap = new Map(syncStates.map(s => [s.source, s]));
+
   return NextResponse.json({
-    events: events.map((e) => ({
-      ...e,
-      date: e.date.toISOString(),
-    })),
+    events: events.map((e) => {
+      const sync = syncMap.get(e.source);
+      const ageMs = sync?.lastSync ? Date.now() - sync.lastSync.getTime() : 0;
+      const ageStr = ageMs < 60000 ? 'live' : 
+                     ageMs < 3600000 ? `${Math.floor(ageMs / 60000)}m ago` :
+                     `${Math.floor(ageMs / 3600000)}h ago`;
+
+      return {
+        ...e,
+        date: e.eventDate.toISOString(),
+        syncAge: ageStr,
+        syncStatus: sync?.status || 'unknown'
+      };
+    }),
   });
 }
