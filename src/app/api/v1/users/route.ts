@@ -3,6 +3,8 @@ import { db } from '@/core/db';
 import * as schema from '@/core/schema';
 import { eq, and, gte, lte } from 'drizzle-orm';
 import { QueryUsersRequestSchema, UsersListResponseSchema } from '@/core/contracts';
+import { gate, publicBaseUrl } from '@/core/auth';
+import { badRequest, internalError, logServerError } from '@/core/errors';
 
 /**
  * GET /api/v1/users
@@ -12,9 +14,13 @@ import { QueryUsersRequestSchema, UsersListResponseSchema } from '@/core/contrac
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const requested = searchParams.get('workspace') || 'demo';
+    const gated = await gate(request, { workspace: requested, write: false });
+    if (!gated.ok) return gated.response;
+    const workspace = gated.workspace;
     
     const params = QueryUsersRequestSchema.parse({
-      workspace: searchParams.get('workspace') || 'demo',
+      workspace,
       cluster: searchParams.get('cluster') || undefined,
       platform: searchParams.get('platform') || undefined,
       signupAfter: searchParams.get('signupAfter') || undefined,
@@ -66,21 +72,16 @@ export async function GET(request: NextRequest) {
       })),
       total,
       workspace: params.workspace,
-      view_url: `${request.nextUrl.origin}/dashboard?workspace=${params.workspace}&view=dotplot${params.cluster ? `&cluster=${params.cluster}` : ''}`
+      view_url: `${publicBaseUrl()}/dashboard?workspace=${params.workspace}&view=dotplot${params.cluster ? `&cluster=${params.cluster}` : ''}`
     });
     
     return NextResponse.json(response);
   } catch (error) {
-    if (error instanceof Error && error.message.includes('parse')) {
-      return NextResponse.json(
-        { error: 'Bad Request', message: error.message, statusCode: 400 },
-        { status: 400 }
-      );
+    if (error instanceof Error && error.name === 'ZodError') {
+      return badRequest();
     }
-    
-    return NextResponse.json(
-      { error: 'Internal Server Error', message: error instanceof Error ? error.message : 'Unknown error', statusCode: 500 },
-      { status: 500 }
-    );
+
+    logServerError('Users query failed');
+    return internalError();
   }
 }

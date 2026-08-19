@@ -3,11 +3,20 @@ import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
 import { buildViewUrl } from "@/core/view-state";
+import { gate, isReadOnlyMcpTool } from "@/core/auth";
+import { logServerError } from "@/core/errors";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
-async function handleMCPRequest(body: any) {
-  const { method, params } = body;
+async function handleMCPRequest(
+  body: Record<string, unknown>,
+  workspaceOverride?: string
+) {
+  const method = body.method;
+  const params = (body.params ?? {}) as {
+    name?: string;
+    arguments?: { workspace?: string; limit?: number };
+  };
 
   if (method === "tools/list") {
     return {
@@ -78,7 +87,7 @@ async function handleMCPRequest(body: any) {
 
   if (method === "tools/call") {
     const { name, arguments: args } = params;
-    const workspace = args?.workspace || "demo";
+    const workspace = workspaceOverride || args?.workspace || "demo";
 
     switch (name) {
       case "get_overview": {
@@ -135,23 +144,53 @@ async function handleMCPRequest(body: any) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const result = await handleMCPRequest(body);
-    
-    // Wrap response in JSON-RPC format
+    const method = body?.method;
+    const params = body?.params ?? {};
+
+    if (method === "tools/list") {
+      const result = await handleMCPRequest(body);
+      return NextResponse.json({
+        jsonrpc: "2.0",
+        id: body.id || null,
+        result,
+      });
+    }
+
+    let workspace: string | undefined;
+    if (method === "tools/call") {
+      const requested = params?.arguments?.workspace || "demo";
+      const toolName = params?.name as string | undefined;
+      const write = !isReadOnlyMcpTool(toolName);
+      const gated = await gate(request, { workspace: requested, write });
+      if (!gated.ok) {
+        return gated.response;
+      }
+      workspace = gated.workspace;
+    } else {
+      const gated = await gate(request, { write: true });
+      if (!gated.ok) {
+        return gated.response;
+      }
+      workspace = gated.workspace;
+    }
+
+    const result = await handleMCPRequest(body, workspace);
+
     return NextResponse.json({
       jsonrpc: "2.0",
       id: body.id || null,
-      result: result,
+      result,
     });
-  } catch (error) {
+  } catch {
+    logServerError("MCP request failed");
     return NextResponse.json(
-      { 
+      {
         jsonrpc: "2.0",
         id: null,
         error: {
           code: -32603,
-          message: error instanceof Error ? error.message : "Unknown error"
-        }
+          message: "Internal Server Error",
+        },
       },
       { status: 500 }
     );

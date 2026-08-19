@@ -9,21 +9,28 @@ export default function ConnectPage() {
   const [mixpanelProject, setMixpanelProject] = useState("");
   const [amplitudeKey, setAmplitudeKey] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [adminKey, setAdminKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [sdkSnippet, setSdkSnippet] = useState("");
 
   const handleGenerateApiKey = async () => {
     try {
-      const response = await fetch("/api/keys/generate", {
+      const response = await fetch("/api/v1/keys", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminKey ? { Authorization: `Bearer ${adminKey}` } : {}),
+        },
         body: JSON.stringify({ name: "MCP Access" }),
       });
       const data = await response.json();
+      if (!response.ok || !data.key) {
+        return;
+      }
       setApiKey(data.key);
       setShowApiKey(true);
-    } catch (error) {
-      console.error("Failed to generate API key:", error);
+    } catch {
+      // Do not log keys or request bodies
     }
   };
 
@@ -34,6 +41,7 @@ export default function ConnectPage() {
     anykpi.init({
       endpoint: "${window.location.origin}",
       workspaceId: "live",
+      apiKey: "YOUR_API_KEY",
       debug: true
     });
     anykpi.identify({ 
@@ -351,12 +359,26 @@ export default function ConnectPage() {
                   </p>
 
                   {!showApiKey ? (
-                    <button
-                      onClick={handleGenerateApiKey}
-                      className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90"
-                    >
-                      Generate API Key
-                    </button>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                          Existing ANYKPI_API_KEY
+                        </label>
+                        <input
+                          type="password"
+                          value={adminKey}
+                          onChange={(e) => setAdminKey(e.target.value)}
+                          placeholder="Required to mint a new key"
+                          className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                        />
+                      </div>
+                      <button
+                        onClick={handleGenerateApiKey}
+                        className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90"
+                      >
+                        Generate API Key
+                      </button>
+                    </div>
                   ) : (
                     <div className="space-y-3">
                       <div>
@@ -408,21 +430,12 @@ export default function ConnectPage() {
           </section>
 
           <section className="border-t border-rule pt-6">
-            <h2 className="font-display text-xl font-semibold mb-4">Hosted Waitlist</h2>
-            <div className="bg-panel border border-border rounded-lg p-6">
-              <p className="text-sm text-sub mb-4">
-                Want ANYKPI cloud-hosted with ANYTIME KPI events and multiplayer? Join the waitlist
-                for early access.
-              </p>
-              <a
-                href="https://anykpi.example.com/waitlist"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block px-4 py-2 border border-border rounded text-sm hover:bg-panel-2"
-              >
-                Join Waitlist
+            <p className="text-sm text-sub">
+              Hosted version:{" "}
+              <a href="https://anykpi.com" className="text-accent hover:underline">
+                anykpi.com
               </a>
-            </div>
+            </p>
           </section>
         </div>
       </div>

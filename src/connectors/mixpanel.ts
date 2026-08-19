@@ -125,7 +125,7 @@ export async function syncMixpanel(workspaceId: string = "live") {
 
     console.log("Mixpanel sync complete");
   } catch (error) {
-    console.error("Mixpanel sync error:", error);
+    console.error("Mixpanel sync failed");
 
     await db
       .insert(schema.syncState)
@@ -134,7 +134,7 @@ export async function syncMixpanel(workspaceId: string = "live") {
         sourceName: "Mixpanel",
         lastSync: new Date(),
         status: "error",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "sync failed",
         workspaceId,
       })
       .onConflictDoUpdate({
@@ -142,7 +142,7 @@ export async function syncMixpanel(workspaceId: string = "live") {
         set: {
           lastSync: new Date(),
           status: "error",
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: "sync failed",
         },
       });
 

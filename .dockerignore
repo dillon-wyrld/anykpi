@@ -2,6 +2,8 @@ node_modules
 .next
 .git
 .env*.local
+.env
+*.pem
 data
 *.md
 .vscode

@@ -26,7 +26,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-RUN mkdir -p /data && chown nextjs:nodejs /data
+RUN mkdir -p /data && chmod 700 /data && chown nextjs:nodejs /data
 
 USER nextjs
 

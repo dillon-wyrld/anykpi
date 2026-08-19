@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { gate } from "@/core/auth";
+import { internalError, logServerError } from "@/core/errors";
 
 /**
  * PMF+ View API
@@ -9,7 +11,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const workspace = searchParams.get("workspace") || "demo";
+  const requested = searchParams.get("workspace") || "demo";
+  const gated = await gate(request, { workspace: requested, write: false });
+  if (!gated.ok) return gated.response;
+  const workspace = gated.workspace;
+
+  try {
 
   // For demo workspace, show simulated PMF research runs
   if (workspace === "demo") {
@@ -133,4 +140,8 @@ export async function GET(request: NextRequest) {
 
   // For live workspace, return empty (no auto-research without explicit trigger)
   return NextResponse.json({ runs: [] });
+  } catch {
+    logServerError("PMF view failed");
+    return internalError();
+  }
 }

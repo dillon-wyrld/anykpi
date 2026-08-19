@@ -5,12 +5,16 @@
     this.config = {
       endpoint: config.endpoint || '',
       workspaceId: config.workspaceId || 'live',
+      apiKey: config.apiKey || '',
       debug: config.debug || false
     };
     this.user = null;
     
     if (this.config.debug) {
-      console.log('[ANYKPI] Initialized', this.config);
+      console.log('[ANYKPI] Initialized', {
+        endpoint: this.config.endpoint,
+        workspaceId: this.config.workspaceId
+      });
     }
   };
 
@@ -48,15 +52,19 @@
     };
 
     if (this.config.debug) {
-      console.log('[ANYKPI] Sending', url, body);
+      console.log('[ANYKPI] Sending', url);
     }
 
     if (typeof fetch !== 'undefined') {
+      var headers = {
+        'Content-Type': 'application/json'
+      };
+      if (this.config.apiKey) {
+        headers.Authorization = 'Bearer ' + this.config.apiKey;
+      }
       fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: headers,
         body: JSON.stringify(body)
       }).catch(function(error) {
         console.error('[ANYKPI] Failed to send event', error);
