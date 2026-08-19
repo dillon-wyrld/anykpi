@@ -241,11 +241,19 @@ export const UsersListResponseSchema = z.object({
   view_url: z.string().optional(),
 });
 
+export const CohortCompareSeriesSchema = z.object({
+  key: z.string(),
+  size: z.number().int().nonnegative(),
+  cohorts: z.array(CohortSchema),
+});
+
 export const CohortsResponseSchema = z.object({
   cohorts: z.array(CohortSchema),
   smileDetected: z.boolean(),
   workspace: z.string(),
   view_url: z.string().optional(),
+  split: z.enum(["platform", "country", "cluster"]).nullable().optional(),
+  series: z.array(CohortCompareSeriesSchema).max(3).optional(),
 });
 
 export const WBRResponseSchema = z.object({
@@ -352,6 +360,7 @@ export const ErrorResponseSchema = z.object({
 export type User = z.infer<typeof UserSchema>;
 export type ActivityEvent = z.infer<typeof ActivityEventSchema>;
 export type Cohort = z.infer<typeof CohortSchema>;
+export type CohortCompareSeries = z.infer<typeof CohortCompareSeriesSchema>;
 export type WBRMetric = z.infer<typeof WBRMetricSchema>;
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>;
 export type SyncState = z.infer<typeof SyncStateSchema>;

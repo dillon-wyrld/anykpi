@@ -150,12 +150,30 @@ export async function GET(request: NextRequest) {
         get: {
           tags: ['Cohorts'],
           summary: 'Get cohort retention',
-          description: 'Returns retention curves with smile detection (PMF signal)',
+          description: 'Returns retention curves with smile detection (PMF signal). Optional split by platform, country, or cluster is capped at 3 series.',
           parameters: [
             {
               name: 'workspace',
               in: 'query',
               schema: { type: 'string', default: 'demo' }
+            },
+            {
+              name: 'payers',
+              in: 'query',
+              schema: { type: 'string', enum: ['1', 'true'] },
+              description: 'When set, keep only paying people'
+            },
+            {
+              name: 'split',
+              in: 'query',
+              schema: { type: 'string', enum: ['platform', 'country', 'cluster'] },
+              description: 'Compare mode: draw one series per value of this field'
+            },
+            {
+              name: 'series',
+              in: 'query',
+              schema: { type: 'string' },
+              description: 'Comma-separated split values, max 3. A fourth series is refused.'
             }
           ],
           responses: {
@@ -164,6 +182,14 @@ export async function GET(request: NextRequest) {
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(CohortsResponseSchema)
+                }
+              }
+            },
+            400: {
+              description: 'Invalid split or more than 3 series',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
                 }
               }
             }

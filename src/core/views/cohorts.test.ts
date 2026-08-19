@@ -3,25 +3,34 @@ import {
   CO_DECAY,
   CO_LEVEL,
   CO_MINSIZE,
+  COHORT_COMPARE_MAX_SERIES,
   bestVintage,
   buildCohortRows,
+  buildCompareSeries,
+  capCohortSeries,
   coFloorOf,
   coGrade,
   coSlope,
   cohortBenchmark,
   findLeak,
   loyalCoreCount,
+  parseCohortCompareOptions,
+  parseCohortSeries,
+  parseCohortSplit,
   periodRetention,
+  pickCompareSeriesKeys,
   smileTest,
+  CohortCompareLimitError,
 } from "./cohort-math";
 import { filterPayerUsers } from "./revenue-math";
 
 function user(
   personId: string,
   signupDay: number,
-  dailyActivity: boolean[]
+  dailyActivity: boolean[],
+  extras: { platform?: string; country?: string; cluster?: string } = {}
 ) {
-  return { personId, name: personId, emoji: "•", signupDay, dailyActivity };
+  return { personId, name: personId, emoji: "•", signupDay, dailyActivity, ...extras };
 }
 
 describe("coSlope / coFloorOf / coGrade — existing smile rules", () => {
@@ -235,5 +244,58 @@ describe("insight cards", () => {
       user("gone", 0, tourist),
     ];
     expect(loyalCoreCount(users, [agedSmile], 7)).toBe(1);
+  });
+});
+
+describe("cohort compare — split series (ANY-23)", () => {
+  const days = Array.from({ length: 14 }, () => true);
+  const users = [
+    user("ios-a", 0, days, { platform: "ios", country: "US", cluster: "power" }),
+    user("ios-b", 0, days, { platform: "ios", country: "US", cluster: "power" }),
+    user("and-a", 0, days, { platform: "android", country: "GB", cluster: "weekday" }),
+    user("web-a", 8, days, { platform: "web", country: "DE", cluster: "occasional" }),
+    user("desk-a", 8, days, { platform: "desktop", country: "FR", cluster: "fading" }),
+  ];
+
+  it("parses split and keeps the same URL/API names", () => {
+    expect(parseCohortSplit("platform")).toBe("platform");
+    expect(parseCohortSplit("Country")).toBe("country");
+    expect(parseCohortCompareOptions({ split: "cluster" })).toEqual({
+      split: "cluster",
+      series: [],
+    });
+  });
+
+  it("builds at most three series, largest first, when split has more keys", () => {
+    const series = buildCompareSeries(users, "week", 14, "platform");
+    expect(series).toHaveLength(COHORT_COMPARE_MAX_SERIES);
+    expect(series.map((s) => s.key)).toEqual(["ios", "android", "desktop"]);
+    expect(series[0].size).toBe(2);
+    expect(series.every((s) => s.cohorts.length > 0)).toBe(true);
+    expect(series.reduce((sum, s) => sum + s.size, 0)).toBeLessThan(users.length);
+  });
+
+  it("refuses a fourth series in parse, pick, and cap", () => {
+    const four = ["ios", "android", "web", "desktop"];
+    expect(() => parseCohortSeries(four.join(","))).toThrow(CohortCompareLimitError);
+    expect(() => parseCohortCompareOptions({ split: "platform", series: four })).toThrow(
+      CohortCompareLimitError
+    );
+    expect(() => pickCompareSeriesKeys(users, "platform", four)).toThrow(
+      CohortCompareLimitError
+    );
+    expect(capCohortSeries(four)).toEqual(["ios", "android", "web"]);
+  });
+
+  it("keeps the payer filter when splitting (ANY-45 still applies)", () => {
+    const payers = filterPayerUsers(users, ["ios-a", "and-a", "web-a", "desk-a"]);
+    const series = buildCompareSeries(payers, "week", 14, "platform", [
+      "ios",
+      "android",
+      "web",
+    ]);
+    expect(series.map((s) => s.key)).toEqual(["ios", "android", "web"]);
+    expect(series.map((s) => s.size)).toEqual([1, 1, 1]);
+    expect(payers).not.toContainEqual(expect.objectContaining({ personId: "ios-b" }));
   });
 });

@@ -55,6 +55,175 @@ export interface CohortUser {
   emoji: string;
   signupDay: number;
   dailyActivity: boolean[];
+  platform?: string | null;
+  country?: string | null;
+  cluster?: string | null;
+}
+
+export const COHORT_SPLIT_FIELDS = ["platform", "country", "cluster"] as const;
+export type CohortSplitField = (typeof COHORT_SPLIT_FIELDS)[number];
+export const COHORT_COMPARE_MAX_SERIES = 3;
+
+export interface CohortCompareSeries {
+  key: string;
+  size: number;
+  cohorts: CohortRow[];
+}
+
+export class CohortCompareError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CohortCompareError";
+  }
+}
+
+export class CohortCompareLimitError extends CohortCompareError {
+  constructor() {
+    super("Cohort compare is capped at 3 series");
+    this.name = "CohortCompareLimitError";
+  }
+}
+
+export function parseCohortSplit(
+  raw: string | null | undefined
+): CohortSplitField | undefined {
+  if (raw == null) return undefined;
+  const value = raw.trim().toLowerCase();
+  if (value === "") return undefined;
+  if (
+    value === "platform" ||
+    value === "country" ||
+    value === "cluster"
+  ) {
+    return value;
+  }
+  throw new CohortCompareError(
+    "split must be platform, country, or cluster"
+  );
+}
+
+function seriesValues(raw: string | string[] | null | undefined): string[] {
+  if (raw == null || raw === "") return [];
+  const parts = Array.isArray(raw) ? raw : raw.split(",");
+  const unique: string[] = [];
+  const seen = new Set<string>();
+  for (const part of parts) {
+    const value = part.trim();
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    unique.push(value);
+  }
+  return unique;
+}
+
+/** Strict parse — a fourth series is refused. */
+export function parseCohortSeries(
+  raw: string | string[] | null | undefined
+): string[] {
+  const unique = seriesValues(raw);
+  if (unique.length > COHORT_COMPARE_MAX_SERIES) {
+    throw new CohortCompareLimitError();
+  }
+  return unique;
+}
+
+/** UI / URL decode — the fourth value is dropped, not drawn. */
+export function capCohortSeries(
+  raw: string | string[] | null | undefined
+): string[] {
+  return seriesValues(raw).slice(0, COHORT_COMPARE_MAX_SERIES);
+}
+
+export function parseCohortCompareOptions(input: {
+  split?: string | null;
+  series?: string | string[] | null;
+}): { split?: CohortSplitField; series: string[] } {
+  const split = parseCohortSplit(input.split);
+  const series = parseCohortSeries(input.series);
+  if (series.length > 0 && !split) {
+    throw new CohortCompareError("series requires split");
+  }
+  return { split, series };
+}
+
+export function splitKeyOf(
+  user: {
+    platform?: string | null;
+    country?: string | null;
+    cluster?: string | null;
+  },
+  field: CohortSplitField
+): string {
+  const raw = user[field];
+  return raw && raw.trim() ? raw : "unknown";
+}
+
+export function listSplitKeys<T extends {
+  platform?: string | null;
+  country?: string | null;
+  cluster?: string | null;
+}>(users: T[], field: CohortSplitField): string[] {
+  const counts = new Map<string, number>();
+  for (const user of users) {
+    const key = splitKeyOf(user, field);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([key]) => key);
+}
+
+export function pickCompareSeriesKeys<T extends {
+  platform?: string | null;
+  country?: string | null;
+  cluster?: string | null;
+}>(
+  users: T[],
+  field: CohortSplitField,
+  requested: string[] = []
+): string[] {
+  if (requested.length > COHORT_COMPARE_MAX_SERIES) {
+    throw new CohortCompareLimitError();
+  }
+  if (requested.length > 0) return requested;
+  return listSplitKeys(users, field).slice(0, COHORT_COMPARE_MAX_SERIES);
+}
+
+export function buildCompareSeries(
+  users: CohortUser[],
+  grainParam: string,
+  totalDays: number,
+  field: CohortSplitField,
+  requested: string[] = []
+): CohortCompareSeries[] {
+  const keys = pickCompareSeriesKeys(users, field, requested);
+  return keys.map((key) => {
+    const subset = users.filter((user) => splitKeyOf(user, field) === key);
+    return {
+      key,
+      size: subset.length,
+      cohorts: buildCohortRows(subset, grainParam, totalDays),
+    };
+  });
+}
+
+export function cohortsDashboardQuery(opts: {
+  workspace: string;
+  payers?: boolean;
+  split?: CohortSplitField | null;
+  series?: string[];
+}): string {
+  const params = new URLSearchParams();
+  params.set("workspace", opts.workspace);
+  params.set("view", "cohorts");
+  if (opts.payers) params.set("p", "1");
+  if (opts.split) {
+    params.set("split", opts.split);
+    if (opts.series && opts.series.length > 0) {
+      params.set("series", opts.series.join(","));
+    }
+  }
+  return params.toString();
 }
 
 /** Least-squares slope in points per period. Existing view-builder fit. */

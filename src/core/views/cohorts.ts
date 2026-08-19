@@ -2,9 +2,13 @@ import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
 import {
+  COHORT_COMPARE_MAX_SERIES,
   buildCohortRows,
+  buildCompareSeries,
   cohortWindow,
+  type CohortSplitField,
   type CohortUser,
+  CohortCompareLimitError,
 } from "@/core/views/cohort-math";
 import { filterPayerUsers, isPayerRow } from "@/core/views/revenue-math";
 
@@ -12,16 +16,30 @@ export {
   CO_DECAY,
   CO_LEVEL,
   CO_MINSIZE,
+  COHORT_COMPARE_MAX_SERIES,
+  COHORT_SPLIT_FIELDS,
   GRAINS,
   buildCohortRows,
-  coFloorOf,
-  coGrade,
-  coSlope,
+  buildCompareSeries,
+  capCohortSeries,
+  cohortsDashboardQuery,
+  parseCohortCompareOptions,
+  parseCohortSeries,
+  parseCohortSplit,
+  pickCompareSeriesKeys,
+  CohortCompareError,
+  CohortCompareLimitError,
 } from "@/core/views/cohort-math";
+
+export type { CohortSplitField } from "@/core/views/cohort-math";
 
 export type LoadCohortsOptions = {
   /** When true, keep only people who appear on the person-revenue join. */
   payers?: boolean;
+  /** Split retention curves by platform, country, or cluster. */
+  split?: CohortSplitField;
+  /** Explicit series keys. A fourth value is refused. */
+  series?: string[];
 };
 
 export async function loadCohortsView(
@@ -56,6 +74,10 @@ export async function loadCohortsView(
     ...activities.map((a) => a.timestamp),
   ]);
 
+  if (options.series && options.series.length > COHORT_COMPARE_MAX_SERIES) {
+    throw new CohortCompareLimitError();
+  }
+
   const enrichedUsers: Array<CohortUser & { isPayer: boolean }> = scopedUsers
     .filter((u) => u.signupDate)
     .map((user) => {
@@ -84,8 +106,22 @@ export async function loadCohortsView(
         signupDay,
         dailyActivity,
         isPayer: payerSet.has(user.personId),
+        platform: user.platform,
+        country: user.country,
+        cluster: user.cluster,
       };
     });
+
+  const split = options.split;
+  const series = split
+    ? buildCompareSeries(
+        enrichedUsers,
+        grainParam,
+        totalDays,
+        split,
+        options.series ?? []
+      )
+    : [];
 
   return {
     cohorts: buildCohortRows(enrichedUsers, grainParam, totalDays),
@@ -93,5 +129,7 @@ export async function loadCohortsView(
     baseDate: baseDate.toISOString(),
     totalDays,
     payers: Boolean(options.payers),
+    split: split ?? null,
+    series,
   };
 }

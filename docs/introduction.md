@@ -78,7 +78,7 @@ Returns:
 **All endpoints:**
 - `GET /api/v1/overview` — Company snapshot
 - `GET /api/v1/users` — Query users (filter by cluster, platform, dates)
-- `GET /api/v1/cohorts` — Retention with PMF signal
+- `GET /api/v1/cohorts` — Retention with PMF signal; optional split by platform, country, or cluster (max 3 series)
 - `GET /api/v1/wbr` — Weekly Business Review metrics
 - `GET /api/v1/calendar` — Multi-source events
 - `GET /api/v1/sync` — Connector status
@@ -117,7 +117,7 @@ Machine Context Protocol server at `/api/mcp`:
 **Tools:**
 - `get_overview` → company snapshot
 - `query_users` → filter/group users
-- `get_cohorts` → retention with smile detection
+- `get_cohorts` → retention with smile detection; optional split (max 3 series)
 - `get_wbr` → Weekly Business Review
 - `get_calendar` → multi-source timeline
 - `install_sdk` → generate SDK snippet
