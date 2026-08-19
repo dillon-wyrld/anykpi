@@ -62,7 +62,7 @@ describe("createFreshnessPoller", () => {
       isHidden: () => false,
       watch: ["ingest"],
       onStale: stale,
-      setIntervalFn: () => 1 as unknown as ReturnType<typeof setInterval>,
+      setIntervalFn: () => 0 as unknown as ReturnType<typeof setInterval>,
       clearIntervalFn: () => undefined,
     });
 

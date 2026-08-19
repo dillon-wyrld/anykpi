@@ -22,14 +22,16 @@ export function freshnessStamp(
   return parts.join("|");
 }
 
+type IntervalId = ReturnType<typeof setInterval>;
+
 export function createFreshnessPoller(opts: {
   load: () => Promise<Pick<FreshnessResponse, "lastIngest" | "sources">>;
   isHidden: () => boolean;
   watch: readonly FreshnessWatch[];
   onStale: () => void;
   intervalMs?: number;
-  setIntervalFn?: typeof setInterval;
-  clearIntervalFn?: typeof clearInterval;
+  setIntervalFn?: (handler: () => void, ms: number) => IntervalId;
+  clearIntervalFn?: (id: IntervalId) => void;
 }) {
   let known: string | null = null;
   let timer: ReturnType<typeof setInterval> | null = null;
