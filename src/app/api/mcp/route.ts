@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { buildViewUrl, publicBaseUrl } from "@/core/view-state";
 import { gate, isReadOnlyMcpTool } from "@/core/auth";
 import { logServerError } from "@/core/errors";
 import { loadCohortsView } from "@/core/views/cohorts";
+import { loadWbrView } from "@/core/views/wbr";
+import { loadCalendarView } from "@/core/views/calendar";
+
+type ToolArgs = {
+  workspace?: string;
+  platform?: string;
+  country?: string;
+  limit?: number;
+  startDate?: string;
+  endDate?: string;
+  payers?: boolean;
+};
 
 async function handleMCPRequest(
   body: Record<string, unknown>,
@@ -15,7 +27,7 @@ async function handleMCPRequest(
   const method = body.method;
   const params = (body.params ?? {}) as {
     name?: string;
-    arguments?: { workspace?: string; limit?: number; payers?: boolean };
+    arguments?: ToolArgs;
   };
 
   if (method === "tools/list") {
@@ -117,10 +129,18 @@ async function handleMCPRequest(
       }
 
       case "query_users": {
+        const conditions = [eq(schema.users.workspaceId, workspace)];
+        if (args?.platform) {
+          conditions.push(eq(schema.users.platform, args.platform));
+        }
+        if (args?.country) {
+          conditions.push(eq(schema.users.country, args.country));
+        }
+
         const users = await db
           .select()
           .from(schema.users)
-          .where(eq(schema.users.workspaceId, workspace))
+          .where(and(...conditions))
           .limit(args?.limit || 100)
           .all();
 
@@ -141,16 +161,64 @@ async function handleMCPRequest(
         const data = await loadCohortsView(workspace, "week", {
           payers: Boolean(args?.payers),
         });
+        const smilingCount = data.cohorts.filter((c) => c.smileDetected).length;
+
         return {
           content: [
             {
               type: "text",
               text: JSON.stringify({
                 cohorts: data.cohorts,
-                smilingCount: data.cohorts.filter((c) => c.smileDetected).length,
-                pmfForming: data.cohorts.filter((c) => c.smileDetected).length >= 3,
+                smilingCount,
+                pmfForming: smilingCount >= 3,
                 payers: data.payers,
                 viewUrl: buildViewUrl(`${baseUrl}/dashboard`, { view: "cohorts" }),
+              }),
+            },
+          ],
+        };
+      }
+
+      case "get_wbr": {
+        const data = await loadWbrView(workspace);
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                metrics: data.metrics,
+                exceptions: data.metrics.filter((m) => m.status !== "ok"),
+                viewUrl: buildViewUrl(`${baseUrl}/dashboard`, { view: "wbr" }),
+              }),
+            },
+          ],
+        };
+      }
+
+      case "get_calendar": {
+        const data = await loadCalendarView(workspace);
+        const start = args?.startDate ? Date.parse(args.startDate) : Number.NaN;
+        const end = args?.endDate ? Date.parse(args.endDate) : Number.NaN;
+        const events = data.events.filter((event) => {
+          const ts = Date.parse(event.date);
+          if (Number.isNaN(ts)) return true;
+          if (!Number.isNaN(start) && ts < start) return false;
+          if (!Number.isNaN(end) && ts > end) return false;
+          return true;
+        });
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                events,
+                viewUrl: buildViewUrl(`${baseUrl}/dashboard`, {
+                  view: "calendar",
+                  startDate: args?.startDate,
+                  endDate: args?.endDate,
+                }),
               }),
             },
           ],

@@ -1,5 +1,6 @@
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 import { browserSnippet } from "../packages/sdk/src/snippet";
+import { expectUserVisibleViaRestAndMcp } from "./helpers/verify-ingest";
 
 const API_KEY = process.env.ANYKPI_API_KEY || "anykpi-e2e-admin";
 
@@ -45,12 +46,5 @@ test("copy-paste /connect snippet delivers an event with no build step", async (
   await page.setContent(html, { waitUntil: "domcontentloaded" });
   await Promise.all([identify, event]);
 
-  const users = await request.get(
-    `/api/v1/users?workspace=demo&platform=${encodeURIComponent(platform)}`
-  );
-  expect(users.ok()).toBeTruthy();
-  const body = await users.json();
-  expect(body.users.map((user: { personId: string }) => user.personId)).toContain(
-    `person_${userId}`
-  );
+  await expectUserVisibleViaRestAndMcp(request, { userId, platform });
 });

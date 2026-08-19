@@ -1,0 +1,66 @@
+{
+  "tools": [
+    {
+      "name": "get_overview",
+      "description": "Get a high-level snapshot: current day, headline metrics, exception count, sync health",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "description": "Workspace ID (default: demo)"
+          }
+        }
+      }
+    },
+    {
+      "name": "query_users",
+      "description": "Filter and group users by platform, country, or behavior. Returns users + view URL",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": { "type": "string" },
+          "platform": { "type": "string" },
+          "country": { "type": "string" },
+          "limit": { "type": "number" }
+        }
+      }
+    },
+    {
+      "name": "get_cohorts",
+      "description": "Get cohort retention data with smile flags and PMF verdict. Set payers to filter to people on the revenue join.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": { "type": "string" },
+          "payers": {
+            "type": "boolean",
+            "description": "When true, keep only paying people"
+          }
+        }
+      }
+    },
+    {
+      "name": "get_wbr",
+      "description": "Get Weekly Business Review with computed statuses",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "get_calendar",
+      "description": "Get calendar events",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": { "type": "string" },
+          "startDate": { "type": "string" },
+          "endDate": { "type": "string" }
+        }
+      }
+    }
+  ]
+}
