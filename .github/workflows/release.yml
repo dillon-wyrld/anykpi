@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish-cli:
+    name: Build, pack, and publish @anykpi/cli
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build @anykpi/cli
+        run: pnpm --filter @anykpi/cli build
+
+      - name: Pack @anykpi/cli
+        run: pnpm --filter @anykpi/cli pack
+
+      - name: Publish @anykpi/cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NPM_TOKEN:-}" ]; then
+            echo "NPM_TOKEN is not set. Skipping npm publish."
+            echo "Claim the anykpi npm org and add the NPM_TOKEN repository secret before the first v* tag that should publish."
+            exit 0
+          fi
+          echo "Publishing @anykpi/cli to npm..."
+          pnpm --filter @anykpi/cli publish --access public --no-git-checks

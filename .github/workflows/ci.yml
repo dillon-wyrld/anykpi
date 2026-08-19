@@ -47,11 +47,16 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Build CLI
+        run: pnpm --filter @anykpi/cli build
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
       
-      - name: Run E2E tests
+      - name: Run E2E tests (includes CLI smoke)
         run: pnpm test:e2e
+        env:
+          ANYKPI_API_KEY: anykpi-e2e-admin
       
       - name: Upload test results
         if: always()

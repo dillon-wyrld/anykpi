@@ -22,4 +22,7 @@ export default async function globalSetup() {
     console.error('Failed to initialize test database:', error);
     throw error;
   }
+
+  console.log('Building @anykpi/cli for smoke tests...');
+  execSync('pnpm --filter @anykpi/cli build', { stdio: 'inherit' });
 }

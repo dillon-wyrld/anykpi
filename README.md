@@ -60,16 +60,12 @@ Hosted version: join the [waitlist](https://github.com/dillon-wyrld/anykpi/discu
 
 ## Connect Data
 
-Visit `/connect` or use CLI:
+Visit `/connect` to attach PostHog, Mixpanel, or Amplitude, or ingest events with the SDK / CLI:
 
 ```bash
-# Connect via CLI
-anykpi connect posthog
-anykpi connect mixpanel
-anykpi connect amplitude
-
-# Or add SDK to your product
-# Visit /connect for snippet
+anykpi login --url http://localhost:3000
+anykpi identify user123 --name="Jane Doe"
+anykpi track user123 song_played
 ```
 
 [Full connect guide →](docs/introduction.md#the-one-step-connect-data)
