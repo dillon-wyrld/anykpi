@@ -17,7 +17,7 @@ interface CohortRow {
   size: number;
   retention: number[];
   counts: number[];
-  users: User[];
+  users?: User[]; // Optional - only for client-side loyal core calc
   state: "young" | "smile" | "low" | "sliding";
   grade: {
     slope: number;
