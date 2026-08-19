@@ -1,6 +1,7 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import type { SyncResult } from "@/core/contracts";
+import { upsertSyncState } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
 
 export async function syncAmplitude(
@@ -120,23 +121,13 @@ export async function syncAmplitude(
       rowsSynced += 1;
     }
 
-    // Update sync state
-    await db
-      .insert(schema.syncState)
-      .values({
-        source: "amplitude",
-        sourceName: "Amplitude",
-        lastSync: new Date(),
-        status: "success",
-        workspaceId,
-      })
-      .onConflictDoUpdate({
-        target: schema.syncState.source,
-        set: {
-          lastSync: new Date(),
-          status: "success",
-        },
-      });
+    await upsertSyncState({
+      source: "amplitude",
+      sourceName: "Amplitude",
+      lastSync: new Date(),
+      status: "success",
+      workspaceId,
+    });
 
     console.log("Amplitude sync complete");
     // Full-snapshot connector: ignore cursor, no incremental watermark yet.
@@ -144,24 +135,14 @@ export async function syncAmplitude(
   } catch (error) {
     console.error("Amplitude sync failed");
 
-    await db
-      .insert(schema.syncState)
-      .values({
-        source: "amplitude",
-        sourceName: "Amplitude",
-        lastSync: new Date(),
-        status: "error",
-        error: "sync failed",
-        workspaceId,
-      })
-      .onConflictDoUpdate({
-        target: schema.syncState.source,
-        set: {
-          lastSync: new Date(),
-          status: "error",
-          error: "sync failed",
-        },
-      });
+    await upsertSyncState({
+      source: "amplitude",
+      sourceName: "Amplitude",
+      lastSync: new Date(),
+      status: "error",
+      error: "sync failed",
+      workspaceId,
+    });
 
     throw error;
   }

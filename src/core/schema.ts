@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
   personId: text("person_id").primaryKey(),
@@ -124,6 +124,10 @@ export const syncState = sqliteTable("sync_state", {
   workspaceId: text("workspace_id").notNull().default("demo"),
 }, (table) => ({
   workspaceIdx: index("sync_state_workspace_idx").on(table.workspaceId),
+  workspaceSourceUidx: uniqueIndex("sync_state_workspace_source_uidx").on(
+    table.workspaceId,
+    table.source
+  ),
 }));
 
 export const apiKeys = sqliteTable("api_keys", {
@@ -141,4 +145,8 @@ export const config = sqliteTable("config", {
   workspaceId: text("workspace_id").notNull().default("demo"),
 }, (table) => ({
   workspaceIdx: index("config_workspace_idx").on(table.workspaceId),
+  keyWorkspaceUidx: uniqueIndex("config_key_workspace_uidx").on(
+    table.key,
+    table.workspaceId
+  ),
 }));

@@ -8,6 +8,13 @@
       "when": 1787162570982,
       "tag": "0000_youthful_medusa",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787175692009,
+      "tag": "0001_cultured_kronos",
+      "breakpoints": true
     }
   ]
 }

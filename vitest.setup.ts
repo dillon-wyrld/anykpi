@@ -43,12 +43,21 @@ sqlite.exec(`
   );
   CREATE TABLE IF NOT EXISTS sync_state (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    source TEXT NOT NULL UNIQUE,
+    source TEXT NOT NULL,
     source_name TEXT NOT NULL,
     last_sync INTEGER,
     status TEXT NOT NULL,
     error TEXT,
     workspace_id TEXT NOT NULL DEFAULT 'demo'
   );
+  CREATE UNIQUE INDEX IF NOT EXISTS sync_state_workspace_source_uidx
+    ON sync_state (workspace_id, source);
+  CREATE TABLE IF NOT EXISTS config (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    workspace_id TEXT NOT NULL DEFAULT 'demo'
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS config_key_workspace_uidx
+    ON config (key, workspace_id);
 `);
 sqlite.close();

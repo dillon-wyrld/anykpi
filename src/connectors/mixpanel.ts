@@ -1,6 +1,7 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import type { SyncResult } from "@/core/contracts";
+import { upsertSyncState } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
 
 export async function syncMixpanel(
@@ -113,23 +114,13 @@ export async function syncMixpanel(
       rowsSynced += 1;
     }
 
-    // Update sync state
-    await db
-      .insert(schema.syncState)
-      .values({
-        source: "mixpanel",
-        sourceName: "Mixpanel",
-        lastSync: new Date(),
-        status: "success",
-        workspaceId,
-      })
-      .onConflictDoUpdate({
-        target: schema.syncState.source,
-        set: {
-          lastSync: new Date(),
-          status: "success",
-        },
-      });
+    await upsertSyncState({
+      source: "mixpanel",
+      sourceName: "Mixpanel",
+      lastSync: new Date(),
+      status: "success",
+      workspaceId,
+    });
 
     console.log("Mixpanel sync complete");
     // Full-snapshot connector: ignore cursor, no incremental watermark yet.
@@ -137,24 +128,14 @@ export async function syncMixpanel(
   } catch (error) {
     console.error("Mixpanel sync failed");
 
-    await db
-      .insert(schema.syncState)
-      .values({
-        source: "mixpanel",
-        sourceName: "Mixpanel",
-        lastSync: new Date(),
-        status: "error",
-        error: "sync failed",
-        workspaceId,
-      })
-      .onConflictDoUpdate({
-        target: schema.syncState.source,
-        set: {
-          lastSync: new Date(),
-          status: "error",
-          error: "sync failed",
-        },
-      });
+    await upsertSyncState({
+      source: "mixpanel",
+      sourceName: "Mixpanel",
+      lastSync: new Date(),
+      status: "error",
+      error: "sync failed",
+      workspaceId,
+    });
 
     throw error;
   }

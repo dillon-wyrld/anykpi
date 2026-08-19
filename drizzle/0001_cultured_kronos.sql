@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX `config_key_workspace_uidx` ON `config` (`key`,`workspace_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `sync_state_workspace_source_uidx` ON `sync_state` (`workspace_id`,`source`);

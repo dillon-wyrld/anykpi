@@ -15,6 +15,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Rate-limited and size-bounded the ingest endpoints.
 
 ### Fixed
+- Sync-state and config upserts now target unique indexes
+  (`sync_state (workspace_id, source)` and `config (key, workspace_id)`)
+  so a second write updates the existing row instead of erroring or
+  duplicating.
 - Fresh clones build and initialize again: auto-create the database directory
   and build `better-sqlite3` on install.
 - The Docker image builds and initializes its schema on first boot.
