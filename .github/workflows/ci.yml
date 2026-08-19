@@ -22,11 +22,13 @@ jobs:
           node-version: 20
           cache: 'pnpm'
       
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 make g++
+      
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      
-      - name: Build native modules
-        run: pnpm rebuild better-sqlite3
       
       - name: Typecheck
         run: pnpm tsc --noEmit
