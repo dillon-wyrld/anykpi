@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import type { ResearchCandidate } from "@/core/contracts";
 import {
   generatePmfQueue,
   pmfProgressPct,
@@ -22,21 +23,84 @@ const STANDARD_QUESTIONS = [
 
 export default function PMF({ workspace }: PMFProps) {
   const [runs, setRuns] = useState<PmfRun[]>([]);
+  const [candidates, setCandidates] = useState<ResearchCandidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [includeGift, setIncludeGift] = useState(true);
   const [giftAmount, setGiftAmount] = useState("25");
   const [giftType, setGiftType] = useState("gift card");
   const [showStandardQuestions, setShowStandardQuestions] = useState<Record<string, boolean>>({});
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const [disclosure, setDisclosure] = useState<ResearchCandidate | null>(null);
+  const [approved, setApproved] = useState<Record<string, boolean>>({});
+  const [researching, setResearching] = useState(false);
+  const [researchError, setResearchError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/views/pmf?workspace=${workspace}`)
+    fetch(`/api/views/pmf?workspace=${encodeURIComponent(workspace)}`)
       .then((res) => res.json())
       .then((data) => {
         setRuns(data.runs || []);
+        setCandidates(data.candidates || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, [workspace]);
+
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return candidates;
+    return candidates.filter(
+      (person) =>
+        person.name.toLowerCase().includes(needle) ||
+        person.personId.toLowerCase().includes(needle)
+    );
+  }, [candidates, query]);
+
+  const selected = candidates.find((person) => person.personId === selectedId);
+
+  const openDisclosure = (person: ResearchCandidate) => {
+    setResearchError(null);
+    setDisclosure(person);
+    setApproved(
+      Object.fromEntries(person.outgoing.map((field) => [field.field, true]))
+    );
+  };
+
+  const approvedFields = (disclosure?.outgoing ?? []).filter(
+    (field) => approved[field.field]
+  );
+
+  const runApprovedResearch = async () => {
+    if (!disclosure || approvedFields.length === 0) return;
+    setResearching(true);
+    setResearchError(null);
+    try {
+      const response = await fetch("/api/views/pmf", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          workspace,
+          personId: disclosure.personId,
+          approvedFields,
+        }),
+      });
+      const data = (await response.json()) as { run?: PmfRun; error?: string };
+      if (!response.ok || !data.run) {
+        setResearchError(data.error || "Research did not run.");
+        return;
+      }
+      setRuns((current) => [
+        data.run as PmfRun,
+        ...current.filter((run) => run.id !== data.run!.id),
+      ]);
+      setDisclosure(null);
+    } catch {
+      setResearchError("Research did not run.");
+    } finally {
+      setResearching(false);
+    }
+  };
 
   const generateQueue = (run: PmfRun) => {
     const queue = generatePmfQueue(run, { includeGift, giftAmount, giftType });
@@ -93,6 +157,123 @@ export default function PMF({ workspace }: PMFProps) {
           {peopleResearched} people researched
         </span>
       </div>
+
+      <div
+        className="bg-panel border border-border rounded-lg p-4 space-y-3"
+        data-testid="pmf-research"
+      >
+        <div>
+          <div className="text-sm font-semibold">Research one person</div>
+          <div className="text-xs text-sub mt-0.5">
+            Nothing leaves this machine until you approve the outgoing fields.
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter by name"
+            className="px-2 py-1.5 border border-border rounded bg-panel text-xs w-40"
+            aria-label="Filter people to research"
+          />
+          <select
+            value={selectedId}
+            onChange={(e) => setSelectedId(e.target.value)}
+            className="px-2 py-1.5 border border-border rounded bg-panel text-xs min-w-[12rem]"
+            aria-label="Person to research"
+          >
+            <option value="">Select a person</option>
+            {filtered.map((person) => (
+              <option key={person.personId} value={person.personId}>
+                {person.emoji ? `${person.emoji} ` : ""}
+                {person.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={!selected}
+            onClick={() => selected && openDisclosure(selected)}
+            className="px-3 py-1.5 bg-accent text-white rounded-lg text-xs font-medium hover:bg-accent/90 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            ✨ Research
+          </button>
+        </div>
+      </div>
+
+      {disclosure && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-text/10 border-0 cursor-default"
+            aria-label="Cancel research"
+            onClick={() => !researching && setDisclosure(null)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="research-disclosure-title"
+            data-testid="research-disclosure"
+            className="relative w-full max-w-md bg-panel border border-border rounded-lg shadow-lg p-4 space-y-3"
+          >
+            <h3 id="research-disclosure-title" className="font-semibold">
+              Fields that leave this machine
+            </h3>
+            <p className="text-xs text-sub">
+              Approve exactly these values before any public query is made.
+              Uncheck a row to keep it here.
+            </p>
+            <ul className="space-y-2" data-testid="research-outgoing-fields">
+              {disclosure.outgoing.map((field) => (
+                <li
+                  key={field.field}
+                  className="flex items-start gap-3 p-2 bg-panel-2 rounded text-sm"
+                  data-testid="research-outgoing-field"
+                  data-field={field.field}
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={Boolean(approved[field.field])}
+                    disabled={field.field === "name"}
+                    onChange={(e) =>
+                      setApproved({ ...approved, [field.field]: e.target.checked })
+                    }
+                    aria-label={`Send ${field.field}`}
+                  />
+                  <div className="min-w-0">
+                    <div className="eyebrow">{field.field}</div>
+                    <div className="font-mono text-xs break-all">{field.value}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {researchError && (
+              <p className="text-xs text-red">{researchError}</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={researching}
+                onClick={() => setDisclosure(null)}
+                className="px-3 py-1.5 border border-border rounded text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={researching || approvedFields.length === 0}
+                onClick={() => void runApprovedResearch()}
+                className="px-3 py-1.5 bg-accent text-white rounded-lg text-xs font-medium hover:bg-accent/90 disabled:opacity-40"
+              >
+                {researching ? "Searching…" : "Approve and search"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {queuedTotal > 0 && (
         <div className="bg-amber/10 border-l-4 border-amber rounded-lg p-3">
@@ -158,7 +339,9 @@ export default function PMF({ workspace }: PMFProps) {
       {runs.length === 0 ? (
         <div className="bg-panel border border-border rounded-lg p-12 text-center">
           <div className="text-5xl mb-3">✨</div>
-          <div className="text-sm text-sub">Click ✨ on any user or group to start research</div>
+          <div className="text-sm text-sub">
+            Pick a person above. You will see every outgoing field before any query is made.
+          </div>
         </div>
       ) : (
         <div className="space-y-6">

@@ -336,6 +336,48 @@ export const ConnectSourceResponseSchema = z.object({
   rotated: z.boolean(),
 });
 
+/** One field the founder must see verbatim before any PMF+ query leaves the machine. */
+export const ResearchOutgoingFieldSchema = z.object({
+  field: z.string().min(1),
+  value: z.string(),
+});
+
+export const ResearchCandidateSchema = z.object({
+  personId: z.string(),
+  name: z.string(),
+  emoji: z.string().nullable(),
+  country: z.string().nullable(),
+  platform: z.string().nullable(),
+  outgoing: z.array(ResearchOutgoingFieldSchema),
+});
+
+export const ResearchClaimSchema = z.object({
+  title: z.string(),
+  source: z.string(),
+  url: z.string().optional(),
+  confidence: z.enum(['high', 'medium', 'low']),
+});
+
+export const ResearchResultSchema = z.object({
+  personId: z.string(),
+  name: z.string(),
+  workspace: z.string(),
+  queriedAt: z.string().datetime(),
+  query: z.string(),
+  outgoing: z.array(ResearchOutgoingFieldSchema),
+  claims: z.array(ResearchClaimSchema),
+  verified: z.boolean(),
+  cached: z.boolean(),
+  source: z.string(),
+});
+
+export const ResearchRunRequestSchema = z.object({
+  workspace: z.string().optional(),
+  personId: z.string().min(1),
+  approvedFields: z.array(ResearchOutgoingFieldSchema).min(1),
+  refresh: z.boolean().optional(),
+});
+
 export const APIKeyCreateRequestSchema = z.object({
   name: z.string(),
 });
@@ -392,4 +434,9 @@ export type ConnectSourceRequest = z.infer<typeof ConnectSourceRequestSchema>;
 export type ConnectSourceResponse = z.infer<typeof ConnectSourceResponseSchema>;
 export type APIKeyCreateRequest = z.infer<typeof APIKeyCreateRequestSchema>;
 export type APIKeyResponse = z.infer<typeof APIKeyResponseSchema>;
+export type ResearchOutgoingField = z.infer<typeof ResearchOutgoingFieldSchema>;
+export type ResearchCandidate = z.infer<typeof ResearchCandidateSchema>;
+export type ResearchClaim = z.infer<typeof ResearchClaimSchema>;
+export type ResearchResult = z.infer<typeof ResearchResultSchema>;
+export type ResearchRunRequest = z.infer<typeof ResearchRunRequestSchema>;
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;

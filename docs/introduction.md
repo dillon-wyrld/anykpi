@@ -8,7 +8,7 @@ Founders who need:
 - **People, not averages** — Every user gets a row, not a segment
 - **Trust** — Numbers name their source and age
 - **Agent-native** — Humans and agents see the same views
-- **Self-hosted** — Person-level data never leaves your machine
+- **Self-hosted** — Person-level data stays on your machine unless you approve a PMF+ research query
 
 ## The One Step: Connect Data
 
@@ -44,7 +44,7 @@ Don't have PostHog/Mixpanel/Amplitude? Add the ANYKPI SDK. Events land in the sa
 2. **Cohorts** — Retention curves with smile detection (PMF signal).
 3. **Weekly Business Review** — 6 weeks, 12 months YOY, exceptions auto-surfaced. Thresholds live in `anykpi.config.json` beside the database; see [WBR exception rules](#wbr-exception-rules).
 4. **Calendar** — Read-only timeline from connected sources.
-5. **PMF+** — Research users, draft outreach (queued, never auto-sent).
+5. **PMF+** — Research one person from a public source after you approve the outgoing fields (listed verbatim). Outreach drafts stay queued — nothing auto-sends.
 
 Every view has a shareable URL.
 
@@ -182,7 +182,7 @@ docker run -p 3000:3000 -v anykpi-data:/data ghcr.io/dillon-wyrld/anykpi
 - One-shot motion (no glows, no loops)
 - Demo ships forever as a workspace
 - Nothing sends on its own (PMF+ drafts wait)
-- No telemetry (person-level data never leaves machine)
+- No telemetry. Person-level data stays on the machine unless the founder approves a PMF+ research query — the disclosure lists every outgoing field before anything is sent.
 
 ## WBR exception rules
 
