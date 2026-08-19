@@ -33,19 +33,24 @@ export async function GET(request: NextRequest) {
     .all();
 
   const metrics = metricDefs.map((def) => {
-    const points = metricPoints
+    const weekPoints = metricPoints
       .filter((p) => p.metricId === def.metricId && p.grain === "week")
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
       .slice(0, 12);
 
-    const current = points[0]?.value || 0;
-    const lastWeek = points[1]?.value || current;
-    const lastYear = points[11]?.value || current;
+    const monthPoints = metricPoints
+      .filter((p) => p.metricId === def.metricId && p.grain === "month")
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, 12);
+
+    const current = weekPoints[0]?.value || 0;
+    const lastWeek = weekPoints[1]?.value || current;
+    const lastYear = weekPoints[11]?.value || current;
 
     const wow = lastWeek !== 0 ? ((current - lastWeek) / lastWeek) * 100 : 0;
     const yoy = lastYear !== 0 ? ((current - lastYear) / lastYear) * 100 : 0;
 
-    const recentValues = points.slice(0, 3).map((p) => p.value || 0);
+    const recentValues = weekPoints.slice(0, 3).map((p) => p.value || 0);
     
     // Use stored status from generator
     const status = def.status as "on" | "watch" | "off" || "on";
@@ -56,6 +61,7 @@ export async function GET(request: NextRequest) {
       section: def.section,
       sectionOrder: def.sectionOrder,
       owner: def.owner,
+      type: def.type,
       current: Math.round(current * 100) / 100,
       target: Math.round((def.target || 0) * 100) / 100,
       wow: Math.round(wow * 10) / 10,
@@ -63,6 +69,9 @@ export async function GET(request: NextRequest) {
       status,
       statusReason: def.statusReason,
       unit: def.unit,
+      goodDir: def.goodDir,
+      weeks: weekPoints.reverse().map(p => Math.round((p.value || 0) * 100) / 100),
+      months: monthPoints.reverse().map(p => Math.round((p.value || 0) * 100) / 100),
       source: "read model",
       syncAge: "live"
     };
