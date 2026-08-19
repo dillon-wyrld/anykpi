@@ -15,7 +15,7 @@
     },
     {
       "name": "query_users",
-      "description": "Filter and group users by platform, country, or behavior. Returns users + view URL",
+      "description": "Filter and group users by platform, country, or behavior. Returns users + per-user view_url",
       "inputSchema": {
         "type": "object",
         "properties": {

@@ -36,6 +36,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `POST /api/v1/connect` and `anykpi connect` store per-source credentials
   encrypted at rest. The registry decrypts config for `Connector.sync`.
   Env vars stay a deprecated read-only fallback (ANY-46).
+- Person drill-down on the dot plot: click a name or a dot to open a
+  keyboard-reachable panel (Escape closes) with the event timeline,
+  first/last seen, cohort, cluster, platform, and the summarized revenue
+  block. `?user=` restores the panel; MCP `query_users` rows include a
+  per-user `view_url`.
 - `POST /api/v1/sync` triggers one registered source or all, with
   `pending → success/error` state transitions and in-process coalescing of
   concurrent runs for the same source. CLI: `anykpi sync`.

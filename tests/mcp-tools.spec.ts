@@ -20,7 +20,7 @@ const HAPPY_PATH: Record<
   get_overview: { args: { workspace: "demo" }, fields: ["totalUsers", "viewUrl"] },
   query_users: {
     args: { workspace: "demo", limit: 10 },
-    fields: ["users", "viewUrl"],
+    fields: ["users", "viewUrl", "view_url"],
   },
   get_cohorts: {
     args: { workspace: "demo" },
@@ -74,12 +74,17 @@ test("query_users honors advertised platform + limit fields", async ({ request }
   });
   expect(response.ok()).toBeTruthy();
   const payload = parseMcpPayload(body);
-  const users = payload.users as { platform?: string }[];
+  const users = payload.users as {
+    personId: string;
+    platform?: string;
+    view_url?: string;
+  }[];
   expect(Array.isArray(users)).toBeTruthy();
   expect(users.length).toBeGreaterThan(0);
   expect(users.length).toBeLessThanOrEqual(5);
   for (const user of users) {
     expect(user.platform).toBe("ios");
+    expect(user.view_url).toContain(`user=${user.personId}`);
   }
 });
 

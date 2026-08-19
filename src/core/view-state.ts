@@ -143,3 +143,58 @@ export function publicBaseUrl(request?: RequestLike): string {
 
   return originFromUrl(request.url) ?? "http://localhost:3000";
 }
+
+function trimOrigin(baseUrl: string): string {
+  return baseUrl.replace(/\/+$/, "");
+}
+
+/** Dashboard URL that opens the person panel for one user. */
+export function personViewUrl(
+  baseUrl: string,
+  workspace: string,
+  personId: string
+): string {
+  const params = new URLSearchParams({
+    workspace,
+    view: "dotplot",
+    user: personId,
+  });
+  return `${trimOrigin(baseUrl)}/dashboard?${params.toString()}`;
+}
+
+export function usersViewUrl(baseUrl: string, workspace: string): string {
+  const params = new URLSearchParams({
+    workspace,
+    view: "dotplot",
+  });
+  return `${trimOrigin(baseUrl)}/dashboard?${params.toString()}`;
+}
+
+export type QueryUserRow = {
+  personId: string;
+  name: string;
+  emoji?: string | null;
+  platform?: string | null;
+  country?: string | null;
+  cluster?: string | null;
+};
+
+/** MCP `query_users` payload: each row carries a deep-link `view_url`. */
+export function queryUsersPayload(
+  users: QueryUserRow[],
+  baseUrl: string,
+  workspace: string
+) {
+  return {
+    users: users.map((user) => ({
+      personId: user.personId,
+      name: user.name,
+      emoji: user.emoji ?? null,
+      platform: user.platform ?? null,
+      country: user.country ?? null,
+      cluster: user.cluster ?? null,
+      view_url: personViewUrl(baseUrl, workspace, user.personId),
+    })),
+    view_url: usersViewUrl(baseUrl, workspace),
+  };
+}
