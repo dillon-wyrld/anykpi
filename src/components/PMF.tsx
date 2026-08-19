@@ -1,31 +1,71 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
-interface PMFCard {
+interface PMFPerson {
+  personId: string;
   name: string;
   emoji: string;
-  headline: string;
-  sources: string[];
+  platform: string;
+  country: string;
+  income: string;
+  verified: boolean;
+  role?: string;
+  org?: string;
+  city?: string;
+  interests: string[];
+  links: Array<{ type: string; value: string }>;
+  claims: Array<{ title: string; source: string; confidence: "high" | "medium" | "low"; content: boolean }>;
+  behavior: string;
+  signal: string;
+  read: string;
+  play: string;
+  questions: string[];
+}
+
+interface Draft {
+  personId: string;
+  message: string;
+  state: "waiting" | "edited" | "approved";
 }
 
 interface PMFRun {
   id: string;
-  target: string;
-  targetEmoji: string;
-  status: "running" | "complete";
-  cardsCount: number;
-  queuedCount: number;
-  cards?: PMFCard[];
+  title: string;
+  emoji: string;
+  status: "researching" | "done";
+  progress: number;
+  totalPeople: number;
+  people: PMFPerson[];
+  queue: Draft[];
+  isGroup: boolean;
+  groupRollup?: {
+    segments: Array<{ name: string; count: number }>;
+    stillHere: number;
+    gone: number;
+    resonatingWith?: string;
+  };
 }
 
 interface PMFProps {
   workspace: string;
 }
 
+const STANDARD_QUESTIONS = [
+  "How would you feel if you could no longer use this? (very / somewhat / not disappointed)",
+  "What's the main benefit you get from it?",
+  "What would you use instead if it vanished?",
+  "What kind of person do you think gets the most out of it?",
+  "If we changed one thing this month, what should it be?",
+];
+
 export default function PMF({ workspace }: PMFProps) {
   const [runs, setRuns] = useState<PMFRun[]>([]);
   const [loading, setLoading] = useState(true);
+  const [includeGift, setIncludeGift] = useState(true);
+  const [giftAmount, setGiftAmount] = useState("25");
+  const [giftType, setGiftType] = useState("gift card");
+  const [showStandardQuestions, setShowStandardQuestions] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetch(`/api/views/pmf?workspace=${workspace}`)
@@ -37,29 +77,148 @@ export default function PMF({ workspace }: PMFProps) {
       .catch(() => setLoading(false));
   }, [workspace]);
 
+  const generateQueue = (run: PMFRun) => {
+    const giftLine = !includeGift
+      ? ""
+      : giftType === "swag box"
+      ? " (we'll send a swag box for your trouble either way.)"
+      : ` (there's a $${giftAmount} ${giftType} for your time too — though I'd be asking regardless.)`;
+
+    const queue: Draft[] = run.people.map((person) => {
+      const first = person.name.split(" ")[0];
+      const message = `hey ${first} — I'd love to understand how this is actually fitting into your week (or not fitting). any chance you'd give me 15 minutes? it would genuinely mean the world.${giftLine}`;
+
+      return {
+        personId: person.personId,
+        message,
+        state: "waiting" as const,
+      };
+    });
+
+    setRuns(
+      runs.map((r) => (r.id === run.id ? { ...r, queue } : r))
+    );
+  };
+
+  const approveDraft = (runId: string, personId: string) => {
+    setRuns(
+      runs.map((r) => {
+        if (r.id !== runId) return r;
+        return {
+          ...r,
+          queue: r.queue.map((d) =>
+            d.personId === personId ? { ...d, state: "approved" as const } : d
+          ),
+        };
+      })
+    );
+  };
+
+  const editDraft = (runId: string, personId: string, newMessage: string) => {
+    setRuns(
+      runs.map((r) => {
+        if (r.id !== runId) return r;
+        return {
+          ...r,
+          queue: r.queue.map((d) =>
+            d.personId === personId
+              ? { ...d, message: newMessage, state: "edited" as const }
+              : d
+          ),
+        };
+      })
+    );
+  };
+
+  const deepLinkToDotPlot = (personId: string, personName: string) => {
+    const dotPlotUrl = `/workspace/${workspace}?view=dotplot&filter=person:${personId}`;
+    window.open(dotPlotUrl, "_blank");
+  };
+
   if (loading) {
     return <div className="text-sub">Loading...</div>;
   }
 
-  const queuedTotal = runs.reduce((sum, r) => sum + r.queuedCount, 0);
+  const queuedTotal = runs.reduce((sum, r) => r.queue.length, 0);
+  const waitingCount = runs.reduce(
+    (sum, r) => sum + r.queue.filter((d) => d.state === "waiting").length,
+    0
+  );
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-3 flex-wrap">
+        <h2 className="text-lg font-semibold">PMF+</h2>
+        <span className="text-sm text-sub">
+          {runs.length} run{runs.length !== 1 ? "s" : ""} ·{" "}
+          {runs.reduce((sum, r) => sum + r.people.length, 0)} people researched
+        </span>
+      </div>
+
       {queuedTotal > 0 && (
-        <div className="bg-amber/10 border-l-3 border-amber rounded-lg p-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">📬</span>
+        <div className="bg-amber/10 border-l-4 border-amber rounded-lg p-3">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📬</span>
             <div>
-              <div className="text-sm font-semibold">{queuedTotal} queued</div>
-              <div className="text-xs text-sub">Nothing sends on its own</div>
+              <div className="text-sm font-semibold">
+                {waitingCount} message{waitingCount !== 1 ? "s" : ""} waiting for approval
+              </div>
+              <div className="text-xs text-sub">Nothing sends on its own — every message waits for your OK</div>
             </div>
           </div>
         </div>
       )}
 
+      <div className="flex items-center gap-4 flex-wrap text-xs">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={includeGift}
+            onChange={(e) => setIncludeGift(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span>🎁 thank-you gift</span>
+        </label>
+
+        {includeGift && (
+          <>
+            <select
+              value={giftAmount}
+              onChange={(e) => setGiftAmount(e.target.value)}
+              className="px-2 py-1 border border-border rounded bg-panel text-xs"
+            >
+              <option value="10">$10</option>
+              <option value="25">$25</option>
+              <option value="50">$50</option>
+              <option value="100">$100</option>
+            </select>
+
+            <select
+              value={giftType}
+              onChange={(e) => setGiftType(e.target.value)}
+              className="px-2 py-1 border border-border rounded bg-panel text-xs"
+            >
+              <option value="gift card">gift card</option>
+              <option value="account credit">account credit</option>
+              <option value="coffee card">coffee card</option>
+              <option value="swag box">swag box (flat)</option>
+            </select>
+          </>
+        )}
+
+        <label
+          className="flex items-center gap-2 opacity-75 cursor-help"
+          title="off in v1 — every message waits for your OK before anything would go out"
+        >
+          <input type="checkbox" disabled className="w-4 h-4" />
+          <span>🤖 autopilot conversations</span>
+          <span className="px-1.5 py-0.5 border border-border rounded text-[10px] text-sub">🔒 v1</span>
+        </label>
+      </div>
+
       {runs.length === 0 ? (
-        <div className="bg-panel border border-border rounded-lg p-8 text-center">
-          <div className="text-4xl mb-2">✨</div>
+        <div className="bg-panel border border-border rounded-lg p-12 text-center">
+          <div className="text-5xl mb-3">✨</div>
           <div className="text-sm text-sub">Click ✨ on any user or group to start research</div>
         </div>
       ) : (
@@ -68,44 +227,233 @@ export default function PMF({ workspace }: PMFProps) {
             <div key={run.id} className="space-y-3">
               <div className="bg-panel border border-border rounded-lg p-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{run.targetEmoji}</span>
+                  <span className="text-3xl">{run.emoji}</span>
                   <div className="flex-1">
-                    <div className="font-semibold">{run.target}</div>
+                    <div className="font-semibold text-lg">{run.title}</div>
                     <div className="text-xs text-sub">
-                      {run.cardsCount} cards · {run.queuedCount} queued
+                      {run.people.length} card{run.people.length !== 1 ? "s" : ""} ·{" "}
+                      {run.queue.length} queued
                     </div>
                   </div>
-                  <div className={`text-xs px-2 py-1 rounded ${run.status === "running" ? "bg-accent-soft text-accent" : "bg-green-soft text-green"}`}>
-                    {run.status}
-                  </div>
+                  {run.status === "researching" && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-32 h-2 bg-panel-2 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-accent transition-all"
+                          style={{ width: `${(run.progress / run.totalPeople) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-sub">{run.progress}/{run.totalPeople}</span>
+                    </div>
+                  )}
+                  {run.status === "done" && run.queue.length === 0 && (
+                    <button
+                      onClick={() => generateQueue(run)}
+                      className="px-3 py-1.5 bg-accent text-white rounded-lg text-xs font-medium hover:bg-accent/90"
+                    >
+                      → Generate outreach
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {run.cards && run.cards.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {run.cards.map((card, idx) => (
-                    <div key={idx} className="bg-panel border border-border rounded-lg p-4 hover:border-accent transition-colors">
+              {run.isGroup && run.groupRollup && (
+                <div className="bg-panel border-l-4 border-accent rounded-lg p-4">
+                  <div className="text-xs uppercase tracking-wider text-sub mb-3">The group, read together</div>
+                  <div className="flex gap-2 flex-wrap mb-3">
+                    {run.groupRollup.segments.map((seg, i) => (
+                      <span key={i} className="px-2 py-1 bg-panel-2 rounded text-xs">
+                        {seg.name} × {seg.count}
+                      </span>
+                    ))}
+                  </div>
+                  {run.groupRollup.resonatingWith && (
+                    <div className="text-sm">
+                      resonating with <strong>{run.groupRollup.resonatingWith}</strong>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {run.people.length > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {run.people.map((person) => (
+                    <div
+                      key={person.personId}
+                      className={`bg-panel border rounded-lg p-4 ${
+                        person.verified ? "border-border" : "border-amber/30"
+                      }`}
+                    >
                       <div className="flex items-start gap-3 mb-3">
-                        <span className="text-3xl">{card.emoji}</span>
+                        <span className="text-3xl">{person.emoji}</span>
                         <div className="flex-1">
-                          <div className="font-semibold text-lg">{card.name}</div>
+                          <div className="font-semibold">{person.name}</div>
+                          <div className="text-xs text-sub">
+                            {person.platform} · {person.country}
+                            {person.income && ` · ${person.income}`}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-sm text-sub mb-3">
-                        {card.headline}
+
+                      {!person.verified ? (
+                        <div className="mb-3 p-2 bg-amber/10 border border-amber/30 rounded text-xs text-amber-900">
+                          couldn't verify — common name, no matching profiles
+                        </div>
+                      ) : (
+                        <div className="space-y-3 mb-3">
+                          {person.role && person.city && (
+                            <div className="text-xs">
+                              <strong>{person.role}</strong>
+                              {person.org && ` at ${person.org}`} · {person.city}
+                            </div>
+                          )}
+
+                          {person.links.length > 0 && (
+                            <div className="flex gap-1.5 flex-wrap">
+                              {person.links.map((link, i) => (
+                                <span
+                                  key={i}
+                                  className="px-2 py-1 bg-panel-2 rounded text-[10px] font-mono"
+                                  title="demo — the real one links out"
+                                >
+                                  {link.type} · {link.value}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {person.claims.length > 0 && (
+                            <div className="space-y-2">
+                              {person.claims.map((claim, i) => (
+                                <div
+                                  key={i}
+                                  className="flex items-start justify-between gap-2 text-xs"
+                                  data-confidence={claim.confidence}
+                                >
+                                  <div className="flex-1">
+                                    <div className="font-medium">
+                                      {claim.content && "🎬 "}
+                                      {claim.title}
+                                    </div>
+                                    <div className="text-[10px] text-sub">{claim.source}</div>
+                                  </div>
+                                  <div className="text-[10px] text-faint" title={`confidence: ${claim.confidence}`}>
+                                    {claim.confidence === "high" ? "●●●" : claim.confidence === "medium" ? "●●○" : "●○○"}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="space-y-2 mb-3 text-xs">
+                        <div className="p-2 bg-panel-2 rounded">
+                          <span className="text-[10px] uppercase tracking-wider text-faint">Signal</span>
+                          <div className="text-sub mt-1">{person.signal}</div>
+                        </div>
+
+                        <div className="p-2 bg-panel-2 rounded">
+                          <span className="text-[10px] uppercase tracking-wider text-faint">The read</span>
+                          <div className="mt-1">{person.read}</div>
+                        </div>
+
+                        <div className="p-2 bg-panel-2 rounded">
+                          <span className="text-[10px] uppercase tracking-wider text-faint">Worth trying</span>
+                          <div className="mt-1">{person.play}</div>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-1">
-                        {card.sources.map((source, i) => (
-                          <span
-                            key={i}
-                            className="text-xs px-2 py-1 rounded bg-panel-2 text-faint font-mono uppercase tracking-wider"
-                          >
-                            {source}
-                          </span>
-                        ))}
+
+                      <div className="mb-3">
+                        <div className="text-[10px] uppercase tracking-wider text-faint mb-2">Worth a conversation</div>
+                        <ul className="text-xs space-y-1 list-disc pl-4 text-sub">
+                          {person.questions.map((q, i) => (
+                            <li key={i}>{q}</li>
+                          ))}
+                        </ul>
                       </div>
+
+                      <button
+                        onClick={() => {
+                          const show = !showStandardQuestions[person.personId];
+                          setShowStandardQuestions({ ...showStandardQuestions, [person.personId]: show });
+                        }}
+                        className="text-xs text-accent hover:underline mb-2"
+                      >
+                        {showStandardQuestions[person.personId] ? "−" : "+"} standard questionnaire
+                      </button>
+
+                      {showStandardQuestions[person.personId] && (
+                        <ul className="text-[11px] space-y-1 list-decimal pl-4 text-sub mb-3">
+                          {STANDARD_QUESTIONS.map((q, i) => (
+                            <li key={i}>{q}</li>
+                          ))}
+                        </ul>
+                      )}
+
+                      <button
+                        onClick={() => deepLinkToDotPlot(person.personId, person.name)}
+                        className="w-full px-3 py-1.5 border border-border rounded text-xs hover:border-accent"
+                      >
+                        → their row
+                      </button>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {run.queue.length > 0 && (
+                <div className="space-y-3">
+                  <div className="text-sm font-semibold">Outreach queue — {run.queue.length} messages</div>
+                  {run.queue.map((draft) => {
+                    const person = run.people.find((p) => p.personId === draft.personId);
+                    if (!person) return null;
+
+                    return (
+                      <div
+                        key={draft.personId}
+                        className={`bg-panel border rounded-lg p-4 ${
+                          draft.state === "approved"
+                            ? "border-green bg-green-50"
+                            : draft.state === "edited"
+                            ? "border-amber"
+                            : "border-border"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className="text-2xl">{person.emoji}</span>
+                          <div className="flex-1">
+                            <div className="font-semibold">{person.name}</div>
+                            <div className="text-xs text-sub">
+                              {draft.state === "approved" ? (
+                                <span className="text-green">✓ Approved (nothing sends automatically)</span>
+                              ) : draft.state === "edited" ? (
+                                <span className="text-amber">Edited</span>
+                              ) : (
+                                <span>Waiting for approval</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <textarea
+                          value={draft.message}
+                          onChange={(e) => editDraft(run.id, draft.personId, e.target.value)}
+                          className="w-full min-h-[120px] p-3 border border-border rounded bg-white text-sm font-mono resize-y mb-3"
+                          disabled={draft.state === "approved"}
+                        />
+
+                        {draft.state !== "approved" && (
+                          <button
+                            onClick={() => approveDraft(run.id, draft.personId)}
+                            className="px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent/90"
+                          >
+                            ✓ Approve (ready to send manually)
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
