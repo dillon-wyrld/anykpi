@@ -112,6 +112,8 @@ export const OverviewResponseSchema = z.object({
 export const UsersListResponseSchema = z.object({
   users: z.array(UserSchema),
   total: z.number(),
+  hasMore: z.boolean(),
+  nextOffset: z.number().int().nullable(),
   workspace: z.string(),
   view_url: z.string().optional(),
 });

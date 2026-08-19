@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { publicBaseUrl } from '@/core/view-state';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import {
   OverviewResponseSchema,
@@ -20,7 +21,7 @@ import {
  * 
  * OpenAPI 3.0 spec generated from Zod contracts
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   const spec = {
     openapi: '3.0.0',
     info: {
@@ -38,7 +39,7 @@ export async function GET() {
     },
     servers: [
       {
-        url: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+        url: publicBaseUrl(request),
         description: 'Self-hosted instance'
       }
     ],
@@ -90,7 +91,7 @@ export async function GET() {
         get: {
           tags: ['Users'],
           summary: 'Query users',
-          description: 'Filter users by cluster, platform, signup dates',
+          description: 'Filter users by cluster, platform, signup dates. `total` is the full match count; page with `hasMore` / `nextOffset`.',
           parameters: [
             {
               name: 'workspace',

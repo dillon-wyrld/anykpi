@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { WBRResponseSchema } from '@/core/contracts';
-import { gate, publicBaseUrl } from '@/core/auth';
+import { gate } from '@/core/auth';
+import { publicBaseUrl } from '@/core/view-state';
 import { internalError, logServerError } from '@/core/errors';
 import { loadWbrView } from '@/core/views/wbr';
 
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
       sections,
       exceptionsCount,
       workspace,
-      view_url: `${publicBaseUrl()}/dashboard?workspace=${workspace}&view=wbr`
+      view_url: `${publicBaseUrl(request)}/dashboard?workspace=${workspace}&view=wbr`
     });
 
     return NextResponse.json(response);

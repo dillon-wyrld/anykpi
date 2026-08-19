@@ -17,7 +17,7 @@ ANYKPI is an open-source dashboard. The only step is connecting data.
 ### Two On-Ramps (both agent-installable)
 
 **Path 1: Connect existing tools**  
-PostHog, Mixpanel, Amplitude, Stripe, calendar, GitHub — tools you already pay for. ANYKPI syncs summaries into local read models and never writes back. An agent can do this unattended.
+Shipped: PostHog, Mixpanel, Amplitude (`src/connectors/`). Roadmap: Stripe, calendar/ICS, GitHub — tools you already pay for. ANYKPI syncs summaries into local read models and never writes back. An agent can do this unattended.
 
 **Path 2: Add ANYKPI events to your product**  
 Don't have PostHog/Mixpanel/Amplitude? Add the ANYKPI SDK. Same step, human or agent. Events land in the same read models the connectors write. Self-hosted, person-level data never leaves your machine.
@@ -46,14 +46,16 @@ pnpm dev
 
 The demo workspace loads automatically (public-read, fictional people). Set `ANYKPI_API_KEY` before connecting live data or deploying.
 
-**Hosted version:** [anykpi.com](https://anykpi.com)
+Start with the [self-host quickstart](#install).
+
+Hosted version: join the [waitlist](https://github.com/dillon-wyrld/anykpi/discussions).
 
 ## Platform
 
 - **Dashboard** at `/dashboard` — Five views with shareable URLs
-- **REST API** at `/api/v1/*` — [OpenAPI docs](/api-docs)
+- **REST API** at `/api/v1/*` — [OpenAPI reference](docs/introduction.md#rest-api)
 - **CLI** via `npx @anykpi/cli` — [Install guide](docs/introduction.md#cli)
-- **MCP** at `/api/mcp` — [Agent setup](/agents)
+- **MCP** at `/api/mcp` — [Agent setup](docs/introduction.md#mcp)
 - **Docs** at [docs/introduction.md](docs/introduction.md)
 
 ## Connect Data
@@ -70,7 +72,7 @@ anykpi connect amplitude
 # Visit /connect for snippet
 ```
 
-[Full connect guide →](docs/introduction.md#connect-data)
+[Full connect guide →](docs/introduction.md#the-one-step-connect-data)
 
 ## Agent Setup
 
@@ -112,7 +114,7 @@ The agent can do this unattended via MCP tools.
 ## Stack
 
 - **Next.js 15** — App Router, TypeScript strict mode
-- **SQLite + Drizzle** — Fast local read models (Postgres via DATABASE_URL)
+- **SQLite + Drizzle** — Fast local read models via `DATABASE_PATH` ([Postgres later](docs/introduction.md#postgres-later))
 - **Tailwind + shadcn** — Linear-light aesthetic
 - **Hand-rolled SVG charts** — Seven rounds of prototype learnings baked in
 - **MCP** — Streamable HTTP at `/api/mcp`
@@ -129,9 +131,11 @@ docker run -p 3000:3000 \
   anykpi
 ```
 
+`view_url` values use the request `Host` / `X-Forwarded-*` origin. Set `PUBLIC_BASE_URL` only if you need to pin them.
+
 In production, if `ANYKPI_API_KEY` is unset, writes and non-demo reads are refused (503). Copy `.env.example` and see [SECURITY.md](SECURITY.md).
 
-Data lives in `./data/anykpi.db`. Back it up. It's yours.
+Data lives in the SQLite file at `DATABASE_PATH` (default `./data/anykpi.db`, or `/data/anykpi.db` in Docker). Back it up. It's yours.
 
 ## Design Principles (binding)
 

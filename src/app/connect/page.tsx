@@ -432,8 +432,11 @@ export default function ConnectPage() {
           <section className="border-t border-rule pt-6">
             <p className="text-sm text-sub">
               Hosted version:{" "}
-              <a href="https://anykpi.com" className="text-accent hover:underline">
-                anykpi.com
+              <a
+                href="https://github.com/dillon-wyrld/anykpi/discussions"
+                className="text-accent hover:underline"
+              >
+                join the waitlist
               </a>
             </p>
           </section>

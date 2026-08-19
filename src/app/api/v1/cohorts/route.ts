@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CohortsResponseSchema } from '@/core/contracts';
-import { gate, publicBaseUrl } from '@/core/auth';
+import { gate } from '@/core/auth';
+import { publicBaseUrl } from '@/core/view-state';
 import { internalError, logServerError } from '@/core/errors';
 import { loadCohortsView } from '@/core/views/cohorts';
 
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
       })),
       smileDetected,
       workspace,
-      view_url: `${publicBaseUrl()}/dashboard?workspace=${workspace}&view=cohorts`
+      view_url: `${publicBaseUrl(request)}/dashboard?workspace=${workspace}&view=cohorts`
     });
 
     return NextResponse.json(response);

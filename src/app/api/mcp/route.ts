@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
-import { buildViewUrl } from "@/core/view-state";
+import { buildViewUrl, publicBaseUrl } from "@/core/view-state";
 import { gate, isReadOnlyMcpTool } from "@/core/auth";
 import { logServerError } from "@/core/errors";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-
 async function handleMCPRequest(
   body: Record<string, unknown>,
-  workspaceOverride?: string
+  workspaceOverride?: string,
+  request?: NextRequest
 ) {
   const method = body.method;
   const params = (body.params ?? {}) as {
@@ -88,6 +87,7 @@ async function handleMCPRequest(
   if (method === "tools/call") {
     const { name, arguments: args } = params;
     const workspace = workspaceOverride || args?.workspace || "demo";
+    const baseUrl = publicBaseUrl(request);
 
     switch (name) {
       case "get_overview": {
@@ -103,7 +103,7 @@ async function handleMCPRequest(
               type: "text",
               text: JSON.stringify({
                 totalUsers: users.length,
-                viewUrl: buildViewUrl(`${BASE_URL}/dashboard`, { view: "dotplot" }),
+                viewUrl: buildViewUrl(`${baseUrl}/dashboard`, { view: "dotplot" }),
               }),
             },
           ],
@@ -124,7 +124,7 @@ async function handleMCPRequest(
               type: "text",
               text: JSON.stringify({
                 users,
-                viewUrl: buildViewUrl(`${BASE_URL}/dashboard`, { view: "dotplot" }),
+                viewUrl: buildViewUrl(`${baseUrl}/dashboard`, { view: "dotplot" }),
               }),
             },
           ],
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
     const params = body?.params ?? {};
 
     if (method === "tools/list") {
-      const result = await handleMCPRequest(body);
+      const result = await handleMCPRequest(body, undefined, request);
       return NextResponse.json({
         jsonrpc: "2.0",
         id: body.id || null,
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
       workspace = gated.workspace;
     }
 
-    const result = await handleMCPRequest(body, workspace);
+    const result = await handleMCPRequest(body, workspace, request);
 
     return NextResponse.json({
       jsonrpc: "2.0",

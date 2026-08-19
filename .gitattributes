@@ -1,0 +1,2 @@
+# Keep GitHub language statistics on the TypeScript app, not the visual spec.
+spec/** linguist-documentation linguist-vendored

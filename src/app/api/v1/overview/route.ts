@@ -3,7 +3,8 @@ import { db } from '@/core/db';
 import * as schema from '@/core/schema';
 import { eq } from 'drizzle-orm';
 import { OverviewResponseSchema } from '@/core/contracts';
-import { gate, publicBaseUrl } from '@/core/auth';
+import { gate } from '@/core/auth';
+import { publicBaseUrl } from '@/core/view-state';
 import { internalError, logServerError } from '@/core/errors';
 import { loadCohortsView } from '@/core/views/cohorts';
 import { loadWbrView } from '@/core/views/wbr';
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
       smileDetected,
       exceptionsCount,
       upcomingEvents,
-      view_url: `${publicBaseUrl()}/dashboard?workspace=${workspace}&view=dotplot`
+      view_url: `${publicBaseUrl(request)}/dashboard?workspace=${workspace}&view=dotplot`
     });
 
     return NextResponse.json(response);

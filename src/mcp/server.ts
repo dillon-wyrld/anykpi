@@ -9,7 +9,7 @@ import * as schema from "@/core/schema";
 import { eq, and } from "drizzle-orm";
 import { buildViewUrl } from "@/core/view-state";
 
-const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+const BASE_URL = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
 
 export function createMCPServer() {
   const server = new Server(
