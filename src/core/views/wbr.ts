@@ -7,6 +7,7 @@ import {
   wbrDecimals,
   wbrGoodDir,
 } from "@/core/views/wbr-math";
+import { loadRevenueLanes, wbrSectionId } from "@/core/views/revenue";
 
 export {
   seriesPctChange,
@@ -29,7 +30,7 @@ export async function loadWbrView(workspace: string) {
     .where(eq(schema.metricPoints.workspaceId, workspace))
     .all();
 
-  const metrics = metricDefs.map((def) => {
+  const fromDefs = metricDefs.map((def) => {
     const allWeeks = metricPoints
       .filter((p) => p.metricId === def.metricId && p.grain === "week")
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
@@ -63,7 +64,7 @@ export async function loadWbrView(workspace: string) {
     return {
       id: def.metricId,
       name: def.name,
-      section: def.section,
+      section: wbrSectionId(def.section),
       sectionOrder: def.sectionOrder,
       owner: def.owner,
       type: def.type,
@@ -86,6 +87,9 @@ export async function loadWbrView(workspace: string) {
       syncAge: "live",
     };
   });
+
+  const revenueLanes = await loadRevenueLanes(workspace);
+  const metrics = [...revenueLanes, ...fromDefs];
 
   metrics.sort((a, b) => a.sectionOrder.localeCompare(b.sectionOrder));
 

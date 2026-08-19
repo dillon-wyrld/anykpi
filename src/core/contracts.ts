@@ -108,6 +108,93 @@ export const AccountSchema = z.object({
   workspaceId: z.string(),
 });
 
+export const MrrSnapshotSchema = z.object({
+  id: z.number().int().optional(),
+  period: z.string().datetime(),
+  grain: z.enum(['week', 'month']),
+  mrr: z.number(),
+  subscriberCount: z.number().int().nonnegative(),
+  source: z.string(),
+  workspaceId: z.string(),
+});
+
+export const SubscriptionEventTypeSchema = z.enum([
+  'new',
+  'churned',
+  'renewed',
+  'upgraded',
+  'downgraded',
+]);
+
+export const SubscriptionEventSchema = z.object({
+  id: z.number().int().optional(),
+  personId: z.string(),
+  accountId: z.string().nullable().optional(),
+  eventType: SubscriptionEventTypeSchema,
+  occurredAt: z.string().datetime(),
+  mrrDelta: z.number(),
+  plan: z.string().nullable().optional(),
+  source: z.string(),
+  sourceEventId: z.string(),
+  workspaceId: z.string(),
+});
+
+export const PersonRevenueStatusSchema = z.enum(['active', 'churned', 'trial', 'free']);
+
+export const PersonRevenueSchema = z.object({
+  id: z.number().int().optional(),
+  personId: z.string(),
+  accountId: z.string().nullable().optional(),
+  status: PersonRevenueStatusSchema,
+  plan: z.string().nullable().optional(),
+  mrr: z.number(),
+  ltv: z.number(),
+  firstPaidAt: z.string().datetime().nullable().optional(),
+  lastChargeAt: z.string().datetime().nullable().optional(),
+  chargeCount: z.number().int().nonnegative(),
+  lastChargeAmount: z.number().nullable().optional(),
+  currency: z.string(),
+  source: z.string(),
+  workspaceId: z.string(),
+});
+
+export const BalanceSnapshotSchema = z.object({
+  id: z.number().int().optional(),
+  asOf: z.string().datetime(),
+  cashBalance: z.number(),
+  monthlyBurn: z.number(),
+  runwayMonths: z.number(),
+  source: z.string(),
+  workspaceId: z.string(),
+});
+
+/**
+ * Summarized person-level revenue ANY-20 reads. Charge detail is rolled up —
+ * never a raw charge dump.
+ */
+export const PersonRevenueBlockSchema = z.object({
+  personId: z.string(),
+  workspaceId: z.string(),
+  isPayer: z.boolean(),
+  status: PersonRevenueStatusSchema,
+  plan: z.string().nullable(),
+  mrr: z.number(),
+  ltv: z.number(),
+  currency: z.string(),
+  firstPaidAt: z.string().datetime().nullable(),
+  charges: z.object({
+    count: z.number().int().nonnegative(),
+    total: z.number(),
+    lastAmount: z.number().nullable(),
+    lastAt: z.string().datetime().nullable(),
+  }),
+  subscription: z.object({
+    eventCount: z.number().int().nonnegative(),
+    startedAt: z.string().datetime().nullable(),
+    canceledAt: z.string().datetime().nullable(),
+  }),
+});
+
 // ========== API Responses ==========
 
 export const OverviewResponseSchema = z.object({
@@ -240,6 +327,11 @@ export type SyncState = z.infer<typeof SyncStateSchema>;
 export type ConnectorHealth = z.infer<typeof ConnectorHealthSchema>;
 export type SyncResult = z.infer<typeof SyncResultSchema>;
 export type Account = z.infer<typeof AccountSchema>;
+export type MrrSnapshot = z.infer<typeof MrrSnapshotSchema>;
+export type SubscriptionEvent = z.infer<typeof SubscriptionEventSchema>;
+export type PersonRevenue = z.infer<typeof PersonRevenueSchema>;
+export type BalanceSnapshot = z.infer<typeof BalanceSnapshotSchema>;
+export type PersonRevenueBlock = z.infer<typeof PersonRevenueBlockSchema>;
 
 export type OverviewResponse = z.infer<typeof OverviewResponseSchema>;
 export type UsersListResponse = z.infer<typeof UsersListResponseSchema>;

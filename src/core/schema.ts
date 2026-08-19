@@ -150,3 +150,88 @@ export const config = sqliteTable("config", {
     table.workspaceId
   ),
 }));
+
+/**
+ * Weekly / monthly MRR snapshots. Stripe and RevenueCat write the same
+ * rows later; views read this table now from demo seed.
+ */
+export const mrrSnapshots = sqliteTable("mrr_snapshots", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  period: integer("period", { mode: "timestamp" }).notNull(),
+  grain: text("grain").notNull(), // week | month
+  mrr: real("mrr").notNull(),
+  subscriberCount: integer("subscriber_count").notNull().default(0),
+  source: text("source").notNull().default("demo"),
+  workspaceId: text("workspace_id").notNull().default("demo"),
+}, (table) => ({
+  workspaceIdx: index("mrr_snapshots_workspace_idx").on(table.workspaceId),
+  workspaceGrainPeriodUidx: uniqueIndex("mrr_snapshots_workspace_grain_period_uidx").on(
+    table.workspaceId,
+    table.grain,
+    table.period
+  ),
+}));
+
+/** New / churned / renewed subscription events. Idempotent on source event id. */
+export const subscriptionEvents = sqliteTable("subscription_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  personId: text("person_id").notNull(),
+  accountId: text("account_id"),
+  eventType: text("event_type").notNull(), // new | churned | renewed | upgraded | downgraded
+  occurredAt: integer("occurred_at", { mode: "timestamp" }).notNull(),
+  mrrDelta: real("mrr_delta").notNull().default(0),
+  plan: text("plan"),
+  source: text("source").notNull().default("demo"),
+  sourceEventId: text("source_event_id").notNull(),
+  workspaceId: text("workspace_id").notNull().default("demo"),
+}, (table) => ({
+  workspaceIdx: index("subscription_events_workspace_idx").on(table.workspaceId),
+  personIdx: index("subscription_events_person_idx").on(table.personId),
+  occurredIdx: index("subscription_events_occurred_idx").on(table.occurredAt),
+  workspaceSourceEventUidx: uniqueIndex("subscription_events_workspace_source_event_uidx").on(
+    table.workspaceId,
+    table.source,
+    table.sourceEventId
+  ),
+}));
+
+/** Per-person revenue join — current plan / MRR / summarized charges. */
+export const personRevenue = sqliteTable("person_revenue", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  personId: text("person_id").notNull(),
+  accountId: text("account_id"),
+  status: text("status").notNull(), // active | churned | trial | free
+  plan: text("plan"),
+  mrr: real("mrr").notNull().default(0),
+  ltv: real("ltv").notNull().default(0),
+  firstPaidAt: integer("first_paid_at", { mode: "timestamp" }),
+  lastChargeAt: integer("last_charge_at", { mode: "timestamp" }),
+  chargeCount: integer("charge_count").notNull().default(0),
+  lastChargeAmount: real("last_charge_amount"),
+  currency: text("currency").notNull().default("usd"),
+  source: text("source").notNull().default("demo"),
+  workspaceId: text("workspace_id").notNull().default("demo"),
+}, (table) => ({
+  workspaceIdx: index("person_revenue_workspace_idx").on(table.workspaceId),
+  workspacePersonUidx: uniqueIndex("person_revenue_workspace_person_uidx").on(
+    table.workspaceId,
+    table.personId
+  ),
+}));
+
+/** Cash balance and runway. Banking connectors fill this later. */
+export const balanceSnapshots = sqliteTable("balance_snapshots", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  asOf: integer("as_of", { mode: "timestamp" }).notNull(),
+  cashBalance: real("cash_balance").notNull(),
+  monthlyBurn: real("monthly_burn").notNull(),
+  runwayMonths: real("runway_months").notNull(),
+  source: text("source").notNull().default("demo"),
+  workspaceId: text("workspace_id").notNull().default("demo"),
+}, (table) => ({
+  workspaceIdx: index("balance_snapshots_workspace_idx").on(table.workspaceId),
+  workspaceAsOfUidx: uniqueIndex("balance_snapshots_workspace_as_of_uidx").on(
+    table.workspaceId,
+    table.asOf
+  ),
+}));

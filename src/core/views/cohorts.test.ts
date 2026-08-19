@@ -14,6 +14,7 @@ import {
   periodRetention,
   smileTest,
 } from "./cohort-math";
+import { filterPayerUsers } from "./revenue-math";
 
 function user(
   personId: string,
@@ -209,6 +210,21 @@ describe("insight cards", () => {
       100,
       Math.round((100 * (12 + 8)) / 40),
     ]);
+  });
+
+  it("filters the same user list down to payers before rows are built", () => {
+    const days = Array.from({ length: 14 }, () => true);
+    const all = [
+      user("payer-a", 0, days),
+      user("free-b", 0, days),
+      user("payer-c", 8, days),
+    ];
+    const payers = filterPayerUsers(all, ["payer-a", "payer-c"]);
+    const rows = buildCohortRows(payers, "week", 14);
+
+    expect(payers.map((u) => u.personId)).toEqual(["payer-a", "payer-c"]);
+    expect(rows.map((r) => r.size)).toEqual([1, 1]);
+    expect(rows[0].size + rows[1].size).toBeLessThan(all.length);
   });
 
   it("counts loyal-core users only when they are active every day for 8 weeks", () => {

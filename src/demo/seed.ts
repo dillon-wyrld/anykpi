@@ -27,6 +27,7 @@ import {
   CALENDAR_SOURCES,
   NAMED
 } from "./generators";
+import { buildDemoRevenue, preferPayerIds } from "./revenue";
 
 const WORKSPACE = "demo";
 
@@ -41,6 +42,10 @@ export async function seedDemo() {
   await db.delete(schema.metricPoints).where(eq(schema.metricPoints.workspaceId, WORKSPACE));
   await db.delete(schema.calEvents).where(eq(schema.calEvents.workspaceId, WORKSPACE));
   await db.delete(schema.syncState).where(eq(schema.syncState.workspaceId, WORKSPACE));
+  await db.delete(schema.mrrSnapshots).where(eq(schema.mrrSnapshots.workspaceId, WORKSPACE));
+  await db.delete(schema.subscriptionEvents).where(eq(schema.subscriptionEvents.workspaceId, WORKSPACE));
+  await db.delete(schema.personRevenue).where(eq(schema.personRevenue.workspaceId, WORKSPACE));
+  await db.delete(schema.balanceSnapshots).where(eq(schema.balanceSnapshots.workspaceId, WORKSPACE));
   
   // Build cohorts with canonical data
   const cohorts = buildCohorts();
@@ -62,6 +67,8 @@ export async function seedDemo() {
   
   // Seed users from cohorts
   let personId = 1;
+  const personIds: string[] = [];
+  const namedPersonIds: string[] = [];
   const today = new Date();
   const DAY_MS = 86400000;
   const startDate = new Date(today.getTime() - 168 * DAY_MS); // 24 weeks ago
@@ -85,6 +92,9 @@ export async function seedDemo() {
         else if (activeDays > 0) cluster = CLUSTERS[6]; // Fading
       }
       
+      personIds.push(pid);
+      if (user.name) namedPersonIds.push(pid);
+
       await db.insert(schema.users).values({
         personId: pid,
         name: user.name || `User ${personId - 1}`,
@@ -123,6 +133,60 @@ export async function seedDemo() {
   }
   
   console.log(`Seeded ${personId - 1} users with activity`);
+
+  const revenue = buildDemoRevenue(preferPayerIds(namedPersonIds, personIds), today);
+  for (const person of revenue.people) {
+    await db.insert(schema.personRevenue).values({
+      personId: person.personId,
+      status: person.status,
+      plan: person.plan,
+      mrr: person.mrr,
+      ltv: person.ltv,
+      firstPaidAt: person.firstPaidAt,
+      lastChargeAt: person.lastChargeAt,
+      chargeCount: person.chargeCount,
+      lastChargeAmount: person.lastChargeAmount,
+      currency: "usd",
+      source: "demo",
+      workspaceId: WORKSPACE,
+    });
+  }
+  for (const event of revenue.events) {
+    await db.insert(schema.subscriptionEvents).values({
+      personId: event.personId,
+      eventType: event.eventType,
+      occurredAt: event.occurredAt,
+      mrrDelta: event.mrrDelta,
+      plan: event.plan,
+      source: "demo",
+      sourceEventId: event.sourceEventId,
+      workspaceId: WORKSPACE,
+    });
+  }
+  for (const snapshot of revenue.mrrSnapshots) {
+    await db.insert(schema.mrrSnapshots).values({
+      period: snapshot.period,
+      grain: snapshot.grain,
+      mrr: snapshot.mrr,
+      subscriberCount: snapshot.subscriberCount,
+      source: "demo",
+      workspaceId: WORKSPACE,
+    });
+  }
+  for (const snapshot of revenue.balanceSnapshots) {
+    await db.insert(schema.balanceSnapshots).values({
+      asOf: snapshot.asOf,
+      cashBalance: snapshot.cashBalance,
+      monthlyBurn: snapshot.monthlyBurn,
+      runwayMonths: snapshot.runwayMonths,
+      source: "demo",
+      workspaceId: WORKSPACE,
+    });
+  }
+  const activePayers = revenue.people.filter((p) => p.status === "active").length;
+  console.log(
+    `Seeded revenue: ${activePayers} active payers, ${revenue.events.length} subscription events, ${revenue.mrrSnapshots.length} MRR snapshots`
+  );
   
   // Seed demo accounts
   const accounts = [
@@ -267,6 +331,7 @@ export async function seedDemo() {
   const latestCohort = cohorts[cohorts.length - 1];
   const hasSmile = detectSmile(latestCohort.ret);
   console.log(`  - PMF smile detected: ${hasSmile ? "YES ✓" : "NO"}`);
+  console.log(`  - Active payers: ${activePayers} · latest MRR $656 · ARPU $8.2 · runway 6.0 months`);
   
   console.log("\nDemo workspace seeded successfully");
 }

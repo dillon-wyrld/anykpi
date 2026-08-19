@@ -42,6 +42,7 @@ interface ViewState {
   cell: "pct" | "num" | "emoji";
   celebrate: boolean;
   align: "signup" | "cal";
+  payers: boolean;
 }
 
 interface CohortsProps {
@@ -76,6 +77,7 @@ function encodeViewState(vs: ViewState): string {
   if (vs.cell !== "pct") params.set("c", vs.cell);
   if (!vs.celebrate) params.set("cel", "0");
   if (vs.align !== "signup") params.set("a", vs.align);
+  if (vs.payers) params.set("p", "1");
   const str = params.toString();
   return str ? `?${str}` : "";
 }
@@ -86,6 +88,7 @@ function decodeViewState(searchParams: URLSearchParams): Partial<ViewState> {
   if (searchParams.has("c")) vs.cell = searchParams.get("c") as any;
   if (searchParams.has("cel")) vs.celebrate = searchParams.get("cel") === "1";
   if (searchParams.has("a")) vs.align = searchParams.get("a") as any;
+  if (searchParams.has("p")) vs.payers = searchParams.get("p") === "1";
   return vs;
 }
 
@@ -98,6 +101,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
     cell: "pct",
     celebrate: true,
     align: "signup",
+    payers: false,
   };
   
   const urlState = decodeViewState(searchParams);
@@ -117,7 +121,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
   const curvesRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    fetch(`/api/views/cohorts?workspace=${workspace}&grain=${viewState.grain}`)
+    fetch(`/api/views/cohorts?workspace=${workspace}&grain=${viewState.grain}${viewState.payers ? "&payers=1" : ""}`)
       .then((res) => res.json())
       .then((data) => {
         setUsers(data.users || []);
@@ -125,7 +129,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [workspace, viewState.grain]);
+  }, [workspace, viewState.grain, viewState.payers]);
 
   useEffect(() => {
     // Skip the URL sync on initial mount to avoid loops
@@ -149,7 +153,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
     });
     
     // Remove view-state keys that are at defaults (not in newParams)
-    const viewStateKeys = ['g', 'c', 'cel', 'a'];
+    const viewStateKeys = ['g', 'c', 'cel', 'a', 'p'];
     viewStateKeys.forEach(key => {
       if (!newParams.has(key)) {
         params.delete(key);
@@ -551,6 +555,15 @@ export default function Cohorts({ workspace }: CohortsProps) {
           </button>
         </div>
         
+        <button
+          onClick={() => setViewState({ ...viewState, payers: !viewState.payers })}
+          className={`px-3 py-1.5 text-xs font-medium border border-border rounded-lg ${
+            viewState.payers ? "bg-accent text-white" : "bg-panel text-sub hover:text-text"
+          }`}
+        >
+          💸 payers
+        </button>
+
         <button
           onClick={() => setViewState({ ...viewState, celebrate: !viewState.celebrate })}
           className={`px-3 py-1.5 text-xs font-medium border border-border rounded-lg ${
