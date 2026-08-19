@@ -8,6 +8,11 @@ import Cohorts from "@/components/Cohorts";
 import WBR from "@/components/WBR";
 import Calendar from "@/components/Calendar";
 import PMF from "@/components/PMF";
+import {
+  LiveWorkspaceGate,
+  SessionLogout,
+  WorkspaceSessionProvider,
+} from "@/components/WorkspaceSession";
 
 function DashboardContent() {
   const searchParams = useSearchParams();
@@ -23,7 +28,8 @@ function DashboardContent() {
   ];
 
   return (
-    <div className="flex h-screen bg-bg">
+    <WorkspaceSessionProvider workspace={workspace}>
+      <div className="flex h-screen bg-bg">
       <nav className="w-[200px] bg-panel border-r border-border flex flex-col p-3 flex-shrink-0">
         <div className="flex items-center gap-2 px-2 pb-4 border-b border-rule mb-2">
           <Link href="/" className="font-display text-[15px] font-bold tracking-wide hover:text-accent">
@@ -72,19 +78,23 @@ function DashboardContent() {
           >
             Connect
           </Link>
+          <SessionLogout />
         </div>
       </nav>
 
       <main className="flex-1 overflow-auto p-6">
         <div className="max-w-6xl mx-auto">
-          {view === "dotplot" && <DotPlot workspace={workspace} />}
-          {view === "cohorts" && <Cohorts workspace={workspace} />}
-          {view === "wbr" && <WBR workspace={workspace} />}
-          {view === "calendar" && <Calendar workspace={workspace} />}
-          {view === "pmf" && <PMF workspace={workspace} />}
+          <LiveWorkspaceGate>
+            {view === "dotplot" && <DotPlot workspace={workspace} />}
+            {view === "cohorts" && <Cohorts workspace={workspace} />}
+            {view === "wbr" && <WBR workspace={workspace} />}
+            {view === "calendar" && <Calendar workspace={workspace} />}
+            {view === "pmf" && <PMF workspace={workspace} />}
+          </LiveWorkspaceGate>
         </div>
       </main>
-    </div>
+      </div>
+    </WorkspaceSessionProvider>
   );
 }
 

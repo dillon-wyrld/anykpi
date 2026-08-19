@@ -3,7 +3,7 @@ import { db } from '@/core/db';
 import * as schema from '@/core/schema';
 import { eq } from 'drizzle-orm';
 import { OverviewResponseSchema } from '@/core/contracts';
-import { gate } from '@/core/auth';
+import { gate } from '@/core/session-auth';
 import { publicBaseUrl } from '@/core/view-state';
 import { internalError, logServerError } from '@/core/errors';
 import { loadCohortsView } from '@/core/views/cohorts';

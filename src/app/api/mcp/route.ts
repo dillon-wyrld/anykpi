@@ -3,7 +3,8 @@ import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { and, eq } from "drizzle-orm";
 import { buildViewUrl, publicBaseUrl, queryUsersPayload } from "@/core/view-state";
-import { gate, isReadOnlyMcpTool } from "@/core/auth";
+import { isReadOnlyMcpTool } from "@/core/auth";
+import { gate } from "@/core/session-auth";
 import { logServerError } from "@/core/errors";
 import {
   CohortCompareError,

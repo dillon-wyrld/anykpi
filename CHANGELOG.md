@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Security
+- Browser session for the live workspace (ANY-36): `POST /api/session` verifies
+  the API key once and sets a signed `httpOnly` + `SameSite=Lax` cookie so
+  dashboard views load without putting the key in a URL. Demo stays public-read.
+  `DELETE /api/session` logs out. Writes stay key-only.
 - Default-secure API keys: the API and MCP surface require a bearer key,
   verified in constant time; the `demo` workspace stays public-read while `live`
   and all writes require a key.

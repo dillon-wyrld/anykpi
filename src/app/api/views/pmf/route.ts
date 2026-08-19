@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, asc, eq } from "drizzle-orm";
-import { gate } from "@/core/auth";
+import { gate } from "@/core/session-auth";
 import {
   ResearchCandidateSchema,
   ResearchRunRequestSchema,

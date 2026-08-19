@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
-import { gate } from "@/core/auth";
+import { gate } from "@/core/session-auth";
 import { ensureWorkspaceClusters } from "@/core/clustering";
 import { internalError, logServerError } from "@/core/errors";
 import { activityWindow, buildDotPlotUsers } from "@/core/views/dotplot";

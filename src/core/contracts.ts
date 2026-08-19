@@ -494,6 +494,15 @@ export const ImportResponseSchema = z.object({
 
 export const ApiKeyScopeSchema = z.enum(['read', 'write', 'admin']);
 
+export const SessionCreateRequestSchema = z.object({
+  key: z.string().min(1),
+});
+
+export const SessionStatusResponseSchema = z.object({
+  authenticated: z.boolean(),
+  workspace: z.string().optional(),
+});
+
 export const APIKeyCreateRequestSchema = z.object({
   name: z.string(),
   scope: ApiKeyScopeSchema.default('read'),
@@ -575,6 +584,8 @@ export type ImportRequest = z.infer<typeof ImportRequestSchema>;
 export type ImportPreviewResponse = z.infer<typeof ImportPreviewResponseSchema>;
 export type ImportResponse = z.infer<typeof ImportResponseSchema>;
 export type ApiKeyScope = z.infer<typeof ApiKeyScopeSchema>;
+export type SessionCreateRequest = z.infer<typeof SessionCreateRequestSchema>;
+export type SessionStatusResponse = z.infer<typeof SessionStatusResponseSchema>;
 export type APIKeyCreateRequest = z.infer<typeof APIKeyCreateRequestSchema>;
 export type APIKeyResponse = z.infer<typeof APIKeyResponseSchema>;
 export type APIKeyDowngradeRequest = z.infer<typeof APIKeyDowngradeRequestSchema>;

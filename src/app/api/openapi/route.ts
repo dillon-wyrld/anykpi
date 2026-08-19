@@ -21,6 +21,8 @@ import {
   APIKeyResponseSchema,
   APIKeyDowngradeRequestSchema,
   APIKeyDowngradeResponseSchema,
+  SessionCreateRequestSchema,
+  SessionStatusResponseSchema,
   ErrorResponseSchema,
   IngestIdentifyRequestSchema,
   IngestEventRequestSchema,
@@ -68,7 +70,8 @@ export async function GET(request: NextRequest) {
       { name: 'Connect', description: 'Store per-source credentials' },
       { name: 'Import', description: 'CSV import for users and events' },
       { name: 'Ingest', description: 'Direct event collection' },
-      { name: 'Keys', description: 'API key management' }
+      { name: 'Keys', description: 'API key management' },
+      { name: 'Session', description: 'Browser session cookie for live dashboard reads' }
     ],
     paths: {
       '/api/v1/overview': {
@@ -632,6 +635,82 @@ export async function GET(request: NextRequest) {
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/session': {
+        get: {
+          tags: ['Session'],
+          summary: 'Session status',
+          description:
+            'Whether the signed browser cookie is valid. Demo stays public-read without a session. Never returns the API key.',
+          security: [],
+          responses: {
+            200: {
+              description: 'Session status',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(SessionStatusResponseSchema)
+                }
+              }
+            }
+          }
+        },
+        post: {
+          tags: ['Session'],
+          summary: 'Start a browser session',
+          description:
+            'Verify the API key once and set a signed httpOnly SameSite cookie. Live views then load without putting the key in a URL. Writes still require the key.',
+          security: [],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(SessionCreateRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Cookie set',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(SessionStatusResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Missing or invalid API key',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            503: {
+              description: 'No signing secret (set ANYKPI_SECRET)',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        },
+        delete: {
+          tags: ['Session'],
+          summary: 'End the browser session',
+          description: 'Clear the signed cookie. Demo stays public-read.',
+          security: [],
+          responses: {
+            200: {
+              description: 'Cookie cleared',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(SessionStatusResponseSchema)
                 }
               }
             }
