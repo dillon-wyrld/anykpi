@@ -1,0 +1,31 @@
+# ANYKPI — Railway one-click template (always-on + persistent volume).
+#
+# Always-on pin: sleepApplication = false (Serverless / app-sleep off).
+# Overnight is the zero-traffic window; a sleeping deploy voids freshness
+# at the deploy step.
+#
+# Volume pin: requiredMountPath = "/data" (SQLite at /data/anykpi.db).
+# Attach a Railway volume mounted at /data. The service refuses to start
+# without it.
+#
+# SQLite is single-writer: numReplicas = 1.
+#
+# If a future template targets an auto-stop host, it must wire an
+# external-cron recipe to POST /api/v1/sync instead of assuming in-process
+# freshness. Do not add a second host template here.
+#
+# Demo workspace stays public-read. Set ANYKPI_API_KEY before connecting
+# live data or performing writes. The Dockerfile CMD runs migrations, then
+# the Next standalone server — do not override startCommand.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+numReplicas = 1
+sleepApplication = false
+requiredMountPath = "/data"
+restartPolicyType = "ALWAYS"
+healthcheckPath = "/"
+healthcheckTimeout = 300

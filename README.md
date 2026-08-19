@@ -134,6 +134,14 @@ docker run -p 3000:3000 \
 
 `-p 3000:3000` publishes the dashboard; `-v anykpi-data:/data` persists SQLite. Omit the volume for an ephemeral demo. Images are tagged `latest` and the release version (`linux/amd64`, `linux/arm64`). To build locally instead: `docker build -t anykpi .` and run the same flags against `anykpi`.
 
+`docker compose up` pulls the same image and keeps SQLite in the named volume `anykpi-data`.
+
+### Railway (always-on)
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new?template=https://github.com/dillon-wyrld/anykpi)
+
+Stays awake (`sleepApplication = false`) with a persistent volume at `/data`. Set `ANYKPI_API_KEY` before connecting live data.
+
 `view_url` values use the request `Host` / `X-Forwarded-*` origin. Set `PUBLIC_BASE_URL` only if you need to pin them.
 
 In production, if `ANYKPI_API_KEY` is unset, writes and non-demo reads are refused (503). Copy `.env.example` and see [SECURITY.md](SECURITY.md).
