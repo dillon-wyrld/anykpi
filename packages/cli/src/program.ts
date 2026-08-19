@@ -8,7 +8,6 @@ import { configFile, loadConfig, saveConfig } from "./config";
 
 export const PUBLISHED_COMMANDS = [
   "login",
-  "keys",
   "workspaces",
   "connect",
   "import",
@@ -20,6 +19,7 @@ export const PUBLISHED_COMMANDS = [
   "wbr",
   "calendar",
   "sync",
+  "keys",
 ] as const;
 
 function workspaceOf(options: { workspace?: string }): string {
@@ -751,7 +751,7 @@ export function createProgram(): Command {
 
   program
     .command("keys")
-    .description("List API keys, or downgrade legacy write keys to read")
+    .description("List API keys or downgrade legacy keys")
     .argument("[action]", "Pass downgrade to convert legacy write keys to read")
     .option("--id <id>", "Downgrade one key id")
     .option("--json", "Output as JSON")
