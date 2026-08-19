@@ -61,6 +61,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `docker-compose.yml` pulls `ghcr.io/dillon-wyrld/anykpi` into a named
   volume, plus a Railway one-click template that stays awake
   (`sleepApplication = false`, volume at `/data`) (ANY-35).
+- Revenue read models (ANY-45): MRR snapshots, subscription events, the
+  per-person revenue join, and balance/runway. Demo seed fills them;
+  WBR shows those lanes with week-over-week deltas; cohorts and
+  `get_cohorts` can filter to payers. Person charge detail stays summarized.
 
 ### Changed
 - Removed internal design notes and competitor/brand references from the public

@@ -199,3 +199,20 @@ describe("canon WBR_METRICS — every metric on the deck", () => {
     expect(wfmt(box.lw, { dp: 0, unit: "$" })).toBe("$1240");
   });
 });
+
+describe("ANY-45 — revenue lanes reuse the same WoW helper", () => {
+  it("computes MRR / ARPU / runway WoW the same way as Weekly Revenue", () => {
+    const mrrWeeks = [497, 511, 490, 532, 553, 656];
+    const mrrPrev = [280, 290, 275, 300, 310, 320];
+    const series = seriesWowYoy(mrrWeeks, mrrPrev);
+    expect(series.current).toBe(656);
+    expect(series.wow).toBe(seriesPctChange(656, 553));
+    expect(series.yoy).toBe(seriesPctChange(656, 320));
+
+    const box = wbrBox(
+      metric({ weeks: mrrWeeks, prevWeeks: mrrPrev, target: 600, unit: "$" })
+    );
+    expect(box.lw).toBe(656);
+    expect(box.wow).toBe(Math.round(((656 - 553) / 553) * 100));
+  });
+});

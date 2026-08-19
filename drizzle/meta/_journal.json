@@ -15,6 +15,13 @@
       "when": 1787175692009,
       "tag": "0001_cultured_kronos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787176349457,
+      "tag": "0002_revenue_read_models",
+      "breakpoints": true
     }
   ]
 }

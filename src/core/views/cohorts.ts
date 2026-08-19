@@ -6,6 +6,7 @@ import {
   cohortWindow,
   type CohortUser,
 } from "@/core/views/cohort-math";
+import { filterPayerUsers, isPayerRow } from "@/core/views/revenue-math";
 
 export {
   CO_DECAY,
@@ -18,7 +19,16 @@ export {
   coSlope,
 } from "@/core/views/cohort-math";
 
-export async function loadCohortsView(workspace: string, grainParam = "week") {
+export type LoadCohortsOptions = {
+  /** When true, keep only people who appear on the person-revenue join. */
+  payers?: boolean;
+};
+
+export async function loadCohortsView(
+  workspace: string,
+  grainParam = "week",
+  options: LoadCohortsOptions = {}
+) {
   const users = await db
     .select()
     .from(schema.users)
@@ -31,12 +41,22 @@ export async function loadCohortsView(workspace: string, grainParam = "week") {
     .where(eq(schema.activity.workspaceId, workspace))
     .all();
 
+  const revenueRows = await db
+    .select()
+    .from(schema.personRevenue)
+    .where(eq(schema.personRevenue.workspaceId, workspace))
+    .all();
+
+  const payerIds = revenueRows.filter(isPayerRow).map((row) => row.personId);
+  const scopedUsers = options.payers ? filterPayerUsers(users, payerIds) : users;
+  const payerSet = new Set(payerIds);
+
   const { baseDate, totalDays } = cohortWindow([
-    ...users.map((u) => u.signupDate),
+    ...scopedUsers.map((u) => u.signupDate),
     ...activities.map((a) => a.timestamp),
   ]);
 
-  const enrichedUsers: CohortUser[] = users
+  const enrichedUsers: Array<CohortUser & { isPayer: boolean }> = scopedUsers
     .filter((u) => u.signupDate)
     .map((user) => {
       const signupDay = Math.floor(
@@ -63,6 +83,7 @@ export async function loadCohortsView(workspace: string, grainParam = "week") {
         emoji: user.emoji ?? "",
         signupDay,
         dailyActivity,
+        isPayer: payerSet.has(user.personId),
       };
     });
 
@@ -71,5 +92,6 @@ export async function loadCohortsView(workspace: string, grainParam = "week") {
     users: enrichedUsers,
     baseDate: baseDate.toISOString(),
     totalDays,
+    payers: Boolean(options.payers),
   };
 }

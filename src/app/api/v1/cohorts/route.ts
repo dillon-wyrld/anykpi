@@ -18,7 +18,9 @@ export async function GET(request: NextRequest) {
     if (!gated.ok) return gated.response;
     const workspace = gated.workspace;
 
-    const cohortData = await loadCohortsView(workspace);
+    const payers =
+      searchParams.get("payers") === "1" || searchParams.get("payers") === "true";
+    const cohortData = await loadCohortsView(workspace, "week", { payers });
     const smileDetected = cohortData.cohorts?.some((c) => c.smileDetected) || false;
 
     const response = CohortsResponseSchema.parse({
@@ -36,7 +38,7 @@ export async function GET(request: NextRequest) {
       })),
       smileDetected,
       workspace,
-      view_url: `${publicBaseUrl(request)}/dashboard?workspace=${workspace}&view=cohorts`
+      view_url: `${publicBaseUrl(request)}/dashboard?workspace=${workspace}&view=cohorts${payers ? "&p=1" : ""}`
     });
 
     return NextResponse.json(response);

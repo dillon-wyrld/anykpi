@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { buildViewUrl, publicBaseUrl } from "@/core/view-state";
 import { gate, isReadOnlyMcpTool } from "@/core/auth";
 import { logServerError } from "@/core/errors";
+import { loadCohortsView } from "@/core/views/cohorts";
 
 async function handleMCPRequest(
   body: Record<string, unknown>,
@@ -14,7 +15,7 @@ async function handleMCPRequest(
   const method = body.method;
   const params = (body.params ?? {}) as {
     name?: string;
-    arguments?: { workspace?: string; limit?: number };
+    arguments?: { workspace?: string; limit?: number; payers?: boolean };
   };
 
   if (method === "tools/list") {
@@ -50,11 +51,16 @@ async function handleMCPRequest(
         },
         {
           name: "get_cohorts",
-          description: "Get cohort retention data with smile flags and PMF verdict",
+          description:
+            "Get cohort retention data with smile flags and PMF verdict. Set payers to filter to people on the revenue join.",
           inputSchema: {
             type: "object",
             properties: {
               workspace: { type: "string" },
+              payers: {
+                type: "boolean",
+                description: "When true, keep only paying people",
+              },
             },
           },
         },
@@ -125,6 +131,26 @@ async function handleMCPRequest(
               text: JSON.stringify({
                 users,
                 viewUrl: buildViewUrl(`${baseUrl}/dashboard`, { view: "dotplot" }),
+              }),
+            },
+          ],
+        };
+      }
+
+      case "get_cohorts": {
+        const data = await loadCohortsView(workspace, "week", {
+          payers: Boolean(args?.payers),
+        });
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                cohorts: data.cohorts,
+                smilingCount: data.cohorts.filter((c) => c.smileDetected).length,
+                pmfForming: data.cohorts.filter((c) => c.smileDetected).length >= 3,
+                payers: data.payers,
+                viewUrl: buildViewUrl(`${baseUrl}/dashboard`, { view: "cohorts" }),
               }),
             },
           ],
