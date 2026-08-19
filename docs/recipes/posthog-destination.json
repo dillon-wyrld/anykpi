@@ -1,0 +1,10 @@
+{
+  "event": "song_played",
+  "distinct_id": "ph_recipe_user",
+  "timestamp": "2026-03-15T12:00:00.000Z",
+  "properties": {
+    "name": "Recipe Listener",
+    "platform": "web",
+    "$lib": "posthog-destination"
+  }
+}

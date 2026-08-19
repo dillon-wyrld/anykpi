@@ -31,6 +31,7 @@ Demo workspace is public-read. Live workspaces and all writes require a key (`Au
 - `POST /api/v1/connect` — store per-source credentials (encrypted at rest)
 - `GET /api/v1/keys` / `POST /api/v1/keys` — list metadata / mint a key
 - `POST /api/v1/ingest/identify` / `POST /api/v1/ingest/event` — identify and track
+- `POST /api/ingest/webhook/:source` — realtime push; HMAC secret stored via connect
 
 ## MCP
 
@@ -60,6 +61,7 @@ Read responses include a view_url that opens `/dashboard` in the workspace and v
 - `src/demo` — canonical demo dataset
 - `packages/cli` — CLI
 - `docs/introduction.md` — human docs
+- `docs/webhooks.md` — webhook-in recipes
 
 Do not invent routes or tools. The OpenAPI spec and MCP tools list are the source of truth. `spec/` is design history, not the shipped surface.
 

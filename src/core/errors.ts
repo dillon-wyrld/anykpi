@@ -16,6 +16,10 @@ export function badRequest(error = "Bad Request"): NextResponse {
   return NextResponse.json({ error }, { status: 400 });
 }
 
+export function unauthorized(error = "Unauthorized"): NextResponse {
+  return NextResponse.json({ error }, { status: 401 });
+}
+
 export function tooManyRequests(retryAfterSeconds: number): NextResponse {
   return NextResponse.json(
     { error: "Too Many Requests" },
@@ -39,13 +43,21 @@ export class PayloadTooLargeError extends Error {
  * use / DoS on write endpoints. Throws PayloadTooLargeError past the cap and
  * SyntaxError on malformed JSON.
  */
-export async function readJsonBounded(
+export async function readTextBounded(
   request: Request,
   maxBytes = 64 * 1024
-): Promise<unknown> {
+): Promise<string> {
   const raw = await request.text();
   if (raw.length > maxBytes) {
     throw new PayloadTooLargeError();
   }
+  return raw;
+}
+
+export async function readJsonBounded(
+  request: Request,
+  maxBytes = 64 * 1024
+): Promise<unknown> {
+  const raw = await readTextBounded(request, maxBytes);
   return raw ? JSON.parse(raw) : {};
 }

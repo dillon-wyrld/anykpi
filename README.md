@@ -66,7 +66,7 @@ Hosted version: join the [waitlist](https://github.com/dillon-wyrld/anykpi/discu
 
 ## Connect Data
 
-Visit `/connect` to attach PostHog, Mixpanel, or Amplitude, or ingest events with the SDK / CLI:
+Visit `/connect` to attach PostHog, Mixpanel, or Amplitude, ingest events with the SDK / CLI, or push a signed webhook (`POST /api/ingest/webhook/:source` — [recipes](docs/webhooks.md)):
 
 ```bash
 anykpi login --url http://localhost:3000

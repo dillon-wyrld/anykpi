@@ -10,7 +10,7 @@ const LLMS_TXT = `# ANYKPI
 
 > Self-hosted dashboard + REST API + CLI + MCP. Same resources humans see in the dashboard, agents fetch via API. Founder metrics: users, retention, PMF signals, WBR.
 
-Demo workspace is public-read (seeded fictional people). Live workspaces and all writes require an API key.
+Demo workspace is public-read (seeded fictional people). Live workspaces and all writes require an API key. Webhook ingest is authenticated by a per-source HMAC secret instead of an API key.
 
 ## Auth
 
@@ -39,6 +39,8 @@ OpenAPI spec: /api/openapi
 - POST /api/v1/keys — mint a key (requires an existing operator or hashed key; raw key returned once)
 - POST /api/v1/ingest/identify — create or update a user
 - POST /api/v1/ingest/event — track an activity event
+
+Realtime push (HMAC, not an API key): POST /api/ingest/webhook/{source} — see docs/webhooks.md.
 
 Default query workspace is demo. Ingest and key writes always require a key.
 
