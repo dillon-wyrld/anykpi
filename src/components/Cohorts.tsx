@@ -104,15 +104,38 @@ export default function Cohorts({ workspace }: CohortsProps) {
             <tbody>
               {cohorts.map((cohort) => (
                 <tr key={cohort.cohort} className="border-b border-rule hover:bg-panel-2">
-                  <td className="py-2 px-3 font-mono text-xs">{cohort.cohort}</td>
-                  {cohort.weeks.map((val, i) => (
-                    <td key={i} className="text-right py-2 px-3 font-mono text-xs tabular-nums">
-                      {val !== null ? `${val}%` : "—"}
-                    </td>
-                  ))}
+                  <td className="py-2 px-3">
+                    <div className="font-mono text-xs font-semibold">{cohort.cohort}</div>
+                    {cohort.cohortDate && (
+                      <div className="text-[10px] text-sub">{cohort.cohortDate} · {cohort.size} joined</div>
+                    )}
+                  </td>
+                  {cohort.weeks.map((val, i) => {
+                    if (val === null) {
+                      return <td key={i} className="text-center py-2 px-3 text-faint">—</td>;
+                    }
+                    const opacity = Math.min(1, val / 100);
+                    const bgColor = i === 0 
+                      ? 'rgb(94, 106, 210)' 
+                      : `rgba(94, 106, 210, ${(0.15 + opacity * 0.85).toFixed(2)})`;
+                    return (
+                      <td 
+                        key={i} 
+                        className="text-center py-2 px-3"
+                        style={{ 
+                          backgroundColor: bgColor,
+                          color: i === 0 || opacity > 0.6 ? '#fff' : 'inherit'
+                        }}
+                      >
+                        <span className="font-mono text-[11px] tabular-nums font-semibold">
+                          {val}%
+                        </span>
+                      </td>
+                    );
+                  })}
                   <td className="text-center py-2 px-3">
                     {cohort.smileDetected ? (
-                      <span className="text-green text-base">😊</span>
+                      <span className="text-xl">😊</span>
                     ) : (
                       <span className="text-faint text-xs">—</span>
                     )}
@@ -123,12 +146,6 @@ export default function Cohorts({ workspace }: CohortsProps) {
           </table>
         </div>
 
-        <div className="px-4 py-3 border-t border-rule text-xs text-sub">
-          <p>
-            Each row is a signup week. Numbers show the % who came back in that week.
-            The smile appears when a curve flattens — people simply keep coming back.
-          </p>
-        </div>
       </div>
     </div>
   );
