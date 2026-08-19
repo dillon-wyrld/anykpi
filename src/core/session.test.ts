@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   parseNamedCookie,
@@ -88,5 +90,14 @@ describe("stripKeyQueryParams", () => {
     const params = new URLSearchParams("workspace=live&view=dotplot");
     expect(stripKeyQueryParams(params)).toBe(false);
     expect(params.toString()).toBe("workspace=live&view=dotplot");
+  });
+});
+
+describe("edge middleware + instrumentation", () => {
+  it("stubs Node builtins so the Edge graph can compile", () => {
+    const config = readFileSync(resolve(__dirname, "../../next.config.ts"), "utf8");
+    expect(config).toMatch(/nextRuntime === "edge"/);
+    expect(config).toMatch(/fs:\s*false/);
+    expect(config).toMatch(/path:\s*false/);
   });
 });
