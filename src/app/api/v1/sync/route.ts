@@ -3,7 +3,7 @@ import { db } from '@/core/db';
 import * as schema from '@/core/schema';
 import { eq } from 'drizzle-orm';
 import { SyncResponseSchema } from '@/core/contracts';
-import { requireAuth } from '@/core/auth';
+import { gate } from '@/core/auth';
 import { internalError, logServerError } from '@/core/errors';
 
 /**
@@ -14,9 +14,10 @@ import { internalError, logServerError } from '@/core/errors';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const workspace = searchParams.get('workspace') || 'demo';
-    const denied = await requireAuth(request, { workspace, write: false });
-    if (denied) return denied;
+    const requested = searchParams.get('workspace') || 'demo';
+    const gated = await gate(request, { workspace: requested, write: false });
+    if (!gated.ok) return gated.response;
+    const workspace = gated.workspace;
     
     const syncStates = await db
       .select()

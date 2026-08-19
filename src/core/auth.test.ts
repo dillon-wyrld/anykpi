@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { authorize, extractApiKey } from "./auth";
+import {
+  authorize,
+  extractApiKey,
+  hashedKeyMatches,
+  resolveWorkspace,
+  sha256Hex,
+} from "./auth";
 
 function requestWith(headers: Record<string, string> = {}): {
   headers: { get(name: string): string | null };
@@ -117,6 +123,34 @@ describe("authorize", () => {
     );
 
     expect(statusOf(result)).toBe(401);
+  });
+
+  it("hashed key matches via SHA-256 timing-safe compare", () => {
+    const raw = "ak_test.secret";
+    const digest = sha256Hex(raw);
+    expect(hashedKeyMatches(raw, digest)).toBe(true);
+    expect(hashedKeyMatches("wrong", digest)).toBe(false);
+  });
+
+  it("hashed key workspace wins on writes; env admin may choose", () => {
+    const hashed = resolveWorkspace(
+      {
+        ok: true,
+        actor: "hashed",
+        keyWorkspace: "live",
+        canChooseWorkspace: false,
+      },
+      "demo",
+      true
+    );
+    expect("workspace" in hashed && hashed.workspace).toBe("live");
+
+    const env = resolveWorkspace(
+      { ok: true, actor: "env", canChooseWorkspace: true },
+      "team-a",
+      true
+    );
+    expect("workspace" in env && env.workspace).toBe("team-a");
   });
 
   it("production without ANYKPI_API_KEY refuses live reads and writes with 503", async () => {

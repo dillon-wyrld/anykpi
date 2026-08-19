@@ -4,22 +4,42 @@ import * as schema from "@/core/schema";
 import { nanoid } from "nanoid";
 import { APIKeyCreateRequestSchema, APIKeyResponseSchema } from "@/core/contracts";
 import { createHash } from "crypto";
-import { requireAuth } from "@/core/auth";
+import {
+  authorize,
+  authResponse,
+  canBootstrapFirstKey,
+  LIVE_WORKSPACE,
+} from "@/core/auth";
 import { badRequest, internalError, logServerError } from "@/core/errors";
 
 /**
  * POST /api/v1/keys
  *
- * Generate a new API key. Never unauthenticated — requires the env admin
- * key or an existing valid key.
+ * Mint a key. Never unauthenticated on a public/production interface.
+ * First key is allowed only when the table is empty and this is local/dev,
+ * or when the caller already has a valid env/admin or hashed key.
  */
 export async function POST(request: NextRequest) {
-  const denied = await requireAuth(request, { write: true });
-  if (denied) return denied;
+  const auth = await authorize(request, { write: true });
+  if (!auth.ok) {
+    const bootstrap = await canBootstrapFirstKey();
+    if (!bootstrap) {
+      return authResponse(auth);
+    }
+  }
 
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const params = APIKeyCreateRequestSchema.parse(body);
+
+    let workspaceId = LIVE_WORKSPACE;
+    if (auth.ok && auth.canChooseWorkspace) {
+      workspaceId = typeof body.workspace === "string" && body.workspace
+        ? body.workspace
+        : LIVE_WORKSPACE;
+    } else if (auth.ok && auth.keyWorkspace) {
+      workspaceId = auth.keyWorkspace;
+    }
 
     const keyId = `ak_${nanoid(24)}`;
     const rawKey = `${keyId}.${nanoid(32)}`;
@@ -29,6 +49,7 @@ export async function POST(request: NextRequest) {
       id: keyId,
       hashedKey,
       name: params.name,
+      workspaceId,
       createdAt: new Date(),
     });
 
@@ -56,8 +77,8 @@ export async function POST(request: NextRequest) {
  * List API key metadata (never the raw key). Requires a valid key.
  */
 export async function GET(request: NextRequest) {
-  const denied = await requireAuth(request, { write: false });
-  if (denied) return denied;
+  const auth = await authorize(request, { write: false });
+  if (!auth.ok) return authResponse(auth);
 
   try {
     const keys = await db.select().from(schema.apiKeys).all();

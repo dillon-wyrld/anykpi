@@ -1,33 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CohortsResponseSchema } from '@/core/contracts';
-import { authForwardHeaders, requireAuth } from '@/core/auth';
+import { gate, publicBaseUrl } from '@/core/auth';
 import { internalError, logServerError } from '@/core/errors';
+import { loadCohortsView } from '@/core/views/cohorts';
 
 /**
  * GET /api/v1/cohorts
- * 
+ *
  * Cohort retention with smile detection (PMF signal)
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const workspace = searchParams.get('workspace') || 'demo';
-    const denied = await requireAuth(request, { workspace, write: false });
-    if (denied) return denied;
-    
-    const cohortData = await fetch(`${request.nextUrl.origin}/api/views/cohorts?workspace=${workspace}`, {
-      headers: authForwardHeaders(request),
-    }).then(r => r.json());
-    
-    const smileDetected = cohortData.cohorts?.some((c: any) => c.smileDetected) || false;
-    
+    const requested = searchParams.get('workspace') || 'demo';
+    const gated = await gate(request, { workspace: requested, write: false });
+    if (!gated.ok) return gated.response;
+    const workspace = gated.workspace;
+
+    const cohortData = await loadCohortsView(workspace);
+    const smileDetected = cohortData.cohorts?.some((c) => c.smileDetected) || false;
+
     const response = CohortsResponseSchema.parse({
-      cohorts: cohortData.cohorts || [],
+      cohorts: (cohortData.cohorts || []).map((c) => ({
+        cohort: c.label,
+        label: c.label,
+        size: c.size,
+        weeks: c.retention,
+        smileDetected: c.smileDetected,
+        retention: {
+          week0: c.retention[0] ?? 0,
+          week4: c.retention[4] ?? 0,
+          latest: c.retention[c.retention.length - 1] ?? 0,
+        },
+      })),
       smileDetected,
       workspace,
-      view_url: `${request.nextUrl.origin}/dashboard?workspace=${workspace}&view=cohorts`
+      view_url: `${publicBaseUrl()}/dashboard?workspace=${workspace}&view=cohorts`
     });
-    
+
     return NextResponse.json(response);
   } catch {
     logServerError('Cohorts query failed');

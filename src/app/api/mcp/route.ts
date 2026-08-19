@@ -3,12 +3,15 @@ import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
 import { buildViewUrl } from "@/core/view-state";
-import { authorize, authResponse, isReadOnlyMcpTool } from "@/core/auth";
+import { gate, isReadOnlyMcpTool } from "@/core/auth";
 import { logServerError } from "@/core/errors";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
-async function handleMCPRequest(body: Record<string, unknown>) {
+async function handleMCPRequest(
+  body: Record<string, unknown>,
+  workspaceOverride?: string
+) {
   const method = body.method;
   const params = (body.params ?? {}) as {
     name?: string;
@@ -84,7 +87,7 @@ async function handleMCPRequest(body: Record<string, unknown>) {
 
   if (method === "tools/call") {
     const { name, arguments: args } = params;
-    const workspace = args?.workspace || "demo";
+    const workspace = workspaceOverride || args?.workspace || "demo";
 
     switch (name) {
       case "get_overview": {
@@ -153,22 +156,25 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    let workspace: string | undefined;
     if (method === "tools/call") {
-      const workspace = params?.arguments?.workspace || "demo";
+      const requested = params?.arguments?.workspace || "demo";
       const toolName = params?.name as string | undefined;
       const write = !isReadOnlyMcpTool(toolName);
-      const auth = await authorize(request, { workspace, write });
-      if (!auth.ok) {
-        return authResponse(auth);
+      const gated = await gate(request, { workspace: requested, write });
+      if (!gated.ok) {
+        return gated.response;
       }
+      workspace = gated.workspace;
     } else {
-      const auth = await authorize(request, { write: true });
-      if (!auth.ok) {
-        return authResponse(auth);
+      const gated = await gate(request, { write: true });
+      if (!gated.ok) {
+        return gated.response;
       }
+      workspace = gated.workspace;
     }
 
-    const result = await handleMCPRequest(body);
+    const result = await handleMCPRequest(body, workspace);
 
     return NextResponse.json({
       jsonrpc: "2.0",

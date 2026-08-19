@@ -130,6 +130,7 @@ export const apiKeys = sqliteTable("api_keys", {
   id: text("id").primaryKey(),
   hashedKey: text("hashed_key").notNull(),
   name: text("name").notNull(),
+  workspaceId: text("workspace_id").notNull().default("live"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   lastUsedAt: integer("last_used_at", { mode: "timestamp" }),
 });

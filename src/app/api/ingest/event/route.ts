@@ -1,22 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
-import { requireAuth } from "@/core/auth";
+import { authorize, authResponse, resolveWorkspace } from "@/core/auth";
 import { badRequest, internalError, logServerError } from "@/core/errors";
 
 /**
  * POST /api/ingest/event
  *
  * Track activity event (SDK or agent). Always requires a valid API key.
+ * Workspace comes from the key (env admin may choose).
  */
 export async function POST(request: NextRequest) {
-  const denied = await requireAuth(request, { write: true });
-  if (denied) return denied;
+  const auth = await authorize(request, { write: true });
+  if (!auth.ok) return authResponse(auth);
 
   try {
     const body = await request.json();
-    const { userId, event, eventName, properties, timestamp, workspaceId = "live" } = body;
+    const resolved = resolveWorkspace(auth, body.workspaceId, true);
+    if ("ok" in resolved && resolved.ok === false) {
+      return authResponse(resolved);
+    }
+    const workspaceId = (resolved as { workspace: string }).workspace;
 
+    const { userId, event, eventName, properties, timestamp } = body;
     const actualEventName = eventName || event;
 
     if (!userId || !actualEventName) {
