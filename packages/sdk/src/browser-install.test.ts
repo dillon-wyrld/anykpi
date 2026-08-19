@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EVENT_PATH, IDENTIFY_PATH } from "./index";
+import { BATCH_PATH, IDENTIFY_PATH } from "./index";
 import { installAnykpiBrowser } from "./browser-install";
 
 const originalFetch = globalThis.fetch;
@@ -42,7 +42,7 @@ describe("installAnykpiBrowser", () => {
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
 
     expect(fetchMock.mock.calls[0][0]).toBe(`http://localhost:3000${IDENTIFY_PATH}`);
-    expect(fetchMock.mock.calls[1][0]).toBe(`http://localhost:3000${EVENT_PATH}`);
+    expect(fetchMock.mock.calls[1][0]).toBe(`http://localhost:3000${BATCH_PATH}`);
     expect(scope.anykpi).toBe(api);
     expect(typeof api.track).toBe("function");
   });

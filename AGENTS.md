@@ -34,6 +34,7 @@ Demo workspace is public-read. Live workspaces and all writes require a key (`Au
 - `GET /api/v1/keys` / `POST /api/v1/keys` — list metadata (scope, last used, legacy) / mint a key (default read)
 - `POST /api/v1/keys/downgrade` — convert legacy write keys to read
 - `POST /api/v1/ingest/identify` / `POST /api/v1/ingest/event` — identify and track
+- `POST /api/ingest/batch` — batch track (up to 1k events; idempotent on activity.externalId)
 - `POST /api/ingest/webhook/:source` — realtime push; HMAC secret stored via connect
 
 ## MCP

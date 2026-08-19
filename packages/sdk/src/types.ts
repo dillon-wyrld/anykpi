@@ -3,6 +3,12 @@ export interface AnykpiConfig {
   workspaceId?: string;
   apiKey?: string;
   debug?: boolean;
+  /** Delay before an automatic flush. 0 sends on the next timer tick. */
+  flushIntervalMs?: number;
+  /** Backoff between flush retries after a network or 5xx failure. */
+  retryDelayMs?: number;
+  /** Flush attempts for a buffered batch (including the first try). */
+  maxRetries?: number;
 }
 
 export type JsonPrimitive = string | number | boolean | null;

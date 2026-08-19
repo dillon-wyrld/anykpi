@@ -24,6 +24,8 @@ import {
   ErrorResponseSchema,
   IngestIdentifyRequestSchema,
   IngestEventRequestSchema,
+  IngestBatchRequestSchema,
+  IngestBatchResponseSchema,
   IngestWebhookRequestSchema,
   IngestWebhookResponseSchema,
 } from '@/core/contracts';
@@ -552,6 +554,48 @@ export async function GET(request: NextRequest) {
             },
             401: {
               description: 'Missing or invalid HMAC signature',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/ingest/batch': {
+        post: {
+          tags: ['Ingest'],
+          summary: 'Batch track events',
+          description:
+            'Write-gated. Up to 1000 events in one transaction. Duplicates no-op on activity (workspaceId, externalId) via idempotencyKey or externalId.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(IngestBatchRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Batch accepted',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(IngestBatchResponseSchema)
+                }
+              }
+            },
+            400: {
+              description: 'Invalid request',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Missing or invalid API key',
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(ErrorResponseSchema)

@@ -92,6 +92,7 @@ Returns:
 - `POST /api/v1/keys/downgrade` — Convert legacy write keys to read
 - `POST /api/ingest/identify` — Identify user
 - `POST /api/ingest/event` — Track event
+- `POST /api/ingest/batch` — Batch track (up to 1k events; idempotent on `externalId`)
 - `POST /api/ingest/webhook/:source` — Realtime push (HMAC; [recipes](webhooks.md))
 
 **API Docs:** http://localhost:3000/api-docs (OpenAPI spec from Zod contracts)

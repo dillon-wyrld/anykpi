@@ -33,6 +33,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- `POST /api/ingest/batch` accepts up to 1k events in one transaction
+  (ANY-32). Duplicates no-op on ANY-12's `(workspaceId, externalId)`.
+  The SDK buffers `track()` and flushes through the batch path with a
+  stable idempotency key so a retry does not double-count.
 - API key scopes (`read` / `write` / `admin`) and last-used tracking
   (ANY-29). New keys default to read. The env `ANYKPI_API_KEY` is admin.
   Existing keys migrate to write and show as `legacy` until

@@ -38,7 +38,7 @@ test("copy-paste /connect snippet delivers an event with no build step", async (
   );
   const event = page.waitForResponse(
     (res) =>
-      res.url().includes("/api/ingest/event") &&
+      res.url().includes("/api/ingest/batch") &&
       res.request().method() === "POST" &&
       res.ok()
   );

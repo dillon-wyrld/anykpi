@@ -7,6 +7,6 @@ describe("public/sdk.js browser artifact", () => {
     const artifact = readFileSync(resolve(__dirname, "../../../public/sdk.js"), "utf8");
     expect(artifact).toContain("@anykpi/sdk browser IIFE");
     expect(artifact).toContain("/api/ingest/identify");
-    expect(artifact).toContain("/api/ingest/event");
+    expect(artifact).toContain("/api/ingest/batch");
   });
 });
