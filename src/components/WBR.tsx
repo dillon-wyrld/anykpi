@@ -40,25 +40,13 @@ export default function WBR({ workspace }: WBRProps) {
   const exceptions = metrics.filter((m) => m.status !== "on");
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-2xl font-semibold mb-2">Weekly Business Review</h2>
-        <p className="text-sub text-sm">
-          The Amazon method: six trailing weeks beside twelve trailing months, inputs ordered before outputs.
-        </p>
-      </div>
-
+    <div className="space-y-4">
       {exceptions.length > 0 && (
-        <div className="bg-amber/10 border-l-2 border-amber rounded-lg p-4 space-y-2">
-          <div className="font-semibold">Exceptions this week</div>
+        <div className="bg-amber/10 border-l-3 border-amber rounded-lg p-3">
+          <div className="text-sm font-semibold mb-1">{exceptions.length} exception{exceptions.length > 1 ? 's' : ''}</div>
           {exceptions.map((metric) => (
-            <div key={metric.id} className="text-sm">
-              <span className="font-mono">{metric.name}</span>:{" "}
-              <span className="text-sub">
-                {metric.status === "off"
-                  ? "multiple weeks under target, still falling"
-                  : "fresh miss or noisy input"}
-              </span>
+            <div key={metric.id} className="text-xs text-sub">
+              {metric.name} · {metric.status}
             </div>
           ))}
         </div>

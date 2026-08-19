@@ -31,32 +31,23 @@ export default function Cohorts({ workspace }: CohortsProps) {
   }
 
   const smilingCount = cohorts.filter((c) => c.smileDetected).length;
+  const hasSmile = smilingCount >= 3;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-2xl font-semibold mb-2">Cohorts</h2>
-        <p className="text-sub text-sm">
-          Retention triangles and decay curves. Watch for the smile — curves that flatten instead of falling to zero.
-        </p>
-      </div>
-
-      {smilingCount >= 3 && (
-        <div className="bg-green-soft border border-green rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">🎉</span>
-            <span className="font-semibold text-green">Product-market fit is forming</span>
+    <div className="space-y-4">
+      {hasSmile && (
+        <div className="bg-green-soft border border-green rounded-lg p-3 flex items-center gap-3">
+          <span className="text-2xl">😊</span>
+          <div className="flex-1">
+            <div className="font-semibold text-green text-sm">Smile detected</div>
+            <div className="text-xs text-sub">{smilingCount} cohorts flattening</div>
           </div>
-          <p className="text-sm text-sub">
-            {smilingCount} cohorts are showing the smile — they're sticking around instead of dropping off.
-            Go tell the group chat.
-          </p>
         </div>
       )}
 
       <div className="bg-panel border border-border rounded-lg shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-rule bg-panel-2">
-          <span className="font-semibold text-sm">Weekly Cohorts</span>
+          <span className="eyebrow text-[10px]">{cohorts.length} cohorts</span>
         </div>
 
         <div className="p-4 overflow-x-auto">

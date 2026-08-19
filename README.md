@@ -24,28 +24,27 @@ Both paths are first-class.
 
 ## Five Views
 
-1. **Dot Plot** — Every user gets a row, every day a column. Streaks and silences read instantly.
-2. **Cohorts** — Retention curves that flatten instead of falling to zero. The system tells you when product-market fit is forming.
-3. **Weekly Business Review** — The Amazon method. Six trailing weeks beside twelve trailing months, inputs before outputs, exceptions surfaced automatically.
-4. **Calendar** — Read-only forever. Payouts, releases, renewals, milestones. Never asks you to enter anything.
-5. **PMF+** — Point at a user or group and say "go understand these people." Research, context, sharp questions.
+1. **Dot Plot** — Every user, every day. Streaks and silences read instantly.
+2. **Cohorts** — Retention curves with smile detection (PMF signal).
+3. **Weekly Business Review** — 6 weeks, 12 months, exceptions auto-surfaced.
+4. **Calendar** — Read-only. Synced from connected tools.
+5. **PMF+** — Research users, draft outreach (queued, never auto-sent).
 
-Every view has a shareable URL that is the answer.
+Every view has a shareable URL.
 
 ## Install
 
 ```bash
-# One command
-npx anykpi@latest
-
-# Or clone and run
-git clone https://github.com/anykpi/anykpi.git
+git clone https://github.com/dillon-wyrld/anykpi.git
 cd anykpi
 pnpm install
+pnpm db:init
 pnpm dev
 ```
 
 The demo workspace loads automatically. Connect your data to see your people.
+
+**Hosted version waitlist:** [anykpi.com](https://anykpi.com) (managed cloud + multiplayer)
 
 ## Connect Data
 
@@ -151,12 +150,6 @@ The agent can do this unattended via MCP tools.
 ```bash
 docker build -t anykpi .
 docker run -p 3000:3000 -v anykpi-data:/data anykpi
-```
-
-### One-Command Install
-
-```bash
-npx anykpi@latest
 ```
 
 Data lives in `./data/anykpi.db`. Back it up. It's yours.

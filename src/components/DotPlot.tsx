@@ -43,17 +43,9 @@ export default function DotPlot({ workspace }: DotPlotProps) {
   const letters = ["M", "T", "W", "T", "F", "S", "S"];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-2xl font-semibold mb-2">Dot Plot</h2>
-        <p className="text-sub text-sm">
-          Every user gets a row, every day a column. Streaks and silences read instantly.
-        </p>
-      </div>
-
+    <div className="space-y-4">
       <div className="bg-panel border border-border rounded-lg shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-rule bg-panel-2">
-          <span className="font-semibold text-sm">Who's actually using it?</span>
           <span className="eyebrow text-[10px]">
             {users.length} people · {DAYS} days
           </span>

@@ -53,24 +53,16 @@ export default function Calendar({ workspace }: CalendarProps) {
   const sortedDates = Object.keys(groupedEvents).sort();
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-2xl font-semibold mb-2">Calendar</h2>
-        <p className="text-sub text-sm">
-          Read-only by design. Lines up what your connected tools know — payouts, releases, renewals — alongside
-          milestones we detect ourselves.
-        </p>
-      </div>
-
+    <div className="space-y-4">
       <div className="bg-panel border border-border rounded-lg shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-rule bg-panel-2">
-          <span className="font-semibold text-sm">Upcoming & Past</span>
+          <span className="eyebrow text-[10px]">{events.length} events · read-only</span>
         </div>
 
         <div className="divide-y divide-rule">
           {sortedDates.length === 0 ? (
-            <div className="p-8 text-center text-sub">
-              <p>No events yet. Connect your tools to see payouts, releases, and milestones.</p>
+            <div className="p-8 text-center text-sub text-sm">
+              No events
             </div>
           ) : (
             sortedDates.map((dateKey) => {
