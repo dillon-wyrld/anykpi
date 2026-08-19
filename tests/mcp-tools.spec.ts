@@ -74,7 +74,11 @@ test("query_users honors advertised platform + limit fields", async ({ request }
   });
   expect(response.ok()).toBeTruthy();
   const payload = parseMcpPayload(body);
-  const users = payload.users as { platform?: string }[];
+  const users = payload.users as {
+    personId: string;
+    platform?: string;
+    view_url?: string;
+  }[];
   expect(Array.isArray(users)).toBeTruthy();
   expect(users.length).toBeGreaterThan(0);
   expect(users.length).toBeLessThanOrEqual(5);
