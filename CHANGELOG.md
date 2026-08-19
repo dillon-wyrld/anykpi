@@ -58,6 +58,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `src/core/views/*` as pure functions.
 - README hero screenshot and five-view demo GIF, recaptured from the seeded
   `demo` workspace with `pnpm readme:assets` (ANY-08).
+- `docker-compose.yml` pulls `ghcr.io/dillon-wyrld/anykpi` into a named
+  volume, plus a Railway one-click template that stays awake
+  (`sleepApplication = false`, volume at `/data`) (ANY-35).
 
 ### Changed
 - Removed internal design notes and competitor/brand references from the public

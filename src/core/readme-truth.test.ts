@@ -31,6 +31,14 @@ describe("out-of-the-box docs tell the truth", () => {
     expect(readme).toContain("-v anykpi-data:/data");
   });
 
+  it("README links the Railway always-on deploy and docker compose", () => {
+    expect(readme).toContain("docker compose up");
+    expect(readme).toContain(
+      "https://railway.com/new?template=https://github.com/dillon-wyrld/anykpi"
+    );
+    expect(readme).toContain("sleepApplication = false");
+  });
+
   it("README hosted-version copy points at the quickstart and Discussions", () => {
     expect(readme).not.toMatch(/anykpi\.com/);
     expect(readme).not.toMatch(/ANYTIME KPI/);
@@ -43,7 +51,7 @@ describe("out-of-the-box docs tell the truth", () => {
 
   it("README links are in-repo or known live pages", () => {
     const links = [...readme.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].map((m) => m[1]);
-    const allowedPrefix = /^(https:\/\/(img\.shields\.io|github\.com\/dillon-wyrld\/anykpi|opensource\.org)|#|docs\/|SECURITY\.md)/;
+    const allowedPrefix = /^(https:\/\/(img\.shields\.io|github\.com\/dillon-wyrld\/anykpi|opensource\.org|railway\.com)|#|docs\/|SECURITY\.md)/;
     for (const href of links) {
       expect(href, href).toMatch(allowedPrefix);
     }
