@@ -96,7 +96,7 @@ function HomeContent() {
               Welcome to ANYKPI
             </h2>
             <p className="text-sub mb-6">
-              The growth dashboard a founder actually opens every morning — and the first one agents can read too.
+              The growth stack for modern builders. Dashboard + API + CLI + MCP.
             </p>
             <div className="flex gap-4 justify-center">
               <Link
