@@ -166,9 +166,11 @@ describe("research runs only from the explicit action", () => {
     expect(first.result.claims[0]?.title).toContain("River");
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    const url = String(fetchMock.mock.calls[0]?.[0]);
+    const url = String(
+      (fetchMock.mock.calls[0] as unknown as [string, RequestInit] | undefined)?.[0]
+    );
     expect(url).toBe(buildResearchUrl("River GB"));
-    expect(url).toContain(encodeURIComponent("River GB"));
+    expect(url).toContain("search=River+GB");
     expect(url).not.toContain("hidden.test");
     expect(url).not.toContain("p-river");
     expect(buildResearchQuery(approved)).toBe("River GB");
