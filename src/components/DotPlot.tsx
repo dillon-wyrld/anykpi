@@ -141,12 +141,12 @@ export default function DotPlot({ workspace }: DotPlotProps) {
                   <text
                     x="2"
                     y={cy + 4.4}
-                    fontSize="12.5"
+                    fontSize="14"
                   >
                     {user.emoji}
                   </text>
                   <text
-                    x="26"
+                    x="28"
                     y={cy + 4}
                     fontFamily="IBM Plex Sans, sans-serif"
                     fontSize="11.5"
@@ -156,16 +156,28 @@ export default function DotPlot({ workspace }: DotPlotProps) {
                     {user.name}
                   </text>
                   <text
-                    x={LBL - 11}
+                    x={LBL - 56}
                     y={cy + 3.4}
-                    textAnchor="end"
                     fontFamily="IBM Plex Mono, monospace"
                     fontSize="7.5"
                     fill="var(--faint)"
                     letterSpacing="0.06em"
+                    textTransform="uppercase"
                   >
                     {user.platform}
                   </text>
+                  {user.streak && user.streak >= 3 && (
+                    <text
+                      x={LBL - 16}
+                      y={cy + 3.8}
+                      fontFamily="IBM Plex Sans, sans-serif"
+                      fontSize="10"
+                      fontWeight="600"
+                      fill="#ff4d8d"
+                    >
+                      🔥{user.streak}
+                    </text>
+                  )}
 
                   {user.signupOffset > 0 && (
                     <rect
