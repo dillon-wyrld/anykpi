@@ -49,8 +49,12 @@ test.describe('Demo Workspace - Canonical Dataset', () => {
     expect(apiTime).toBeLessThan(2000);
     
     await page.goto('http://localhost:3000/dashboard?workspace=demo&view=cohorts');
-    // Wait for cohorts view to render - check for actual UI elements
-    await page.waitForSelector('text=The smile test', { timeout: 30000 });
+    
+    // Wait for the page to load by checking for grain buttons which render before data
+    await page.waitForSelector('button:has-text("Week")', { timeout: 10000 });
+    
+    // Now wait for insights to render
+    await page.waitForSelector('text=The smile test', { timeout: 50000 });
     
     const content = await page.content();
     
