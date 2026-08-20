@@ -211,7 +211,7 @@ docker run -p 3000:3000 -v anykpi-data:/data ghcr.io/dillon-wyrld/anykpi
 ## Stack
 
 - Next.js 15, TypeScript strict, Tailwind
-- SQLite via Drizzle (`DATABASE_PATH`). [Postgres later](#postgres-later).
+- SQLite via Drizzle (`DATABASE_PATH`). Postgres schema via `DATABASE_URL` ([storage](#postgres-later)).
 - Hand-rolled SVG charts from prototype learnings
 - Zod contracts shared by UI, REST, MCP
 - MCP SDK for agents
@@ -245,9 +245,11 @@ Every exception row states, in plain words, the rule that fired (`Rule: 2 or mor
 
 ## Postgres later
 
-Storage is SQLite, configured with `DATABASE_PATH` (see `.env.example`).
-Postgres is planned for a later hosted deployment and is not wired up.
-There is no `DATABASE_URL` and no Postgres driver in this tree.
+SQLite via `DATABASE_PATH` is the zero-config default (see `.env.example`).
+The sqlite-core schema is the source of truth through v0.x. A Postgres
+mirror lives in `src/core/schema.pg.ts` with migrations under `drizzle/pg`.
+When `DATABASE_URL` is a `postgres://` URL, the Docker entrypoint applies
+those migrations instead of `drizzle/sqlite`.
 
 ## API Reference
 

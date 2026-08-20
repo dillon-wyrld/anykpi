@@ -44,6 +44,9 @@ jobs:
       - name: Run unit tests
         run: pnpm test:unit
 
+      - name: Schema drift
+        run: pnpm exec vitest run src/core/schema-drift.test.ts
+
       - name: Build
         run: pnpm build
 
