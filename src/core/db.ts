@@ -96,6 +96,20 @@ function ensureActivityExternalId(sqlite: Database.Database) {
   }
 }
 
+function ensureUsersTimezone(sqlite: Database.Database) {
+  try {
+    const cols = sqlite.prepare("PRAGMA table_info(users)").all() as {
+      name: string;
+    }[];
+    if (cols.length === 0) return;
+    if (!cols.some((c) => c.name === "timezone")) {
+      sqlite.exec("ALTER TABLE users ADD COLUMN timezone TEXT");
+    }
+  } catch {
+    // Table may not exist until db:init / drizzle push
+  }
+}
+
 function ensureTombstones(sqlite: Database.Database) {
   try {
     sqlite.exec(`
@@ -294,6 +308,7 @@ function openSqlite(): AppDatabase {
   ensureActivityExternalId(sqlite);
   ensureTombstones(sqlite);
   ensureWorkspaceIsolation(sqlite);
+  ensureUsersTimezone(sqlite);
   return drizzle(sqlite, { schema });
 }
 

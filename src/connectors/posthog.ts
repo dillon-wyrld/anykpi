@@ -16,6 +16,7 @@ import {
   saveSyncCursor,
   type SourceCursor,
 } from "./cursor";
+import { geographyFromProperties } from "@/core/geography";
 import { failedSync } from "./http-status";
 import type { SyncOpts } from "./types";
 
@@ -33,6 +34,11 @@ type PersonRow = {
     emoji?: string;
     platform?: string;
     country?: string;
+    timezone?: string;
+    $geoip_country_code?: string;
+    $geoip_time_zone?: string;
+    $timezone?: string;
+    [key: string]: unknown;
   };
   created_at?: string;
 };
@@ -117,13 +123,15 @@ export async function syncPostHog(
         for (const person of personsData.results || []) {
           const distinctId = person.distinct_ids?.[0];
           if (!distinctId) continue;
+          const geo = geographyFromProperties(person.properties);
           rowsSynced += await insertUserIfAbsent({
             personId: `person_${distinctId}`,
             name: person.properties?.name || distinctId,
             email: person.properties?.email || null,
             emoji: person.properties?.emoji || null,
             platform: person.properties?.platform || null,
-            country: person.properties?.country || null,
+            country: geo.country,
+            timezone: geo.timezone,
             signupDate: person.created_at ? new Date(person.created_at) : new Date(),
             workspaceId,
           });

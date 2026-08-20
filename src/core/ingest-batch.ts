@@ -5,6 +5,7 @@ import { db } from "./db";
 import { writeInTransaction } from "./query-compat";
 import * as schema from "./schema";
 import { loadTombstoneSet, matchesTombstone } from "./tombstones";
+import { geographyFromProperties } from "./geography";
 import { classifyEventName } from "./webhook";
 
 export { BATCH_INGEST_MAX_EVENTS };
@@ -43,6 +44,7 @@ export type UserStub = {
   emoji: string | null;
   platform: string;
   country: string | null;
+  timezone: string | null;
   signupDate: Date;
   cluster: null;
   accountId: null;
@@ -127,13 +129,15 @@ export function prepareBatchEvents(
     });
 
     if (!users.has(personId)) {
+      const geo = geographyFromProperties(properties);
       users.set(personId, {
         personId,
         name: asNonEmptyString(properties.name) ?? `User ${event.userId}`,
         email: asNonEmptyString(properties.email) ?? null,
         emoji: asNonEmptyString(properties.emoji) ?? null,
         platform,
-        country: asNonEmptyString(properties.country) ?? null,
+        country: geo.country,
+        timezone: geo.timezone,
         signupDate: timestamp,
         cluster: null,
         accountId: null,

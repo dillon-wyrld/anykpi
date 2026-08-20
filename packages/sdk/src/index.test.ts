@@ -156,5 +156,27 @@ describe("@anykpi/sdk", () => {
     expect(html).toContain("anykpi.init");
     expect(html).toContain("anykpi.identify");
     expect(html).toContain("anykpi.track");
+    expect(html).toContain("deviceTimezone");
+    expect(html).toContain("Intl.DateTimeFormat().resolvedOptions().timeZone");
+  });
+
+  it("identify attaches the device timezone when the caller omits one", async () => {
+    const fetchMock = mockFetch();
+    const client = new Anykpi({
+      endpoint: "http://localhost:3000/",
+      workspaceId: "live",
+      apiKey: "test-key",
+    });
+
+    await client.identify({
+      userId: "u-tz",
+      properties: { name: "Ada", platform: "web" },
+    });
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string) as {
+      properties: { deviceTimezone?: string; timezone?: string };
+    };
+    expect(body.properties.deviceTimezone).toMatch(/\S/);
+    expect(body.properties.timezone).toBeUndefined();
   });
 });

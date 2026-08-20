@@ -47,7 +47,9 @@ export function browserSnippet(options: BrowserSnippetOptions): string {
     });
     anykpi.identify({
       userId: ${JSON.stringify(userId)},
-      properties: ${JSON.stringify(properties)}
+      properties: Object.assign({}, ${JSON.stringify(properties)}, {
+        deviceTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      })
     });${trackCall}
   }();
 </script>

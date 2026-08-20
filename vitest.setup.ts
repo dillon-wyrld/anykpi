@@ -48,6 +48,7 @@ sqlite.exec(`
     emoji TEXT,
     platform TEXT,
     country TEXT,
+    timezone TEXT,
     income_band TEXT,
     traits TEXT,
     signup_date INTEGER,

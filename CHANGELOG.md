@@ -62,6 +62,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   table. `/connect` and `anykpi config` set all three. Demo seeds as
   YourCo in San Francisco. A founded date in the future is refused.
   Setting the name changes `Day of <name>`.
+- User geography from real sources (ANY-57): `users.timezone` (IANA)
+  plus country filled on PostHog sync, identify (device timezone from
+  the snippet and SDK), and CSV import. Precedence is explicit
+  property, then device timezone, then a country-derived fallback.
+  Users with no signal stay off the city rows; the geography module
+  counts them as unplaced. Migration `0010_user_timezone`.
 - Postgres query-compat and CI matrix (ANY-47): view builders and
   read-model writers share one query shape on SQLite and Postgres.
   Timestamps stay Date objects, upserts use `excluded`, and writes that

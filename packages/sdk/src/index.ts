@@ -56,6 +56,15 @@ function shouldRetryStatus(status: number): boolean {
   return status === 408 || status === 429 || status >= 500;
 }
 
+export function deviceTimezone(): string | undefined {
+  try {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return typeof zone === "string" && zone.length > 0 ? zone : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
   if (typeof timer === "object" && timer && "unref" in timer) {
     (timer as { unref: () => void }).unref();
@@ -102,9 +111,14 @@ export class Anykpi {
 
   identify(user: User): Promise<void> {
     this.user = user;
+    const properties = { ...(user.properties || {}) };
+    if (!properties.deviceTimezone) {
+      const zone = deviceTimezone();
+      if (zone) properties.deviceTimezone = zone;
+    }
     return this.postJson(IDENTIFY_PATH, {
       userId: user.userId,
-      properties: user.properties || {},
+      properties,
       timestamp: new Date().toISOString(),
       workspaceId: this.config.workspaceId,
     })

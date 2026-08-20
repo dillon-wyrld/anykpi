@@ -40,6 +40,16 @@ describe("CSV parse and mapping", () => {
     }
   });
 
+  it("maps country and timezone aliases on users files", () => {
+    expect(
+      suggestMapping(["user_id", "country", "time_zone"], "users")
+    ).toEqual({
+      user_id: "personId",
+      country: "country",
+      time_zone: "timezone",
+    });
+  });
+
   it("maps common event aliases", () => {
     expect(
       suggestMapping(["user_id", "ts", "event", "id"], "events")
@@ -220,6 +230,68 @@ describe("runCsvImport", () => {
       .where(eq(schema.activity.workspaceId, WS))
       .all();
     expect(activity).toHaveLength(10_000);
+  });
+
+  it("maps country and timezone and updates both on re-import", async () => {
+    const csv =
+      "person_id,name,country,tz\n" +
+      "geo_ada,Ada,US,America/New_York\n" +
+      "geo_grace,Grace,GB,Europe/London\n";
+    const mapping = {
+      person_id: "personId",
+      name: "name",
+      country: "country",
+      tz: "timezone",
+    };
+
+    const first = await runCsvImport({
+      csv,
+      kind: "users",
+      mapping,
+      workspaceId: WS,
+    });
+    expect(first.status).toBe("ok");
+    if (first.status === "ok") {
+      expect(first.result.imported).toBe(2);
+    }
+
+    const people = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.workspaceId, WS))
+      .all();
+    const byId = Object.fromEntries(people.map((row) => [row.personId, row]));
+    expect(byId.geo_ada?.country).toBe("US");
+    expect(byId.geo_ada?.timezone).toBe("America/New_York");
+    expect(byId.geo_grace?.country).toBe("GB");
+    expect(byId.geo_grace?.timezone).toBe("Europe/London");
+
+    const updated =
+      "person_id,name,country,tz\n" +
+      "geo_ada,Ada Lovelace,CA,America/Toronto\n" +
+      "geo_grace,Grace Hopper,GB,Europe/London\n";
+    const again = await runCsvImport({
+      csv: updated,
+      kind: "users",
+      mapping,
+      workspaceId: WS,
+    });
+    expect(again.status).toBe("ok");
+    if (again.status === "ok") {
+      expect(again.result.imported).toBe(0);
+      expect(again.result.skipped).toBe(2);
+    }
+
+    const after = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.workspaceId, WS))
+      .all();
+    const updatedById = Object.fromEntries(after.map((row) => [row.personId, row]));
+    expect(updatedById.geo_ada?.name).toBe("Ada Lovelace");
+    expect(updatedById.geo_ada?.country).toBe("CA");
+    expect(updatedById.geo_ada?.timezone).toBe("America/Toronto");
+    expect(after).toHaveLength(2);
   });
 
   it("derives a stable externalId when the file has none", () => {
