@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCohorts, addDailyTexture, detectSmile, wbrStat, WBR_METRICS, NAMED } from './generators';
+import { buildCohorts, addDailyTexture, detectSmile, wbrStat, WBR_METRICS, NAMED, demoGeo } from './generators';
 
 /**
  * Golden tests for stats functions
@@ -252,5 +252,30 @@ describe('PRNG Stability (golden guard)', () => {
       expect(dave.sd).toBeGreaterThanOrEqual(0);
       expect(dave.sd).toBeLessThan(7); // Within first week
     }
+  });
+});
+
+describe("demoGeo", () => {
+  it("is deterministic per personId", () => {
+    expect(demoGeo("p42")).toEqual(demoGeo("p42"));
+  });
+
+  it("always yields a country and a K-suffixed income band", () => {
+    for (let i = 1; i <= 200; i++) {
+      const g = demoGeo(`p${i}`);
+      expect(g.country).toMatch(/^[A-Z]{2}$/);
+      expect(g.incomeBand).toMatch(/^\d+K$/);
+    }
+  });
+
+  it("spreads users across several countries with US heaviest", () => {
+    const counts: Record<string, number> = {};
+    for (let i = 1; i <= 600; i++) {
+      const { country } = demoGeo(`p${i}`);
+      counts[country] = (counts[country] || 0) + 1;
+    }
+    expect(Object.keys(counts).length).toBeGreaterThanOrEqual(5);
+    const max = Math.max(...Object.values(counts));
+    expect(counts["US"]).toBe(max);
   });
 });

@@ -511,3 +511,40 @@ export function generateCalendar(startDate: Date, days: number): CalendarEvent[]
   
   return events;
 }
+
+/* ============================================================
+ * Demo geography + income — powers the user hover card's
+ * "android · 🇧🇷 BR · $34K/yr" meta line.
+ *
+ * ⚠️ Uses its OWN hash, never the shared rnd() stream — one extra
+ * draw there shifts every pinned canonical user (the recorded
+ * draw-order lesson). Deterministic per personId across reseeds.
+ * ============================================================ */
+
+/** Weighted toward the prototype's timezone cast: US-heavy, then CA/BR/GB/FR/DE/IN/JP. */
+const GEO_COUNTRIES = [
+  "US", "US", "US", "US", "US", "US",
+  "CA", "CA", "CA",
+  "BR", "BR",
+  "GB", "GB",
+  "FR", "FR",
+  "DE",
+  "IN",
+  "JP",
+];
+
+const INCOME_BANDS_K = [18, 24, 28, 34, 41, 48, 55, 62, 74, 88, 96, 110, 125, 140];
+
+function geoHash(s: string): number {
+  let h = 9;
+  for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 387420489) >>> 0;
+  return h;
+}
+
+export function demoGeo(personId: string): { country: string; incomeBand: string } {
+  const h = geoHash(personId);
+  return {
+    country: GEO_COUNTRIES[h % GEO_COUNTRIES.length],
+    incomeBand: `${INCOME_BANDS_K[(h >>> 5) % INCOME_BANDS_K.length]}K`,
+  };
+}

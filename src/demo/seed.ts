@@ -26,8 +26,7 @@ import {
   wbrStat,
   generateCalendar,
   CALENDAR_SOURCES,
-  NAMED
-} from "./generators";
+  NAMED, demoGeo} from "./generators";
 import { buildDemoRevenue, preferPayerIds } from "./revenue";
 import {
   foundedAtConfigKey,
@@ -104,12 +103,15 @@ export async function seedDemo() {
       personIds.push(pid);
       if (user.name) namedPersonIds.push(pid);
 
+      const geo = demoGeo(pid);
       await db.insert(schema.users).values({
         personId: pid,
         name: user.name || `User ${personId - 1}`,
         email: user.name ? `${user.name.toLowerCase()}@example.com` : null,
         emoji: user.emoji,
         platform: user.platform,
+        country: geo.country,
+        incomeBand: geo.incomeBand,
         signupDate: signupDate,
         cluster: cluster,
         workspaceId: WORKSPACE

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback, type MouseEvent as ReactMouse
 import { useRouter, useSearchParams } from "next/navigation";
 import PersonPanel from "@/components/PersonPanel";
 import { useFreshness } from "@/components/useFreshness";
+import { clusterNote, stripDays, clampCardPosition } from "@/components/user-card";
 
 interface User {
   personId: string;
@@ -763,10 +764,14 @@ export default function DotPlot({ workspace }: DotPlotProps) {
           }}
           onMouseEnter={(e) => {
             const rect = (e.target as SVGElement).getBoundingClientRect();
+            const pos = clampCardPosition(rect, {
+              width: window.innerWidth,
+              height: window.innerHeight,
+            });
             setUserCard({
               visible: true,
-              x: rect.left + 40,
-              y: rect.bottom + 6,
+              x: pos.x,
+              y: pos.y,
               user,
             });
           }}
@@ -1206,31 +1211,70 @@ export default function DotPlot({ workspace }: DotPlotProps) {
         </svg>
       </div>
 
-      {/* User card tooltip */}
+      {/* User hover card — ported from the design of record (spec/prototype.html, .ucard) */}
       {userCard.visible && userCard.user && (
         <div
-          className="fixed z-50 bg-panel border border-border rounded-lg shadow-lg p-3 min-w-[200px]"
+          className="fixed z-50 w-[250px] bg-panel border border-border rounded-xl p-3"
           style={{
             left: `${userCard.x}px`,
             top: `${userCard.y}px`,
+            boxShadow: "0 8px 30px rgba(0,0,0,.14)",
           }}
+          data-testid="user-hover-card"
         >
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">{userCard.user.emoji}</span>
-            <div>
-              <div className="font-semibold text-sm">{userCard.user.name}</div>
-              <div className="text-xs text-sub">
-                {userCard.user.platform} · {FLAGS[userCard.user.country] || ""}{" "}
-                {userCard.user.country}
+          <div className="flex items-center gap-2.5 mb-2">
+            <span className="flex items-center justify-center w-9 h-9 rounded-[10px] bg-accent-soft text-xl flex-none">
+              {userCard.user.emoji}
+            </span>
+            <div className="min-w-0">
+              <div className="font-bold text-sm leading-tight truncate">
+                {userCard.user.name}
+              </div>
+              <div className="text-[11px] text-sub truncate">
+                {[
+                  userCard.user.platform,
+                  userCard.user.country
+                    ? `${FLAGS[userCard.user.country] || ""} ${userCard.user.country}`.trim()
+                    : null,
+                  userCard.user.incomeBand
+                    ? `$${userCard.user.incomeBand}/yr`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </div>
             </div>
           </div>
-          <div className="text-xs text-sub space-y-1">
-            <div>🔥 streak {userCard.user.streak}</div>
-            <div>📅 {userCard.user.activeCount} active days</div>
-            {userCard.user.paid && <div>💸 paid</div>}
-            {userCard.user.isNew && <div>🐣 new</div>}
-            {userCard.user.churned && <div>👻 churned</div>}
+          {clusterNote(userCard.user.cluster) && (
+            <div className="text-[11.5px] text-sub italic my-1.5">
+              &ldquo;{clusterNote(userCard.user.cluster)}&rdquo;
+            </div>
+          )}
+          <div className="flex gap-[1.5px] mt-1.5" aria-hidden="true">
+            {stripDays(userCard.user.activity).map((active, i) => (
+              <i
+                key={i}
+                className="w-[5px] h-3.5 rounded-[2px] bg-accent"
+                style={{ opacity: active ? 0.85 : 0.15 }}
+              />
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1.5 mt-2 text-[10px]">
+            <span className="bg-hover rounded-[5px] px-1.5 py-0.5">
+              🔥 streak {userCard.user.streak}
+            </span>
+            <span className="bg-hover rounded-[5px] px-1.5 py-0.5">
+              📅 {userCard.user.activeCount} active days
+            </span>
+            <span className="bg-hover rounded-[5px] px-1.5 py-0.5">
+              {userCard.user.paid ? "💸 paid" : "🆓 free"}
+            </span>
+            {userCard.user.isNew && (
+              <span className="bg-hover rounded-[5px] px-1.5 py-0.5">🐣 new</span>
+            )}
+            {userCard.user.churned && (
+              <span className="bg-hover rounded-[5px] px-1.5 py-0.5">👻 churned</span>
+            )}
           </div>
         </div>
       )}
