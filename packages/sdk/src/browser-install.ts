@@ -1,10 +1,11 @@
-import { Anykpi, identify, init, track } from "./index";
+import { Anykpi, flush, identify, init, track } from "./index";
 import type { AnykpiConfig, EventProperties, User } from "./types";
 
 export type AnykpiBrowserApi = {
   init: typeof init;
   identify: typeof identify;
   track: typeof track;
+  flush: typeof flush;
   Anykpi: typeof Anykpi;
 };
 
@@ -46,6 +47,10 @@ function applyCommand(api: AnykpiBrowserApi, command: QueuedCommand): void {
   }
   if (method === "track") {
     void api.track(args[0] as string, args[1] as EventProperties | undefined);
+    return;
+  }
+  if (method === "flush") {
+    void api.flush();
   }
 }
 
@@ -55,6 +60,7 @@ export function installAnykpiBrowser(scope: AnykpiBrowserScope): AnykpiBrowserAp
     init,
     identify,
     track,
+    flush,
     Anykpi,
   };
 

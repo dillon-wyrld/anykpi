@@ -336,6 +336,35 @@ export const IngestEventRequestSchema = z.object({
   workspaceId: z.string().default('live'),
 });
 
+/** Max events accepted by POST /api/ingest/batch. */
+export const BATCH_INGEST_MAX_EVENTS = 1000;
+
+/**
+ * One activity event in a batch. `idempotencyKey` and `externalId` are
+ * aliases stored as activity.externalId (unique with workspaceId).
+ */
+export const IngestBatchEventSchema = z.object({
+  userId: z.string().min(1),
+  event: z.string().min(1).optional(),
+  eventName: z.string().min(1).optional(),
+  properties: z.record(z.unknown()).optional(),
+  timestamp: z.string().optional(),
+  idempotencyKey: z.string().min(1).max(256).optional(),
+  externalId: z.string().min(1).max(256).optional(),
+});
+
+export const IngestBatchRequestSchema = z.object({
+  workspaceId: z.string().optional(),
+  events: z.array(IngestBatchEventSchema).min(1).max(BATCH_INGEST_MAX_EVENTS),
+});
+
+export const IngestBatchResponseSchema = z.object({
+  success: z.literal(true),
+  accepted: z.number().int().nonnegative(),
+  inserted: z.number().int().nonnegative(),
+  duplicates: z.number().int().nonnegative(),
+});
+
 /** Per-source slug used by connect and webhook-in (`/api/ingest/webhook/:source`). */
 export const SourceSlugSchema = z
   .string()
@@ -531,6 +560,9 @@ export type SyncTriggerResponse = z.infer<typeof SyncTriggerResponseSchema>;
 export type QueryUsersRequest = z.infer<typeof QueryUsersRequestSchema>;
 export type IngestIdentifyRequest = z.infer<typeof IngestIdentifyRequestSchema>;
 export type IngestEventRequest = z.infer<typeof IngestEventRequestSchema>;
+export type IngestBatchEvent = z.infer<typeof IngestBatchEventSchema>;
+export type IngestBatchRequest = z.infer<typeof IngestBatchRequestSchema>;
+export type IngestBatchResponse = z.infer<typeof IngestBatchResponseSchema>;
 export type IngestWebhookRequest = z.infer<typeof IngestWebhookRequestSchema>;
 export type IngestWebhookResponse = z.infer<typeof IngestWebhookResponseSchema>;
 export type SourceSlug = z.infer<typeof SourceSlugSchema>;

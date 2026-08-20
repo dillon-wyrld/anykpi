@@ -42,6 +42,7 @@ OpenAPI spec: /api/openapi
 - POST /api/v1/keys/downgrade — convert legacy write keys to read (\`anykpi keys downgrade\`)
 - POST /api/v1/ingest/identify — create or update a user
 - POST /api/v1/ingest/event — track an activity event
+- POST /api/ingest/batch — batch track (up to 1k events; duplicates no-op on externalId)
 
 Realtime push (HMAC, not an API key): POST /api/ingest/webhook/{source} — see docs/webhooks.md.
 
