@@ -144,7 +144,7 @@ export function createProgram(): Command {
 
   program
     .command("config")
-    .description("Get or set the company profile (name, founded date, home city)")
+    .description("Read or update the company profile")
     .option("--name <name>", "Company display name")
     .option("--founded <date>", "Founded date (YYYY-MM-DD)")
     .option("--city <label>", "Home city label")
