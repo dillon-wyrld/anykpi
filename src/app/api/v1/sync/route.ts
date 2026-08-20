@@ -7,6 +7,7 @@ import {
   SyncTriggerRequestSchema,
   SyncTriggerResponseSchema,
 } from '@/core/contracts';
+import { AUDIT_ACTIONS, recordWriteAudit } from '@/core/audit';
 import { gate } from '@/core/session-auth';
 import {
   badRequest,
@@ -102,6 +103,13 @@ export async function POST(request: NextRequest) {
         const result = await sync(source, workspace);
         return { source, ...result };
       })
+    );
+
+    await recordWriteAudit(
+      gated.auth,
+      workspace,
+      AUDIT_ACTIONS.syncTrigger,
+      sourceArg ?? 'all'
     );
 
     const response = SyncTriggerResponseSchema.parse({

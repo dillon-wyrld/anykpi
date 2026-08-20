@@ -36,7 +36,14 @@ export type AuthorizeOptions = {
   allowAnonymous?: boolean;
 };
 
-export type AuthActor = "anonymous" | "env" | "hashed";
+/** `session` is reserved for the browser-session ticket; hashed keys store their id. */
+export type AuthActor = "anonymous" | "env" | "hashed" | "session";
+
+/** Actor strings persisted on the audit log (key id, `env`, or `session`). */
+export const AUDIT_ACTOR_ENV = "env";
+export const AUDIT_ACTOR_SESSION = "session";
+/** HMAC / signature inbound writes are not a key, env, or session. */
+export const AUDIT_ACTOR_WEBHOOK = "webhook";
 
 export type AuthOk = {
   ok: true;
@@ -51,6 +58,14 @@ export type AuthOk = {
 
 export type AuthDenied = { ok: false; status: 401 | 403 | 503; error: string };
 export type AuthResult = AuthOk | AuthDenied;
+
+/** Map a verified principal onto the audit actor column. */
+export function actorFromAuth(auth: AuthOk): string {
+  if (auth.actor === "session") return AUDIT_ACTOR_SESSION;
+  if (auth.actor === "env") return AUDIT_ACTOR_ENV;
+  if (auth.keyId) return auth.keyId;
+  return AUDIT_ACTOR_ENV;
+}
 
 function header(request: RequestLike, name: string): string | null {
   return request.headers.get(name);

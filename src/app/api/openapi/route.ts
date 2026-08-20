@@ -24,6 +24,7 @@ import {
   APIKeyDowngradeResponseSchema,
   SessionCreateRequestSchema,
   SessionStatusResponseSchema,
+  AuditListResponseSchema,
   ErrorResponseSchema,
   IngestIdentifyRequestSchema,
   IngestEventRequestSchema,
@@ -73,7 +74,8 @@ export async function GET(request: NextRequest) {
       { name: 'Export', description: 'Full export of users, events, and read models' },
       { name: 'Ingest', description: 'Direct event collection' },
       { name: 'Keys', description: 'API key management' },
-      { name: 'Session', description: 'Browser session cookie for live dashboard reads' }
+      { name: 'Session', description: 'Browser session cookie for live dashboard reads' },
+      { name: 'Audit', description: 'Action audit log' }
     ],
     paths: {
       '/api/v1/overview': {
@@ -344,6 +346,70 @@ export async function GET(request: NextRequest) {
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(FreshnessResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Live workspace requires an API key',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/v1/audit': {
+        get: {
+          tags: ['Audit'],
+          summary: 'Query the action audit log',
+          description:
+            'Every write records actor (key id, env, or session), action, subject, and timestamp. Filter by actor and since/until to answer what an agent did in a window.',
+          parameters: [
+            {
+              name: 'workspace',
+              in: 'query',
+              schema: { type: 'string', default: 'demo' }
+            },
+            {
+              name: 'actor',
+              in: 'query',
+              schema: { type: 'string' },
+              description: 'Key id, env, session, or webhook'
+            },
+            {
+              name: 'action',
+              in: 'query',
+              schema: { type: 'string' }
+            },
+            {
+              name: 'since',
+              in: 'query',
+              schema: { type: 'string', format: 'date-time' }
+            },
+            {
+              name: 'until',
+              in: 'query',
+              schema: { type: 'string', format: 'date-time' }
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              schema: { type: 'integer', default: 100 }
+            },
+            {
+              name: 'offset',
+              in: 'query',
+              schema: { type: 'integer', default: 0 }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Audit entries, newest first',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(AuditListResponseSchema)
                 }
               }
             },

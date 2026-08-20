@@ -589,6 +589,31 @@ export const APIKeyDowngradeResponseSchema = z.object({
   downgraded: z.array(z.string()),
 });
 
+export const AuditEntrySchema = z.object({
+  id: z.number().int(),
+  actor: z.string(),
+  action: z.string(),
+  subject: z.string(),
+  createdAt: z.string().datetime(),
+  workspaceId: z.string(),
+});
+
+export const AuditListResponseSchema = z.object({
+  workspace: z.string(),
+  entries: z.array(AuditEntrySchema),
+  total: z.number().int().nonnegative(),
+});
+
+export const AuditQuerySchema = z.object({
+  workspace: z.string().default('demo'),
+  actor: z.string().optional(),
+  action: z.string().optional(),
+  since: z.string().datetime().optional(),
+  until: z.string().datetime().optional(),
+  limit: z.coerce.number().int().min(1).max(1000).default(100),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 // ========== Error Response ==========
 
 export const ErrorResponseSchema = z.object({
@@ -660,6 +685,9 @@ export type APIKeyCreateRequest = z.infer<typeof APIKeyCreateRequestSchema>;
 export type APIKeyResponse = z.infer<typeof APIKeyResponseSchema>;
 export type APIKeyDowngradeRequest = z.infer<typeof APIKeyDowngradeRequestSchema>;
 export type APIKeyDowngradeResponse = z.infer<typeof APIKeyDowngradeResponseSchema>;
+export type AuditEntry = z.infer<typeof AuditEntrySchema>;
+export type AuditListResponse = z.infer<typeof AuditListResponseSchema>;
+export type AuditQuery = z.infer<typeof AuditQuerySchema>;
 export type ResearchOutgoingField = z.infer<typeof ResearchOutgoingFieldSchema>;
 export type ResearchCandidate = z.infer<typeof ResearchCandidateSchema>;
 export type ResearchClaim = z.infer<typeof ResearchClaimSchema>;

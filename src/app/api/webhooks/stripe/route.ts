@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AUDIT_ACTIONS, recordWebhookAudit } from "@/core/audit";
 import { loadSourceConfig } from "@/core/sources";
 import {
   badRequest,
@@ -52,6 +53,13 @@ export async function POST(request: NextRequest) {
     }
 
     const applied = await applyStripeWebhookEvent(workspace, event);
+    const subject =
+      typeof event.id === "string" && event.id
+        ? event.id
+        : typeof event.type === "string" && event.type
+          ? event.type
+          : STRIPE_SOURCE;
+    await recordWebhookAudit(workspace, AUDIT_ACTIONS.webhookStripe, subject);
     return NextResponse.json({ ok: true, applied });
   } catch {
     logServerError("Stripe webhook failed");

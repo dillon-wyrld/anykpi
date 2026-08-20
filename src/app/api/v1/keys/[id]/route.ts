@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
+import { AUDIT_ACTIONS, recordWriteAudit } from "@/core/audit";
 import { authorize, authResponse, LIVE_WORKSPACE } from "@/core/auth";
 import { internalError, logServerError } from "@/core/errors";
 
@@ -33,11 +34,17 @@ export async function DELETE(
       (auth.canChooseWorkspace ||
         (key.workspaceId || LIVE_WORKSPACE) === auth.keyWorkspace);
 
-    if (!inScope) {
+    if (!key || !inScope) {
       return NextResponse.json({ error: "Not Found" }, { status: 404 });
     }
 
     await db.delete(schema.apiKeys).where(eq(schema.apiKeys.id, id));
+    await recordWriteAudit(
+      auth,
+      key.workspaceId || LIVE_WORKSPACE,
+      AUDIT_ACTIONS.keysRevoke,
+      id
+    );
     return NextResponse.json({ id, revoked: true });
   } catch {
     logServerError("Revoke API key failed");

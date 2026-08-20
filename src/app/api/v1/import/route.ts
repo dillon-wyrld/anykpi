@@ -4,6 +4,7 @@ import {
   ImportRequestSchema,
   ImportResponseSchema,
 } from "@/core/contracts";
+import { AUDIT_ACTIONS, recordWriteAudit } from "@/core/audit";
 import { gate } from "@/core/session-auth";
 import {
   badRequest,
@@ -97,6 +98,12 @@ export async function POST(request: NextRequest) {
       csvSourceConfig(outcome.result.kind, mapping ?? {})
     );
 
+    await recordWriteAudit(
+      gated.auth,
+      workspaceId,
+      AUDIT_ACTIONS.importCsv,
+      outcome.result.kind
+    );
     return NextResponse.json(ImportResponseSchema.parse(outcome.result));
   } catch {
     logServerError("CSV import failed");

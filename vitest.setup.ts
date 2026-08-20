@@ -168,6 +168,18 @@ sqlite.exec(`
     role TEXT,
     workspace_id TEXT NOT NULL DEFAULT 'demo'
   );
+  CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workspace_id TEXT NOT NULL DEFAULT 'live',
+    actor TEXT NOT NULL,
+    action TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS audit_log_workspace_created_idx
+    ON audit_log (workspace_id, created_at);
+  CREATE INDEX IF NOT EXISTS audit_log_workspace_actor_created_idx
+    ON audit_log (workspace_id, actor, created_at);
   CREATE TABLE IF NOT EXISTS cal_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source TEXT NOT NULL,

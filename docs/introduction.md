@@ -86,6 +86,7 @@ Returns:
 - `GET /api/v1/calendar` — Multi-source events
 - `GET /api/v1/sync` — Connector status
 - `GET /api/v1/freshness` — Last ingest + per-source last-sync stamps
+- `GET /api/v1/audit` — Action audit log (filter by actor and since/until)
 - `POST /api/v1/sync` — Trigger a sync (one source or all; requires an API key)
 - `POST /api/v1/import` — Import users or events from CSV (requires an API key)
 - `GET /api/v1/export` — Users, events, and read models as JSON or CSV (requires a key on live)

@@ -254,6 +254,31 @@ export const sources = sqliteTable("sources", {
   ),
 }));
 
+/**
+ * Append-only action log. Every keyed write (ingest, config, keys, sync,
+ * MCP mutation) records actor + action + subject + timestamp so a founder
+ * can ask what an agent did.
+ */
+export const auditLog = sqliteTable("audit_log", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  workspaceId: text("workspace_id").notNull().default("live"),
+  /** Key id, `env`, or `session`. HMAC inbound writes use `webhook`. */
+  actor: text("actor").notNull(),
+  action: text("action").notNull(),
+  subject: text("subject").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+}, (table) => ({
+  workspaceCreatedIdx: index("audit_log_workspace_created_idx").on(
+    table.workspaceId,
+    table.createdAt
+  ),
+  workspaceActorCreatedIdx: index("audit_log_workspace_actor_created_idx").on(
+    table.workspaceId,
+    table.actor,
+    table.createdAt
+  ),
+}));
+
 /** Cash balance and runway. Banking connectors fill this later. */
 export const balanceSnapshots = sqliteTable("balance_snapshots", {
   id: integer("id").primaryKey({ autoIncrement: true }),

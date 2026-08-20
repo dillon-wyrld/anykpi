@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
+import { AUDIT_ACTIONS, recordWebhookAudit } from "@/core/audit";
 import { LIVE_WORKSPACE } from "@/core/auth";
 import {
   badRequest,
@@ -76,6 +77,7 @@ export async function POST(
       await writeActivity(workspace, event);
     }
 
+    await recordWebhookAudit(workspace, AUDIT_ACTIONS.ingestWebhook, source);
     return NextResponse.json({ success: true, accepted: events.length });
   } catch {
     logServerError("Ingest webhook failed");
