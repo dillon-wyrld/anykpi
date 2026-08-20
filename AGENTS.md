@@ -34,6 +34,7 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 - `POST /api/v1/outreach` — queue a waiting draft (write scope)
 - `POST /api/v1/outreach/approve` — approve a draft (browser session or admin key; write cannot approve)
 - `POST /api/v1/outreach/send` — deliver an approved draft (unapproved drafts are refused)
+- `POST /api/v1/outreach/outcome` — tag replied / interviewed / converted (stored in config; PMF+ shows conversion by cluster)
 - `POST /api/v1/connect` — store per-source credentials (encrypted at rest; source `csv` stores import mapping)
 - `POST /api/v1/import` — CSV import for users and events (uses the sources store; column-mapping preview)
 - `GET /api/v1/export` — users, events, and read models as JSON or CSV files
@@ -55,7 +56,7 @@ HTTP `POST /api/mcp`. stdio: `src/mcp/server.ts`. `tools/list` is open. `tools/c
 
 ## CLI
 
-`npx @anykpi/cli` (`packages/cli`): `login` (alias `key`), `keys`, `workspaces`, `connect`, `import`, `export`, `identify`, `track`, `overview`, `users`, `cohorts`, `wbr`, `calendar`, `sync`. `login` requires an operator key and mints read by default (`--scope write` for ingest). `anykpi keys downgrade` converts legacy write keys to read. `connect` stores source config only (`anykpi connect csv` saves import mapping). `import` loads a users or events CSV. `export` writes JSON or CSV of users, events, and read models (`docs/backup.md`).
+`npx @anykpi/cli` (`packages/cli`): `login` (alias `key`), `keys`, `workspaces`, `connect`, `import`, `export`, `identify`, `track`, `overview`, `users`, `cohorts`, `wbr`, `calendar`, `sync`, `outreach`. `login` requires an operator key and mints read by default (`--scope write` for ingest). `anykpi keys downgrade` converts legacy write keys to read. `connect` stores source config only (`anykpi connect csv` saves import mapping). `import` loads a users or events CSV. `export` writes JSON or CSV of users, events, and read models (`docs/backup.md`). `outreach` lists drafts or tags `--outcome replied|interviewed|converted`.
 
 ## Connectors
 

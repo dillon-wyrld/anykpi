@@ -27,8 +27,10 @@ import {
   AuditListResponseSchema,
   OutreachQueueRequestSchema,
   OutreachIdRequestSchema,
+  OutreachOutcomeRequestSchema,
   OutreachListResponseSchema,
   OutreachDraftResponseSchema,
+  OutreachOutcomeResponseSchema,
   OutreachSendResponseSchema,
   ErrorResponseSchema,
   IngestIdentifyRequestSchema,
@@ -81,7 +83,7 @@ export async function GET(request: NextRequest) {
       { name: 'Keys', description: 'API key management' },
       { name: 'Session', description: 'Browser session cookie for live dashboard reads' },
       { name: 'Audit', description: 'Action audit log' },
-      { name: 'Outreach', description: 'Persisted PMF+ outreach drafts with per-send approval' }
+      { name: 'Outreach', description: 'Persisted PMF+ outreach drafts with per-send approval and outcome tags' }
     ],
     paths: {
       '/api/v1/overview': {
@@ -435,7 +437,8 @@ export async function GET(request: NextRequest) {
         get: {
           tags: ['Outreach'],
           summary: 'List outreach drafts',
-          description: 'Persisted drafts (waiting / approved / sent) for the workspace.',
+          description:
+            'Persisted drafts (waiting / approved / sent) for the workspace, including outcome tags and conversion by cluster.',
           parameters: [
             {
               name: 'workspace',
@@ -512,6 +515,40 @@ export async function GET(request: NextRequest) {
             },
             403: {
               description: 'Write-scoped key cannot approve',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/v1/outreach/outcome': {
+        post: {
+          tags: ['Outreach'],
+          summary: 'Tag an outreach outcome',
+          description:
+            'Mark a persisted draft replied, interviewed, or converted. Tags are stored in config keyed by outreach id. The PMF+ view rolls conversion by cluster.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(OutreachOutcomeRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Draft tagged; conversion by cluster included',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(OutreachOutcomeResponseSchema)
+                }
+              }
+            },
+            404: {
+              description: 'Outreach draft not found',
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(ErrorResponseSchema)

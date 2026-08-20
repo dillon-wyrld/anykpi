@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ResearchResult } from "@/core/contracts";
+import { outreachConversionByCluster } from "@/core/outreach-outcomes";
 import {
   buildPmfOutreachMessage,
   demoPmfRuns,
@@ -168,6 +169,7 @@ describe("outreach + header counts", () => {
     expect(queue).toHaveLength(3);
     expect(queue.every((d) => d.state === "waiting")).toBe(true);
     expect(queue.map((d) => d.personId)).toEqual(["dave", "mia", "nova"]);
+    expect(queue.every((d) => d.outcome == null)).toBe(true);
 
     const totals = pmfRunTotals([{ ...run, queue }]);
     expect(totals).toEqual({
@@ -175,6 +177,27 @@ describe("outreach + header counts", () => {
       peopleResearched: 3,
       queuedTotal: 3,
       waitingCount: 3,
+    });
+  });
+
+  it("shows conversion by cluster from tagged outreach", () => {
+    const conversion = outreachConversionByCluster([
+      { cluster: "🔥 Power daily", sent: true, outcome: "converted" },
+      { cluster: "🔥 Power daily", sent: true, outcome: "interviewed" },
+      { cluster: "🌴 Weekenders", sent: true, outcome: "replied" },
+    ]);
+    expect(conversion[0]).toMatchObject({
+      cluster: "🔥 Power daily",
+      converted: 1,
+      interviewed: 2,
+      replied: 2,
+      conversionRate: 0.5,
+    });
+    expect(conversion[1]).toMatchObject({
+      cluster: "🌴 Weekenders",
+      converted: 0,
+      replied: 1,
+      conversionRate: 0,
     });
   });
 });

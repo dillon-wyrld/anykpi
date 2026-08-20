@@ -28,6 +28,10 @@ import {
   type PmfDraft,
   type PmfRun,
 } from "@/core/views/pmf";
+import {
+  listOutreachOutcomes,
+  loadOutreachConversion,
+} from "@/core/outreach-outcomes";
 import { listOutreach } from "@/outreach";
 import { parseOutreachState } from "@/outreach";
 
@@ -103,13 +107,18 @@ export async function GET(request: NextRequest) {
       pmfRunFromResearch(result)
     );
     const runs = workspace === "demo" ? [...cachedRuns, ...demoPmfRuns()] : cachedRuns;
-    const persisted = await listOutreach(workspace);
+    const [persisted, outcomes, conversion] = await Promise.all([
+      listOutreach(workspace),
+      listOutreachOutcomes(workspace),
+      loadOutreachConversion(workspace),
+    ]);
     const queue: PmfDraft[] = persisted.map((row) => ({
       id: row.id,
       personId: row.personId,
       message: row.body,
       state: parseOutreachState(row.state),
       approvedBy: row.approvedBy,
+      outcome: outcomes.get(row.id) ?? null,
     }));
     const byPerson = new Map(queue.map((draft) => [draft.personId, draft]));
     for (const run of runs) {
@@ -121,7 +130,7 @@ export async function GET(request: NextRequest) {
 
     const personId = searchParams.get("user");
     if (!personId) {
-      return NextResponse.json({ runs, candidates, queue });
+      return NextResponse.json({ runs, candidates, queue, conversion });
     }
 
     const user = await loadUser(workspace, personId);
@@ -133,6 +142,7 @@ export async function GET(request: NextRequest) {
       runs,
       candidates,
       queue,
+      conversion,
       disclosure: discloseResearch(toSubject(user)),
     });
   } catch {

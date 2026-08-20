@@ -620,6 +620,8 @@ export const AuditListResponseSchema = z.object({
 
 export const OutreachStateSchema = z.enum(['waiting', 'approved', 'sent']);
 
+export const OutreachOutcomeSchema = z.enum(['replied', 'interviewed', 'converted']);
+
 export const OutreachDraftSchema = z.object({
   id: z.string(),
   personId: z.string(),
@@ -630,6 +632,7 @@ export const OutreachDraftSchema = z.object({
   approvedAt: z.string().datetime().nullable(),
   sentAt: z.string().datetime().nullable(),
   workspaceId: z.string(),
+  outcome: OutreachOutcomeSchema.nullable().optional(),
 });
 
 export const OutreachQueueRequestSchema = z.object({
@@ -643,6 +646,22 @@ export const OutreachIdRequestSchema = z.object({
   workspaceId: z.string().optional(),
 });
 
+export const OutreachOutcomeRequestSchema = z.object({
+  id: z.string().min(1),
+  outcome: OutreachOutcomeSchema.nullable(),
+  workspaceId: z.string().optional(),
+});
+
+export const OutreachConversionByClusterSchema = z.object({
+  cluster: z.string(),
+  outreach: z.number().int().nonnegative(),
+  sent: z.number().int().nonnegative(),
+  replied: z.number().int().nonnegative(),
+  interviewed: z.number().int().nonnegative(),
+  converted: z.number().int().nonnegative(),
+  conversionRate: z.number().nonnegative(),
+});
+
 export const OutreachDeliverySchema = z.object({
   id: z.number().int(),
   outreachId: z.string(),
@@ -654,11 +673,18 @@ export const OutreachDeliverySchema = z.object({
 
 export const OutreachListResponseSchema = z.object({
   drafts: z.array(OutreachDraftSchema),
+  conversion: z.array(OutreachConversionByClusterSchema).optional(),
   view_url: z.string().optional(),
 });
 
 export const OutreachDraftResponseSchema = z.object({
   draft: OutreachDraftSchema,
+  view_url: z.string().optional(),
+});
+
+export const OutreachOutcomeResponseSchema = z.object({
+  draft: OutreachDraftSchema,
+  conversion: z.array(OutreachConversionByClusterSchema),
   view_url: z.string().optional(),
 });
 
@@ -754,12 +780,16 @@ export type AuditEntry = z.infer<typeof AuditEntrySchema>;
 export type AuditListResponse = z.infer<typeof AuditListResponseSchema>;
 export type AuditQuery = z.infer<typeof AuditQuerySchema>;
 export type OutreachState = z.infer<typeof OutreachStateSchema>;
+export type OutreachOutcome = z.infer<typeof OutreachOutcomeSchema>;
 export type OutreachDraft = z.infer<typeof OutreachDraftSchema>;
 export type OutreachQueueRequest = z.infer<typeof OutreachQueueRequestSchema>;
 export type OutreachIdRequest = z.infer<typeof OutreachIdRequestSchema>;
+export type OutreachOutcomeRequest = z.infer<typeof OutreachOutcomeRequestSchema>;
+export type OutreachConversionByCluster = z.infer<typeof OutreachConversionByClusterSchema>;
 export type OutreachDelivery = z.infer<typeof OutreachDeliverySchema>;
 export type OutreachListResponse = z.infer<typeof OutreachListResponseSchema>;
 export type OutreachDraftResponse = z.infer<typeof OutreachDraftResponseSchema>;
+export type OutreachOutcomeResponse = z.infer<typeof OutreachOutcomeResponseSchema>;
 export type OutreachSendResponse = z.infer<typeof OutreachSendResponseSchema>;
 export type ResearchOutgoingField = z.infer<typeof ResearchOutgoingFieldSchema>;
 export type ResearchCandidate = z.infer<typeof ResearchCandidateSchema>;

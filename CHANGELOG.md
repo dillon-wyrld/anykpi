@@ -37,6 +37,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Outreach outcome tracking (ANY-27): tag a draft `replied`,
+  `interviewed`, or `converted` from the PMF+ queue or
+  `anykpi outreach --id … --outcome`. Tags live in the existing
+  `config` table (keyed by outreach id) so schema.ts stays untouched.
+  The PMF+ view and `GET /api/v1/outreach` roll conversion by cluster.
 - Outreach delivery with structural per-send approval (ANY-26): drafts
   persist in `outreach` (waiting / approved / sent). The only delivery
   function takes a persisted approval record and refuses anything else —

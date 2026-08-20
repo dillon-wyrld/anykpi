@@ -31,6 +31,7 @@ export const AUDIT_ACTIONS = {
   outreachQueue: "outreach.queue",
   outreachApprove: "outreach.approve",
   outreachSend: "outreach.send",
+  outreachOutcome: "outreach.outcome",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -54,6 +55,7 @@ export const WRITE_HTTP_ROUTES = [
   { method: "POST", path: "/api/v1/outreach", action: AUDIT_ACTIONS.outreachQueue },
   { method: "POST", path: "/api/v1/outreach/approve", action: AUDIT_ACTIONS.outreachApprove },
   { method: "POST", path: "/api/v1/outreach/send", action: AUDIT_ACTIONS.outreachSend },
+  { method: "POST", path: "/api/v1/outreach/outcome", action: AUDIT_ACTIONS.outreachOutcome },
 ] as const;
 
 /** Route modules that perform writes (including the MCP mutation hook). */

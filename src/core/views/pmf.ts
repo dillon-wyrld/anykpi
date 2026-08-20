@@ -6,6 +6,7 @@ import type { ResearchResult } from "@/core/contracts";
 
 export type PmfConfidence = "high" | "medium" | "low";
 export type PmfDraftState = "waiting" | "edited" | "approved" | "sent";
+export type PmfOutreachOutcome = "replied" | "interviewed" | "converted";
 
 export interface PmfClaim {
   title: string;
@@ -41,6 +42,7 @@ export interface PmfDraft {
   message: string;
   state: PmfDraftState;
   approvedBy?: string | null;
+  outcome?: PmfOutreachOutcome | null;
 }
 
 export interface PmfGroupRollup {

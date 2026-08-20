@@ -1,13 +1,20 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import type { ResearchCandidate } from "@/core/contracts";
+import type { OutreachConversionByCluster, ResearchCandidate } from "@/core/contracts";
 import {
   generatePmfQueue,
   pmfProgressPct,
   pmfRunTotals,
+  type PmfOutreachOutcome,
   type PmfRun,
 } from "@/core/views/pmf";
+
+const OUTCOME_OPTIONS: Array<{ value: PmfOutreachOutcome; label: string }> = [
+  { value: "replied", label: "Replied" },
+  { value: "interviewed", label: "Interviewed" },
+  { value: "converted", label: "Converted" },
+];
 
 interface PMFProps {
   workspace: string;
@@ -24,6 +31,7 @@ const STANDARD_QUESTIONS = [
 export default function PMF({ workspace }: PMFProps) {
   const [runs, setRuns] = useState<PmfRun[]>([]);
   const [candidates, setCandidates] = useState<ResearchCandidate[]>([]);
+  const [conversion, setConversion] = useState<OutreachConversionByCluster[]>([]);
   const [loading, setLoading] = useState(true);
   const [includeGift, setIncludeGift] = useState(true);
   const [giftAmount, setGiftAmount] = useState("25");
@@ -42,6 +50,7 @@ export default function PMF({ workspace }: PMFProps) {
       .then((data) => {
         setRuns(data.runs || []);
         setCandidates(data.candidates || []);
+        setConversion(data.conversion || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -116,7 +125,13 @@ export default function PMF({ workspace }: PMFProps) {
           }),
         });
         const data = (await response.json()) as {
-          draft?: { id: string; personId: string; body: string; state: "waiting" | "approved" | "sent" };
+          draft?: {
+            id: string;
+            personId: string;
+            body: string;
+            state: "waiting" | "approved" | "sent";
+            outcome?: PmfOutreachOutcome | null;
+          };
           error?: string;
         };
         if (!response.ok || !data.draft) {
@@ -127,10 +142,16 @@ export default function PMF({ workspace }: PMFProps) {
           personId: data.draft.personId,
           message: data.draft.body,
           state: data.draft.state,
+          outcome: data.draft.outcome ?? null,
         };
       })
     );
     setRuns(runs.map((r) => (r.id === run.id ? { ...r, queue: persisted } : r)));
+    const listed = await fetch(`/api/views/pmf?workspace=${encodeURIComponent(workspace)}`);
+    if (listed.ok) {
+      const next = (await listed.json()) as { conversion?: OutreachConversionByCluster[] };
+      setConversion(next.conversion || []);
+    }
   };
 
   const approveDraft = async (runId: string, draftId: string | undefined, personId: string) => {
@@ -157,6 +178,39 @@ export default function PMF({ workspace }: PMFProps) {
                   state: "approved" as const,
                   approvedBy: data.draft?.approvedBy ?? d.approvedBy,
                 }
+              : d
+          ),
+        };
+      })
+    );
+  };
+
+  const tagOutcome = async (
+    runId: string,
+    draftId: string | undefined,
+    personId: string,
+    outcome: PmfOutreachOutcome | null
+  ) => {
+    if (!draftId) return;
+    const response = await fetch("/api/v1/outreach/outcome", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ workspaceId: workspace, id: draftId, outcome }),
+    });
+    if (!response.ok) return;
+    const data = (await response.json()) as {
+      draft?: { outcome?: PmfOutreachOutcome | null };
+      conversion?: OutreachConversionByCluster[];
+    };
+    setConversion(data.conversion ?? conversion);
+    setRuns(
+      runs.map((r) => {
+        if (r.id !== runId) return r;
+        return {
+          ...r,
+          queue: r.queue.map((d) =>
+            d.personId === personId
+              ? { ...d, outcome: data.draft?.outcome ?? outcome }
               : d
           ),
         };
@@ -335,6 +389,55 @@ export default function PMF({ workspace }: PMFProps) {
                 {researching ? "Searching…" : "Approve and search"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {conversion.length > 0 && (
+        <div
+          className="bg-panel border border-border rounded-lg p-4 space-y-3"
+          data-testid="pmf-conversion-by-cluster"
+        >
+          <div>
+            <div className="text-sm font-semibold">Conversion by cluster</div>
+            <div className="text-xs text-sub mt-0.5">
+              Replied / interviewed / converted on outreach — research quality by cluster.
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-left text-faint uppercase tracking-wider">
+                  <th className="pb-2 font-medium">Cluster</th>
+                  <th className="pb-2 font-medium text-right">Outreach</th>
+                  <th className="pb-2 font-medium text-right">Sent</th>
+                  <th className="pb-2 font-medium text-right">Replied</th>
+                  <th className="pb-2 font-medium text-right">Interviewed</th>
+                  <th className="pb-2 font-medium text-right">Converted</th>
+                  <th className="pb-2 font-medium text-right">Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {conversion.map((row) => (
+                  <tr
+                    key={row.cluster}
+                    className="border-t border-border"
+                    data-testid="pmf-conversion-row"
+                    data-cluster={row.cluster}
+                  >
+                    <td className="py-2 pr-3">{row.cluster}</td>
+                    <td className="py-2 text-right">{row.outreach}</td>
+                    <td className="py-2 text-right">{row.sent}</td>
+                    <td className="py-2 text-right">{row.replied}</td>
+                    <td className="py-2 text-right">{row.interviewed}</td>
+                    <td className="py-2 text-right">{row.converted}</td>
+                    <td className="py-2 text-right">
+                      {Math.round(row.conversionRate * 100)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -624,6 +727,34 @@ export default function PMF({ workspace }: PMFProps) {
                               )}
                             </div>
                           </div>
+                          {draft.id && (
+                            <label className="text-xs text-sub flex items-center gap-2">
+                              <span className="uppercase tracking-wider text-[10px] text-faint">
+                                Outcome
+                              </span>
+                              <select
+                                value={draft.outcome ?? ""}
+                                onChange={(e) =>
+                                  void tagOutcome(
+                                    run.id,
+                                    draft.id,
+                                    draft.personId,
+                                    (e.target.value || null) as PmfOutreachOutcome | null
+                                  )
+                                }
+                                className="px-2 py-1 border border-border rounded bg-panel text-xs"
+                                aria-label={`Outreach outcome for ${person.name}`}
+                                data-testid="outreach-outcome"
+                              >
+                                <option value="">—</option>
+                                {OUTCOME_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          )}
                         </div>
 
                         <textarea
