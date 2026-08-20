@@ -18,7 +18,11 @@ export function isPostgresUrl(url) {
   return typeof url === "string" && /^(postgres|postgresql):\/\//i.test(url.trim());
 }
 
-export function migrationsDirFor(env = process.env, cwd = process.cwd()) {
+/**
+ * @param {{ DATABASE_URL?: string, DATABASE_PATH?: string }} [env]
+ * @param {string} [cwd]
+ */
+export function migrationsDirFor(env = {}, cwd = process.cwd()) {
   const dialect = isPostgresUrl(env.DATABASE_URL) ? "pg" : "sqlite";
   return resolve(cwd, "drizzle", dialect);
 }
@@ -101,6 +105,10 @@ export async function applyPostgresMigrations(databaseUrl, migrationsDir) {
   }
 }
 
+/**
+ * @param {{ DATABASE_URL?: string, DATABASE_PATH?: string }} [env]
+ * @param {string} [cwd]
+ */
 export async function initializeSchema(env = process.env, cwd = process.cwd()) {
   const migrationsDir = migrationsDirFor(env, cwd);
   if (isPostgresUrl(env.DATABASE_URL)) {
@@ -118,7 +126,7 @@ function invokedDirectly() {
 }
 
 async function main() {
-  await initializeSchema();
+  await initializeSchema(process.env);
   const child = spawn("node", ["server.js"], { stdio: "inherit", env: process.env });
   process.on("SIGTERM", () => child.kill("SIGTERM"));
   process.on("SIGINT", () => child.kill("SIGINT"));

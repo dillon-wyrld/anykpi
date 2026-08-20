@@ -20,7 +20,7 @@ const expectedTables = catalogTableNames(expected);
 function sqliteCatalog(db: Database.Database) {
   const tables = db
     .prepare(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '__%'"
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ESCAPE '\\'"
     )
     .all() as { name: string }[];
   const catalog: Record<string, string[]> = {};
