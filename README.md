@@ -19,7 +19,7 @@ ANYKPI is an open-source dashboard. The only step is connecting data.
 ### Two On-Ramps (both agent-installable)
 
 **Path 1: Connect existing tools**  
-Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, ICS (`src/connectors/`). Roadmap: GitHub — tools you already pay for. ANYKPI syncs summaries into local read models and never writes back. An agent can do this unattended. Calendar ICS is read-only forever.
+Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub (`src/connectors/`). ANYKPI syncs summaries into local read models and never writes back. An agent can do this unattended. Calendar ICS is read-only forever.
 
 **Path 2: Add ANYKPI events to your product**  
 Don't have PostHog/Mixpanel/Amplitude? Add the ANYKPI SDK. Same step, human or agent. Events land in the same read models the connectors write. Self-hosted, person-level data never leaves your machine.
@@ -175,8 +175,8 @@ Data lives in the SQLite file at `DATABASE_PATH` (default `./data/anykpi.db`, or
 - [x] ICS calendar sync (read-only)
 - [x] ANYKPI SDK for direct event ingestion
 - [x] MCP server for agents
-- [ ] Mercury connectors
-- [ ] GitHub releases
+- [x] Mercury connector
+- [x] GitHub releases
 - [ ] Milestone detector (1000th signup, company birthday, streaks)
 - [ ] Semantic user clustering
 - [x] PMF+ web research

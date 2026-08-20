@@ -39,6 +39,7 @@ describe("connector registry", () => {
   it("lists the shipped connectors keyed by source", () => {
     expect(Object.keys(registry).sort()).toEqual([
       "amplitude",
+      "github",
       "ics",
       "mercury",
       "mixpanel",
@@ -48,6 +49,7 @@ describe("connector registry", () => {
     ]);
     expect(listConnectors().map((c) => c.source).sort()).toEqual([
       "amplitude",
+      "github",
       "ics",
       "mercury",
       "mixpanel",
@@ -62,11 +64,13 @@ describe("connector registry", () => {
     expect(registry.revenuecat.name).toBe("RevenueCat");
     expect(registry.mercury.name).toBe("Mercury");
     expect(registry.ics.name).toBe("Calendar");
+    expect(registry.github.name).toBe("GitHub");
     expect(getConnector("posthog")).toBe(registry.posthog);
     expect(getConnector("stripe")).toBe(registry.stripe);
     expect(getConnector("revenuecat")).toBe(registry.revenuecat);
     expect(getConnector("mercury")).toBe(registry.mercury);
     expect(getConnector("ics")).toBe(registry.ics);
+    expect(getConnector("github")).toBe(registry.github);
   });
 
   it("rejects unknown sources", async () => {

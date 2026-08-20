@@ -1,0 +1,74 @@
+{
+  "source": "github",
+  "description": "Repo snapshot, two published releases, weekly commit cadence",
+  "fixtures": [
+    {
+      "name": "repo",
+      "request": {
+        "method": "GET",
+        "urlPattern": "/repos/fixture-org/fixture-app$"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "full_name": "fixture-org/fixture-app",
+          "stargazers_count": 128
+        }
+      }
+    },
+    {
+      "name": "releases",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/repos/fixture-org/fixture-app/releases"
+      },
+      "response": {
+        "status": 200,
+        "body": [
+          {
+            "id": 20,
+            "tag_name": "v0.0.0-wip",
+            "name": "WIP",
+            "draft": true,
+            "prerelease": false,
+            "published_at": null
+          },
+          {
+            "id": 12,
+            "tag_name": "v1.2.0",
+            "name": "v1.2.0",
+            "draft": false,
+            "prerelease": false,
+            "published_at": "2026-06-01T16:00:00Z"
+          },
+          {
+            "id": 11,
+            "tag_name": "v1.1.0",
+            "name": "v1.1.0",
+            "draft": false,
+            "prerelease": false,
+            "published_at": "2026-03-15T12:00:00Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "commit-activity",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/repos/fixture-org/fixture-app/stats/commit_activity"
+      },
+      "response": {
+        "status": 200,
+        "body": [
+          { "total": 3, "week": 1752451200 },
+          { "total": 5, "week": 1753056000 },
+          { "total": 2, "week": 1753660800 },
+          { "total": 8, "week": 1754265600 },
+          { "total": 4, "week": 1754870400 },
+          { "total": 6, "week": 1755475200 }
+        ]
+      }
+    }
+  ]
+}

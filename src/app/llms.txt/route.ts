@@ -76,7 +76,7 @@ login mints a key via POST /api/v1/keys (default scope read; pass --scope write 
 
 ## Connectors
 
-Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS. Sync is pull-only into local read models; ANYKPI never writes back. Stripe also accepts a signature-verified webhook at POST /api/webhooks/stripe so revenue stays minutes-fresh. Connector setup is the /connect UI or \`anykpi connect\`. Config is encrypted at rest with ANYKPI_SECRET. Env vars are a deprecated read-only fallback. Calendar ICS is read-only forever.
+Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub. Sync is pull-only into local read models; ANYKPI never writes back. Stripe also accepts a signature-verified webhook at POST /api/webhooks/stripe so revenue stays minutes-fresh. Connector setup is the /connect UI or \`anykpi connect\`. Config is encrypted at rest with ANYKPI_SECRET. Env vars are a deprecated read-only fallback. Calendar ICS is read-only forever.
 
 ## More
 

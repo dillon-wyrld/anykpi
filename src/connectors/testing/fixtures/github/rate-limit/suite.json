@@ -1,0 +1,23 @@
+{
+  "source": "github",
+  "description": "429 on repo read",
+  "fixtures": [
+    {
+      "name": "repo-rate-limited",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/repos/fixture-org/fixture-app"
+      },
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "1"
+        },
+        "body": {
+          "message": "API rate limit exceeded",
+          "documentation_url": "https://docs.github.com/rest/overview/rate-limits-for-the-rest-api"
+        }
+      }
+    }
+  ]
+}

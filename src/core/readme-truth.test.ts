@@ -58,8 +58,9 @@ describe("out-of-the-box docs tell the truth", () => {
   });
 
   it("names only shipped connectors as shipped", () => {
-    expect(readme).toMatch(/Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, ICS/);
-    expect(readme).toMatch(/Roadmap: GitHub/);
+    expect(readme).toMatch(
+      /Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub/
+    );
     expect(readme).toContain("src/connectors/");
   });
 

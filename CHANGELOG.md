@@ -37,6 +37,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- GitHub connector (ANY-11): token-based read of releases, stars, and
+  commit cadence. Releases land as calendar events; star count and
+  weekly commits land as WBR context. Token is stored via `/connect`
+  or `anykpi connect github`. Offline fixture tests only.
 - `POST /api/ingest/batch` accepts up to 1k events in one transaction
   (ANY-32). Duplicates no-op on ANY-12's `(workspaceId, externalId)`.
   The SDK buffers `track()` and flushes through the batch path with a
