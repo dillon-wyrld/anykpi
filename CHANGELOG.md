@@ -37,6 +37,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Person deletion that survives re-sync (ANY-38): `DELETE /api/v1/users/{id}`
+  purges the person and their events, cascades through person-level read
+  models, and writes a tombstone (`workspaceId` + external ids) consulted
+  by connector upserts, CSV import, and batch ingest. Key-only — a
+  browser-session DELETE is 403 so the audit row names the deleting
+  actor. Migration `0008_tombstones`.
 - Outreach outcome tracking (ANY-27): tag a draft `replied`,
   `interviewed`, or `converted` from the PMF+ queue or
   `anykpi outreach --id … --outcome`. Tags live in the existing

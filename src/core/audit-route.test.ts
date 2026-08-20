@@ -20,6 +20,7 @@ import { POST as postOutreach } from "@/app/api/v1/outreach/route";
 import { POST as postOutreachApprove } from "@/app/api/v1/outreach/approve/route";
 import { POST as postOutreachSend } from "@/app/api/v1/outreach/send/route";
 import { POST as postOutreachOutcome } from "@/app/api/v1/outreach/outcome/route";
+import { DELETE as deleteUser } from "@/app/api/v1/users/[id]/route";
 import {
   AUDIT_ACTIONS,
   WRITE_HTTP_ROUTES,
@@ -65,6 +66,7 @@ afterEach(async () => {
   await db.delete(schema.personRevenue).where(eq(schema.personRevenue.workspaceId, WS));
   await db.delete(schema.mrrSnapshots).where(eq(schema.mrrSnapshots.workspaceId, WS));
   await db.delete(schema.subscriptionEvents).where(eq(schema.subscriptionEvents.workspaceId, WS));
+  await db.delete(schema.tombstones).where(eq(schema.tombstones.workspaceId, WS));
 });
 
 function asAdmin(url: string, method: string, body?: unknown) {
@@ -381,6 +383,22 @@ const drivers: Record<(typeof WRITE_HTTP_ROUTES)[number]["action"], Driver> = {
     );
     expect(res.status).toBe(200);
     return { actor: AUDIT_ACTOR_ENV, subject: draft.id };
+  },
+  [AUDIT_ACTIONS.usersDelete]: async () => {
+    await db.insert(schema.users).values({
+      personId: "audit-delete",
+      name: "Ada",
+      workspaceId: WS,
+    });
+    const res = await deleteUser(
+      asAdmin(
+        `http://localhost:3000/api/v1/users/audit-delete?workspace=${WS}`,
+        "DELETE"
+      ),
+      { params: Promise.resolve({ id: "audit-delete" }) }
+    );
+    expect(res.status).toBe(200);
+    return { actor: AUDIT_ACTOR_ENV, subject: "audit-delete" };
   },
 };
 

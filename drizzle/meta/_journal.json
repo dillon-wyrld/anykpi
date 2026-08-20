@@ -57,6 +57,13 @@
       "when": 1787209612701,
       "tag": "0007_outreach",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1787210205748,
+      "tag": "0008_tombstones",
+      "breakpoints": true
     }
   ]
 }

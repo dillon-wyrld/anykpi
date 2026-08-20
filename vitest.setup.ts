@@ -161,6 +161,15 @@ sqlite.exec(`
     renewal_date INTEGER,
     workspace_id TEXT NOT NULL DEFAULT 'demo'
   );
+  CREATE TABLE IF NOT EXISTS annotations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    type TEXT NOT NULL,
+    target_type TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    workspace_id TEXT NOT NULL DEFAULT 'demo'
+  );
   CREATE TABLE IF NOT EXISTS seats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     account_id TEXT NOT NULL,
@@ -209,6 +218,16 @@ sqlite.exec(`
     ON outreach_delivery (workspace_id, sent_at);
   CREATE INDEX IF NOT EXISTS outreach_delivery_outreach_idx
     ON outreach_delivery (outreach_id);
+  CREATE TABLE IF NOT EXISTS tombstones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    workspace_id TEXT NOT NULL,
+    external_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS tombstones_workspace_idx
+    ON tombstones (workspace_id);
+  CREATE UNIQUE INDEX IF NOT EXISTS tombstones_workspace_external_uidx
+    ON tombstones (workspace_id, external_id);
   CREATE TABLE IF NOT EXISTS cal_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source TEXT NOT NULL,

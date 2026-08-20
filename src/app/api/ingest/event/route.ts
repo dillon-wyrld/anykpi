@@ -14,6 +14,7 @@ import {
   tooManyRequests,
 } from "@/core/errors";
 import { rateLimit, clientKeyFrom } from "@/core/rate-limit";
+import { isTombstoned } from "@/core/tombstones";
 
 /**
  * POST /api/ingest/event
@@ -45,6 +46,14 @@ export async function POST(request: NextRequest) {
     }
 
     const personId = `person_${userId}`;
+    if (
+      await isTombstoned(workspaceId, {
+        personId,
+        email: typeof properties?.email === "string" ? properties.email : null,
+      })
+    ) {
+      return NextResponse.json({ success: true });
+    }
     const eventDate = new Date(timestamp || Date.now());
 
     let eventClass: "core" | "search" | "share" | "pay" = "core";

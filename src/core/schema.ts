@@ -326,6 +326,24 @@ export const outreachDelivery = sqliteTable("outreach_delivery", {
   outreachIdx: index("outreach_delivery_outreach_idx").on(table.outreachId),
 }));
 
+/**
+ * GDPR tombstone. A deleted person's workspace + external ids stay here
+ * so connector upserts, CSV import, and ingest cannot resurrect them.
+ */
+export const tombstones = sqliteTable("tombstones", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  workspaceId: text("workspace_id").notNull(),
+  /** personId, source user id, email, or account id that must not return. */
+  externalId: text("external_id").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+}, (table) => ({
+  workspaceIdx: index("tombstones_workspace_idx").on(table.workspaceId),
+  workspaceExternalUidx: uniqueIndex("tombstones_workspace_external_uidx").on(
+    table.workspaceId,
+    table.externalId
+  ),
+}));
+
 /** Cash balance and runway. Banking connectors fill this later. */
 export const balanceSnapshots = sqliteTable("balance_snapshots", {
   id: integer("id").primaryKey({ autoIncrement: true }),

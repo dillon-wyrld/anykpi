@@ -33,6 +33,7 @@ export async function clearWorkspace(workspaceId: string) {
   await db.delete(schema.config).where(eq(schema.config.workspaceId, workspaceId));
   await db.delete(schema.metricDefs).where(eq(schema.metricDefs.workspaceId, workspaceId));
   await db.delete(schema.metricPoints).where(eq(schema.metricPoints.workspaceId, workspaceId));
+  await db.delete(schema.tombstones).where(eq(schema.tombstones.workspaceId, workspaceId));
 }
 
 export async function withOfflineSuite(

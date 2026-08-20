@@ -3,6 +3,7 @@ import { count, eq } from "drizzle-orm";
 import { BATCH_INGEST_MAX_EVENTS } from "./contracts";
 import { db } from "./db";
 import * as schema from "./schema";
+import { loadTombstoneSet, matchesTombstone } from "./tombstones";
 import { classifyEventName } from "./webhook";
 
 export { BATCH_INGEST_MAX_EVENTS };
@@ -159,16 +160,21 @@ export function runIngestBatch(
   }
 
   const prepared = prepareBatchEvents(workspaceId, events);
+  const tombstoned = loadTombstoneSet(workspaceId);
+  const users = prepared.users.filter((user) => !matchesTombstone(tombstoned, user));
+  const activity = prepared.activity.filter(
+    (row) => !matchesTombstone(tombstoned, { personId: row.personId })
+  );
   const before = countWorkspaceActivity(workspaceId);
 
   db.transaction((tx) => {
-    for (const batch of chunk(prepared.users, WRITE_CHUNK)) {
+    for (const batch of chunk(users, WRITE_CHUNK)) {
       tx.insert(schema.users)
         .values(batch)
         .onConflictDoNothing({ target: schema.users.personId })
         .run();
     }
-    for (const batch of chunk(prepared.activity, WRITE_CHUNK)) {
+    for (const batch of chunk(activity, WRITE_CHUNK)) {
       tx.insert(schema.activity)
         .values(batch)
         .onConflictDoNothing({

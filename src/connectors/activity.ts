@@ -6,6 +6,7 @@
 import { createHash } from "crypto";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
+import { isTombstoned, loadTombstoneSet, matchesTombstone } from "@/core/tombstones";
 
 export const ACTIVITY_WRITE_BATCH = 500;
 
@@ -48,6 +49,9 @@ export async function insertUserIfAbsent(row: {
   signupDate: Date;
   workspaceId: string;
 }): Promise<number> {
+  if (await isTombstoned(row.workspaceId, row)) {
+    return 0;
+  }
   const written = await db
     .insert(schema.users)
     .values({
@@ -81,9 +85,21 @@ export async function insertActivitiesIdempotent(
   rows: ActivityWrite[]
 ): Promise<number> {
   if (rows.length === 0) return 0;
+  const byWorkspace = new Map<string, Set<string>>();
+  const live: ActivityWrite[] = [];
+  for (const row of rows) {
+    let tombstoned = byWorkspace.get(row.workspaceId);
+    if (!tombstoned) {
+      tombstoned = await loadTombstoneSet(row.workspaceId);
+      byWorkspace.set(row.workspaceId, tombstoned);
+    }
+    if (matchesTombstone(tombstoned, { personId: row.personId })) continue;
+    live.push(row);
+  }
+  if (live.length === 0) return 0;
   let inserted = 0;
-  for (let i = 0; i < rows.length; i += ACTIVITY_WRITE_BATCH) {
-    const batch = rows.slice(i, i + ACTIVITY_WRITE_BATCH);
+  for (let i = 0; i < live.length; i += ACTIVITY_WRITE_BATCH) {
+    const batch = live.slice(i, i + ACTIVITY_WRITE_BATCH);
     const written = await db
       .insert(schema.activity)
       .values(batch)

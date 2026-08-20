@@ -3,6 +3,7 @@ import { count, eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import * as schema from "./schema";
 import type { SourceConfig } from "./sources";
+import { loadTombstoneSet, matchesTombstone } from "./tombstones";
 import {
   applyMapping,
   detectKind,
@@ -374,9 +375,13 @@ export async function runCsvImport(input: CsvImportInput): Promise<CsvImportOutc
     if (errors.length > 0) {
       return { status: "invalid", errors };
     }
+    const tombstoned = await loadTombstoneSet(input.workspaceId);
+    const liveRows = rows.filter(
+      (row) => !matchesTombstone(tombstoned, row)
+    );
     const before = await countWorkspaceUsers(input.workspaceId);
     db.transaction((tx) => {
-      for (const batch of chunk(rows, BATCH)) {
+      for (const batch of chunk(liveRows, BATCH)) {
         tx.insert(schema.users)
           .values(batch)
           .onConflictDoUpdate({
@@ -419,8 +424,13 @@ export async function runCsvImport(input: CsvImportInput): Promise<CsvImportOutc
     return { status: "invalid", errors };
   }
 
+  const tombstoned = await loadTombstoneSet(input.workspaceId);
+  const liveRows = rows.filter(
+    (row) => !matchesTombstone(tombstoned, { personId: row.personId })
+  );
+
   const stubs = new Map<string, UserRow>();
-  for (const row of rows) {
+  for (const row of liveRows) {
     if (stubs.has(row.personId)) continue;
     stubs.set(row.personId, {
       personId: row.personId,
@@ -444,7 +454,7 @@ export async function runCsvImport(input: CsvImportInput): Promise<CsvImportOutc
         .onConflictDoNothing({ target: schema.users.personId })
         .run();
     }
-    for (const batch of chunk(rows, BATCH)) {
+    for (const batch of chunk(liveRows, BATCH)) {
       tx.insert(schema.activity)
         .values(batch)
         .onConflictDoNothing({

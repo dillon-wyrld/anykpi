@@ -32,6 +32,7 @@ OpenAPI spec: /api/openapi
 
 - GET /api/v1/overview — company snapshot (users, activity, retention, PMF signal, exceptions, syncHealth)
 - GET /api/v1/users — query users (cluster, platform, signup dates, limit, offset; total + hasMore + nextOffset)
+- DELETE /api/v1/users/{id} — purge a person, cascade read models, and write a tombstone so re-sync cannot resurrect them (key-only; a browser session is 403)
 - GET /api/v1/cohorts — retention curves with smile detection; optional split by platform, country, or cluster (max 3 series)
 - GET /api/v1/wbr — Weekly Business Review (6 weeks, 12 months YOY, exceptions)
 - GET /api/v1/calendar — multi-source event timeline
