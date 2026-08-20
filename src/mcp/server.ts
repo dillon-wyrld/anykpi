@@ -8,7 +8,13 @@ import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { upsertConfig } from "@/core/upsert";
 import { eq, and } from "drizzle-orm";
-import { authorize } from "@/core/auth";
+import { authorize, isReadOnlyMcpTool } from "@/core/auth";
+import {
+  MCP_WRITE_TOOLS,
+  mcpToolResult,
+  runMcpWriteTool,
+  type McpWriteArgs,
+} from "@/core/mcp-write-tools";
 import { buildViewUrl, queryUsersPayload } from "@/core/view-state";
 import {
   CohortCompareError,
@@ -174,13 +180,15 @@ export function createMCPServer() {
             },
           },
         },
+        ...MCP_WRITE_TOOLS,
       ],
     };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    const workspace = (args as any)?.workspace || "demo";
+    const write = !isReadOnlyMcpTool(name);
+    const workspace = (args as any)?.workspace || (write ? "live" : "demo");
 
     try {
       switch (name) {
@@ -429,13 +437,46 @@ export function createMCPServer() {
           };
         }
 
+        case "connect_source":
+        case "trigger_sync":
+        case "import_csv": {
+          const presented = process.env.ANYKPI_API_KEY;
+          const writeAuth = await authorize(
+            {
+              headers: {
+                get(headerName: string) {
+                  return headerName.toLowerCase() === "x-api-key" ? presented ?? null : null;
+                },
+              },
+            },
+            { write: true, workspace }
+          );
+          if (!writeAuth.ok) {
+            return {
+              content: [{ type: "text", text: writeAuth.error }],
+              isError: true,
+            };
+          }
+
+          const result = await runMcpWriteTool(
+            name,
+            (args ?? {}) as McpWriteArgs,
+            workspace,
+            BASE_URL
+          );
+          if (!result) {
+            throw new Error(`Unknown tool: ${name}`);
+          }
+          return mcpToolResult(result);
+        }
+
         case "configure_value_events": {
           const presented = process.env.ANYKPI_API_KEY;
           const writeAuth = await authorize(
             {
               headers: {
-                get(name: string) {
-                  return name.toLowerCase() === "x-api-key" ? presented ?? null : null;
+                get(headerName: string) {
+                  return headerName.toLowerCase() === "x-api-key" ? presented ?? null : null;
                 },
               },
             },

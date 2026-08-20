@@ -144,6 +144,9 @@ Machine Context Protocol server at `/api/mcp`:
 - `get_cohorts` → retention with smile detection; optional split (max 3 series)
 - `get_wbr` → Weekly Business Review
 - `get_calendar` → multi-source timeline
+- `connect_source` → store per-source credentials (write scope)
+- `trigger_sync` → run a connector sync (write scope)
+- `import_csv` → import users or events from CSV (write scope)
 - `install_sdk` → generate SDK snippet
 - `configure_value_events` → map events to activity classes
 

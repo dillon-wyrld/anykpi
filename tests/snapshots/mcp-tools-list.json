@@ -70,6 +70,74 @@
           "endDate": { "type": "string" }
         }
       }
+    },
+    {
+      "name": "connect_source",
+      "description": "Store per-source credentials encrypted at rest. Requires a write-scoped API key. Credentials are never returned. Returns connected + view_url.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "description": "Workspace ID (default: live)"
+          },
+          "source": {
+            "type": "string",
+            "description": "Source id (ics, csv, or a connector slug)"
+          },
+          "credentials": {
+            "type": "object",
+            "description": "Per-source credentials. Never echoed. csv stores kind + mapping."
+          }
+        }
+      }
+    },
+    {
+      "name": "trigger_sync",
+      "description": "Trigger a connector sync for one source or all registered sources. Requires a write-scoped API key. Returns results, states, and view_url.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "description": "Workspace ID (default: live)"
+          },
+          "source": {
+            "type": "string",
+            "description": "Connector source to sync. Omit or pass all to run every registered source."
+          }
+        }
+      }
+    },
+    {
+      "name": "import_csv",
+      "description": "Import users or events from CSV. Requires a write-scoped API key. Optional preview returns column mapping without writing. Returns import counts and view_url.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "description": "Workspace ID (default: live)"
+          },
+          "csv": {
+            "type": "string",
+            "description": "CSV text (header row required)"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["users", "events"],
+            "description": "File kind. Detected from columns when omitted."
+          },
+          "mapping": {
+            "type": "object",
+            "description": "Column to field mapping. Reuses the csv source mapping when omitted."
+          },
+          "preview": {
+            "type": "boolean",
+            "description": "When true, return column mapping without writing."
+          }
+        }
+      }
     }
   ]
 }

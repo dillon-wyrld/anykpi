@@ -37,6 +37,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- MCP write tools (ANY-28): `connect_source`, `trigger_sync`, and
+  `import_csv` so an agent can connect data unattended. Each requires a
+  write-scoped key, returns a `view_url`, and records `mcp.call` on the
+  audit log. HTTP `tools/list` advertises them.
 - Scheduled refresh (ANY-17): `instrumentation.ts` starts an in-process
   pull every `SYNC_INTERVAL_MINUTES` (default 15). `0` disables for
   hosts that `POST /api/v1/sync` from cron (`docs/cron.md`). Runs share

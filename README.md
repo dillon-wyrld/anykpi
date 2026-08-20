@@ -99,6 +99,8 @@ ANYKPI is agent-native from day zero. Give your AI agent access via MCP:
    - Get cohorts (`get_cohorts`)
    - Check WBR metrics (`get_wbr`)
    - Get calendar events (`get_calendar`)
+   - Connect a source, trigger sync, or import CSV (`connect_source`,
+     `trigger_sync`, `import_csv` — write-scoped key)
 
 Every response includes a `view_url` that opens the dashboard in the state that proves the answer.
 

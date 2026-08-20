@@ -12,10 +12,12 @@ const SNAPSHOT = JSON.parse(
   }[];
 };
 
+const API_KEY = process.env.ANYKPI_API_KEY || "anykpi-e2e-admin";
+
 /** Output fields agents parse. Add a row when adding a tool. */
 const HAPPY_PATH: Record<
   string,
-  { args: Record<string, unknown>; fields: string[] }
+  { args: Record<string, unknown>; fields: string[]; write?: boolean }
 > = {
   get_overview: { args: { workspace: "demo" }, fields: ["totalUsers", "viewUrl"] },
   query_users: {
@@ -30,6 +32,29 @@ const HAPPY_PATH: Record<
   get_calendar: {
     args: { workspace: "demo" },
     fields: ["events", "viewUrl"],
+  },
+  connect_source: {
+    args: {
+      workspace: "e2e-mcp-write",
+      source: "ics",
+      credentials: { icsUrl: "https://example.com/calendar.ics" },
+    },
+    fields: ["connected", "source", "workspaceId", "viewUrl", "view_url"],
+    write: true,
+  },
+  trigger_sync: {
+    args: { workspace: "e2e-mcp-write", source: "ics" },
+    fields: ["results", "states", "workspace", "viewUrl"],
+    write: true,
+  },
+  import_csv: {
+    args: {
+      workspace: "e2e-mcp-write",
+      kind: "users",
+      csv: "person_id,name\nmcp_e2e,Ada\n",
+    },
+    fields: ["imported", "kind", "workspaceId", "viewUrl"],
+    write: true,
   },
 };
 
@@ -55,7 +80,15 @@ test("every advertised tool has a happy-path call that returns its fields", asyn
     const happy = HAPPY_PATH[tool.name];
     expect(happy, `add HAPPY_PATH args and fields for ${tool.name}`).toBeDefined();
 
-    const { response, body } = await callMcpTool(request, tool.name, happy.args);
+    const headers = happy.write
+      ? { Authorization: `Bearer ${API_KEY}` }
+      : undefined;
+    const { response, body } = await callMcpTool(
+      request,
+      tool.name,
+      happy.args,
+      headers
+    );
     expect(response.ok(), `${tool.name} HTTP ${response.status()}`).toBeTruthy();
 
     const payload = parseMcpPayload(body);

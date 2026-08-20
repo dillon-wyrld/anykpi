@@ -45,6 +45,7 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 HTTP `POST /api/mcp`. stdio: `src/mcp/server.ts`. `tools/list` is open. `tools/call` follows REST auth.
 
 - `get_overview`, `query_users`, `get_cohorts`, `get_wbr`, `get_calendar`
+- write (requires write scope): `connect_source`, `trigger_sync`, `import_csv`
 - stdio also: `install_sdk`, `configure_value_events` (requires write scope)
 
 ## CLI

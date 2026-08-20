@@ -5,6 +5,12 @@ import { and, eq } from "drizzle-orm";
 import { buildViewUrl, publicBaseUrl, queryUsersPayload } from "@/core/view-state";
 import { recordMcpWriteAudit } from "@/core/audit";
 import { isReadOnlyMcpTool, type AuthOk } from "@/core/auth";
+import {
+  MCP_WRITE_TOOLS,
+  mcpToolResult,
+  runMcpWriteTool,
+  type McpWriteArgs,
+} from "@/core/mcp-write-tools";
 import { gate } from "@/core/session-auth";
 import { logServerError } from "@/core/errors";
 import {
@@ -27,7 +33,7 @@ type ToolArgs = {
   payers?: boolean;
   split?: string;
   series?: string | string[];
-};
+} & McpWriteArgs;
 
 async function handleMCPRequest(
   body: Record<string, unknown>,
@@ -118,6 +124,7 @@ async function handleMCPRequest(
             },
           },
         },
+        ...MCP_WRITE_TOOLS,
       ],
     };
   }
@@ -259,10 +266,20 @@ async function handleMCPRequest(
         };
       }
 
-      default:
+      default: {
+        const writeResult = await runMcpWriteTool(
+          name ?? "",
+          args ?? {},
+          workspace,
+          baseUrl
+        );
+        if (writeResult) {
+          return mcpToolResult(writeResult);
+        }
         return {
           content: [{ type: "text", text: `Tool ${name} not implemented yet` }],
         };
+      }
     }
   }
 
@@ -287,9 +304,10 @@ export async function POST(request: NextRequest) {
     let workspace: string | undefined;
     let auth: AuthOk;
     if (method === "tools/call") {
-      const requested = params?.arguments?.workspace || "demo";
       const toolName = params?.name as string | undefined;
       const write = !isReadOnlyMcpTool(toolName);
+      const requested =
+        params?.arguments?.workspace || (write ? "live" : "demo");
       const gated = await gate(request, { workspace: requested, write });
       if (!gated.ok) {
         return gated.response;
