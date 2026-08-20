@@ -1,3 +1,4 @@
+import { createHmac } from "crypto";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +15,7 @@ import { stripKeyQueryParams } from "./session-url";
 const SAMPLE: BrowserSession = {
   actor: "env",
   workspace: "live",
+  workspaces: ["live"],
   canChooseWorkspace: true,
   exp: Math.floor(Date.now() / 1000) + 3600,
 };
@@ -60,6 +62,25 @@ describe("sign and verify session", () => {
   it("rejects an expired token", () => {
     const token = signSession({ ...SAMPLE, exp: 10 }, "unit-secret");
     expect(verifySession(token, "unit-secret", 11)).toBeNull();
+  });
+
+  it("accepts a v1 ticket as a single unlocked workspace", () => {
+    const payload = {
+      v: 1,
+      actor: "hashed",
+      workspace: "live",
+      choose: false,
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    };
+    const body = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+    const mac = createHmac("sha256", "unit-secret").update(body).digest("base64url");
+    expect(verifySession(`${body}.${mac}`, "unit-secret")).toEqual({
+      actor: "hashed",
+      workspace: "live",
+      workspaces: ["live"],
+      canChooseWorkspace: false,
+      exp: payload.exp,
+    });
   });
 });
 

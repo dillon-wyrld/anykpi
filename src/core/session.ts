@@ -3,6 +3,10 @@
  *
  * POST /api/session verifies an API key once and sets an HMAC cookie.
  * The cookie never contains the key. Writes ignore it (see session-auth).
+ *
+ * ANY-39: the cookie holds one unlocked workspace per presented key.
+ * Switching to a live workspace that is not yet on the ticket prompts
+ * for that workspace's key; an admin/env key can choose any workspace.
  */
 
 import { createHmac, timingSafeEqual } from "crypto";
@@ -11,11 +15,13 @@ import type { AuthActor, AuthOk, RequestLike } from "./auth";
 export const SESSION_COOKIE_NAME = "anykpi_session";
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
 
-const SESSION_VERSION = 1;
+const SESSION_VERSION = 2;
 
 export type BrowserSession = {
   actor: Exclude<AuthActor, "anonymous">;
   workspace: string;
+  /** Workspaces unlocked by presenting a key. Cookie never stores keys. */
+  workspaces: string[];
   canChooseWorkspace: boolean;
   exp: number;
 };
@@ -46,20 +52,75 @@ export function sessionCookieOptions(): SessionCookieOptions {
   };
 }
 
-export function sessionFromAuth(auth: AuthOk): BrowserSession {
+function uniqueWorkspaces(ids: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const id of ids) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
+export function sessionFromAuth(
+  auth: AuthOk,
+  requestedWorkspace?: string
+): BrowserSession {
+  const workspace =
+    auth.canChooseWorkspace
+      ? requestedWorkspace || auth.keyWorkspace || "live"
+      : auth.keyWorkspace || "live";
   return {
     actor: auth.actor === "hashed" ? "hashed" : "env",
-    workspace: auth.keyWorkspace || "live",
+    workspace,
+    workspaces: uniqueWorkspaces([workspace]),
     canChooseWorkspace: auth.canChooseWorkspace,
     exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SECONDS,
   };
 }
 
-export function authFromSession(session: BrowserSession): AuthOk {
+export function mergeSessions(
+  existing: BrowserSession | null,
+  incoming: BrowserSession
+): BrowserSession {
+  if (!existing) return incoming;
+  const workspaces = uniqueWorkspaces([
+    ...existing.workspaces,
+    ...incoming.workspaces,
+  ]);
+  return {
+    actor: incoming.actor,
+    workspace: incoming.workspace,
+    workspaces,
+    canChooseWorkspace:
+      existing.canChooseWorkspace || incoming.canChooseWorkspace,
+    exp: incoming.exp,
+  };
+}
+
+export function sessionAuthorizes(
+  session: BrowserSession,
+  workspace: string
+): boolean {
+  if (workspace === "demo") return true;
+  if (session.canChooseWorkspace) return true;
+  return session.workspaces.includes(workspace);
+}
+
+export function authFromSession(
+  session: BrowserSession,
+  requestedWorkspace?: string
+): AuthOk {
+  const workspace =
+    requestedWorkspace && sessionAuthorizes(session, requestedWorkspace)
+      ? requestedWorkspace
+      : session.workspace;
   return {
     ok: true,
-    actor: session.actor,
-    keyWorkspace: session.workspace,
+    actor: "session",
+    keyWorkspace: workspace,
+    authorizedWorkspaces: session.workspaces,
     canChooseWorkspace: session.canChooseWorkspace,
     // Browser session is read-only. Writes stay key-only (ANY-38).
     scope: "read",
@@ -88,6 +149,7 @@ export function signSession(session: BrowserSession, secret = sessionSecret()): 
     v: SESSION_VERSION,
     actor: session.actor,
     workspace: session.workspace,
+    workspaces: session.workspaces,
     choose: session.canChooseWorkspace,
     exp: session.exp,
   };
@@ -113,18 +175,25 @@ export function verifySession(
       v?: unknown;
       actor?: unknown;
       workspace?: unknown;
+      workspaces?: unknown;
       choose?: unknown;
       exp?: unknown;
     };
-    if (parsed.v !== SESSION_VERSION) return null;
+    if (parsed.v !== 1 && parsed.v !== SESSION_VERSION) return null;
     if (parsed.actor !== "env" && parsed.actor !== "hashed") return null;
     if (typeof parsed.workspace !== "string" || parsed.workspace.length === 0) {
       return null;
     }
     if (typeof parsed.exp !== "number" || parsed.exp <= nowSeconds) return null;
+    const listed = Array.isArray(parsed.workspaces)
+      ? parsed.workspaces.filter((id): id is string => typeof id === "string" && id.length > 0)
+      : [];
     return {
       actor: parsed.actor,
       workspace: parsed.workspace,
+      workspaces: uniqueWorkspaces(
+        listed.length > 0 ? listed : [parsed.workspace]
+      ),
       canChooseWorkspace: parsed.choose === true,
       exp: parsed.exp,
     };

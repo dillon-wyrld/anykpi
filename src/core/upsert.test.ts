@@ -13,6 +13,7 @@ afterEach(async () => {
     .delete(schema.syncState)
     .where(eq(schema.syncState.workspaceId, OTHER_WS));
   await db.delete(schema.config).where(eq(schema.config.workspaceId, WS));
+  await db.delete(schema.config).where(eq(schema.config.workspaceId, OTHER_WS));
 });
 
 describe("upsertSyncState", () => {
@@ -104,5 +105,39 @@ describe("upsertConfig", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.value).toBe(JSON.stringify({ core: "updated" }));
+  });
+
+  it("keeps the same config key distinct across workspaces", async () => {
+    await upsertConfig({
+      key: "value_events",
+      value: JSON.stringify({ core: "left" }),
+      workspaceId: WS,
+    });
+    await upsertConfig({
+      key: "value_events",
+      value: JSON.stringify({ core: "right" }),
+      workspaceId: OTHER_WS,
+    });
+
+    const left = await db
+      .select()
+      .from(schema.config)
+      .where(
+        and(eq(schema.config.workspaceId, WS), eq(schema.config.key, "value_events"))
+      )
+      .get();
+    const right = await db
+      .select()
+      .from(schema.config)
+      .where(
+        and(
+          eq(schema.config.workspaceId, OTHER_WS),
+          eq(schema.config.key, "value_events")
+        )
+      )
+      .get();
+
+    expect(left?.value).toBe(JSON.stringify({ core: "left" }));
+    expect(right?.value).toBe(JSON.stringify({ core: "right" }));
   });
 });

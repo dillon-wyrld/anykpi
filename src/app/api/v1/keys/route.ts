@@ -15,6 +15,7 @@ import {
   MINT_ADMIN_KEY_ERROR,
 } from "@/core/auth";
 import { badRequest, forbidden, internalError, logServerError } from "@/core/errors";
+import { ensureWorkspace } from "@/core/workspaces";
 
 function keyMetadata(row: {
   id: string;
@@ -71,6 +72,8 @@ export async function POST(request: NextRequest) {
     } else if (auth.ok && auth.keyWorkspace) {
       workspaceId = auth.keyWorkspace;
     }
+
+    await ensureWorkspace(workspaceId);
 
     const keyId = `ak_${nanoid(24)}`;
     const rawKey = `${keyId}.${nanoid(32)}`;

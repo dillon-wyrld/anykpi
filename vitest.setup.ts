@@ -10,8 +10,17 @@ process.env.ANYKPI_SECRET ??= "vitest-anykpi-secret";
 
 const sqlite = new Database(process.env.DATABASE_PATH);
 sqlite.exec(`
+  CREATE TABLE IF NOT EXISTS workspaces (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    archived_at INTEGER
+  );
+  INSERT OR IGNORE INTO workspaces (id, name, created_at) VALUES
+    ('demo', 'Demo', CAST(strftime('%s', 'now') AS INTEGER)),
+    ('live', 'Live', CAST(strftime('%s', 'now') AS INTEGER));
   CREATE TABLE IF NOT EXISTS users (
-    person_id TEXT PRIMARY KEY,
+    person_id TEXT NOT NULL,
     name TEXT NOT NULL,
     email TEXT,
     avatar TEXT,
@@ -23,8 +32,10 @@ sqlite.exec(`
     signup_date INTEGER,
     cluster TEXT,
     account_id TEXT,
-    workspace_id TEXT NOT NULL DEFAULT 'demo'
+    workspace_id TEXT NOT NULL DEFAULT 'demo',
+    PRIMARY KEY (workspace_id, person_id)
   );
+  CREATE INDEX IF NOT EXISTS users_workspace_idx ON users (workspace_id);
   CREATE TABLE IF NOT EXISTS activity (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     person_id TEXT NOT NULL,
@@ -59,14 +70,14 @@ sqlite.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS sync_state_workspace_source_uidx
     ON sync_state (workspace_id, source);
   CREATE TABLE IF NOT EXISTS config (
-    key TEXT PRIMARY KEY,
+    key TEXT NOT NULL,
     value TEXT NOT NULL,
-    workspace_id TEXT NOT NULL DEFAULT 'demo'
+    workspace_id TEXT NOT NULL DEFAULT 'demo',
+    PRIMARY KEY (workspace_id, key)
   );
-  CREATE UNIQUE INDEX IF NOT EXISTS config_key_workspace_uidx
-    ON config (key, workspace_id);
+  CREATE INDEX IF NOT EXISTS config_workspace_idx ON config (workspace_id);
   CREATE TABLE IF NOT EXISTS metric_defs (
-    metric_id TEXT PRIMARY KEY,
+    metric_id TEXT NOT NULL,
     name TEXT NOT NULL,
     section TEXT NOT NULL,
     section_order TEXT NOT NULL,
@@ -77,8 +88,10 @@ sqlite.exec(`
     good_dir TEXT NOT NULL,
     status TEXT NOT NULL,
     status_reason TEXT,
-    workspace_id TEXT NOT NULL DEFAULT 'demo'
+    workspace_id TEXT NOT NULL DEFAULT 'demo',
+    PRIMARY KEY (workspace_id, metric_id)
   );
+  CREATE INDEX IF NOT EXISTS metric_defs_workspace_idx ON metric_defs (workspace_id);
   CREATE TABLE IF NOT EXISTS metric_points (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     metric_id TEXT NOT NULL,
@@ -152,15 +165,17 @@ sqlite.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS sources_workspace_source_uidx
     ON sources (workspace_id, source);
   CREATE TABLE IF NOT EXISTS accounts (
-    account_id TEXT PRIMARY KEY,
+    account_id TEXT NOT NULL,
     name TEXT NOT NULL,
     entity TEXT,
     seats INTEGER DEFAULT 0,
     activated INTEGER DEFAULT 0,
     mrr REAL DEFAULT 0,
     renewal_date INTEGER,
-    workspace_id TEXT NOT NULL DEFAULT 'demo'
+    workspace_id TEXT NOT NULL DEFAULT 'demo',
+    PRIMARY KEY (workspace_id, account_id)
   );
+  CREATE INDEX IF NOT EXISTS accounts_workspace_idx ON accounts (workspace_id);
   CREATE TABLE IF NOT EXISTS annotations (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     type TEXT NOT NULL,

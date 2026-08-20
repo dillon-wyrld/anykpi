@@ -15,6 +15,7 @@ import {
 } from "@/core/errors";
 import { rateLimit, clientKeyFrom } from "@/core/rate-limit";
 import { isTombstoned } from "@/core/tombstones";
+import { ensureWorkspace } from "@/core/workspaces";
 
 /**
  * POST /api/ingest/identify
@@ -37,6 +38,8 @@ export async function POST(request: NextRequest) {
       return authResponse(resolved);
     }
     const workspaceId = (resolved as { workspace: string }).workspace;
+
+    await ensureWorkspace(workspaceId);
 
     const { userId, properties } = body;
 

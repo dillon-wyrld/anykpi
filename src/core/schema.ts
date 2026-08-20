@@ -1,7 +1,19 @@
-import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, index, uniqueIndex, primaryKey } from "drizzle-orm/sqlite-core";
+
+/**
+ * Named workspaces. Isolation is the composite (workspace_id, id) on
+ * users / accounts / metric_defs / config — this table is the catalog
+ * the dashboard switcher and key minting read.
+ */
+export const workspaces = sqliteTable("workspaces", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  archivedAt: integer("archived_at", { mode: "timestamp" }),
+});
 
 export const users = sqliteTable("users", {
-  personId: text("person_id").primaryKey(),
+  personId: text("person_id").notNull(),
   name: text("name").notNull(),
   email: text("email"),
   avatar: text("avatar"),
@@ -15,6 +27,7 @@ export const users = sqliteTable("users", {
   accountId: text("account_id"),
   workspaceId: text("workspace_id").notNull().default("demo"),
 }, (table) => ({
+  pk: primaryKey({ columns: [table.workspaceId, table.personId] }),
   workspaceIdx: index("users_workspace_idx").on(table.workspaceId),
 }));
 
@@ -41,7 +54,7 @@ export const activity = sqliteTable("activity", {
 }));
 
 export const accounts = sqliteTable("accounts", {
-  accountId: text("account_id").primaryKey(),
+  accountId: text("account_id").notNull(),
   name: text("name").notNull(),
   entity: text("entity"),
   seats: integer("seats").default(0),
@@ -50,6 +63,7 @@ export const accounts = sqliteTable("accounts", {
   renewalDate: integer("renewal_date", { mode: "timestamp" }),
   workspaceId: text("workspace_id").notNull().default("demo"),
 }, (table) => ({
+  pk: primaryKey({ columns: [table.workspaceId, table.accountId] }),
   workspaceIdx: index("accounts_workspace_idx").on(table.workspaceId),
 }));
 
@@ -65,7 +79,7 @@ export const seats = sqliteTable("seats", {
 }));
 
 export const metricDefs = sqliteTable("metric_defs", {
-  metricId: text("metric_id").primaryKey(),
+  metricId: text("metric_id").notNull(),
   name: text("name").notNull(),
   section: text("section").notNull(),
   sectionOrder: text("section_order").notNull(),
@@ -78,6 +92,7 @@ export const metricDefs = sqliteTable("metric_defs", {
   statusReason: text("status_reason"),
   workspaceId: text("workspace_id").notNull().default("demo"),
 }, (table) => ({
+  pk: primaryKey({ columns: [table.workspaceId, table.metricId] }),
   workspaceIdx: index("metric_defs_workspace_idx").on(table.workspaceId),
 }));
 
@@ -156,15 +171,12 @@ export const apiKeys = sqliteTable("api_keys", {
 });
 
 export const config = sqliteTable("config", {
-  key: text("key").primaryKey(),
+  key: text("key").notNull(),
   value: text("value").notNull(),
   workspaceId: text("workspace_id").notNull().default("demo"),
 }, (table) => ({
+  pk: primaryKey({ columns: [table.workspaceId, table.key] }),
   workspaceIdx: index("config_workspace_idx").on(table.workspaceId),
-  keyWorkspaceUidx: uniqueIndex("config_key_workspace_uidx").on(
-    table.key,
-    table.workspaceId
-  ),
 }));
 
 /**

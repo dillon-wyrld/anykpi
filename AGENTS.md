@@ -39,6 +39,9 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 - `POST /api/v1/connect` — store per-source credentials (encrypted at rest; source `csv` stores import mapping)
 - `POST /api/v1/import` — CSV import for users and events (uses the sources store; column-mapping preview)
 - `GET /api/v1/export` — users, events, and read models as JSON or CSV files
+- `GET /api/v1/workspaces` — catalog (id, name, archivedAt) for the switcher
+- `POST /api/v1/workspaces` — create a live workspace (admin / env key)
+- `PATCH /api/v1/workspaces` — archive a live workspace (admin / env key; demo cannot be archived)
 - `GET /api/v1/keys` / `POST /api/v1/keys` — list metadata (scope, last used, legacy) / mint a key (default read)
 - `POST /api/v1/keys/downgrade` — convert legacy write keys to read
 - `POST /api/v1/ingest/identify` / `POST /api/v1/ingest/event` — identify and track

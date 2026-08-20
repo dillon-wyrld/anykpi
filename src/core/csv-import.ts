@@ -385,7 +385,7 @@ export async function runCsvImport(input: CsvImportInput): Promise<CsvImportOutc
         tx.insert(schema.users)
           .values(batch)
           .onConflictDoUpdate({
-            target: schema.users.personId,
+            target: [schema.users.workspaceId, schema.users.personId],
             set: {
               name: sql`excluded.name`,
               email: sql`excluded.email`,
@@ -451,7 +451,9 @@ export async function runCsvImport(input: CsvImportInput): Promise<CsvImportOutc
     for (const batch of chunk([...stubs.values()], BATCH)) {
       tx.insert(schema.users)
         .values(batch)
-        .onConflictDoNothing({ target: schema.users.personId })
+        .onConflictDoNothing({
+          target: [schema.users.workspaceId, schema.users.personId],
+        })
         .run();
     }
     for (const batch of chunk(liveRows, BATCH)) {

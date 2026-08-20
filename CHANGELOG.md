@@ -37,6 +37,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Multi-workspace isolation and switcher (ANY-39): `users`, `accounts`,
+  `metric_defs`, and `config` now use composite `(workspace_id, id)`
+  primary keys so the same distinct_id can exist in two products.
+  A `workspaces` catalog (`id`, `name`, `createdAt`, `archivedAt`)
+  backfills from existing rows. The dashboard switcher lists that
+  catalog and prompts for a key the first time you switch into a live
+  workspace; the signed session holds one unlock per workspace, never
+  the key. `GET`/`POST`/`PATCH /api/v1/workspaces`. Migration
+  `0009_workspaces`.
 - Person deletion that survives re-sync (ANY-38): `DELETE /api/v1/users/{id}`
   purges the person and their events, cascades through person-level read
   models, and writes a tombstone (`workspaceId` + external ids) consulted

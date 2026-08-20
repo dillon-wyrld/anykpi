@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { AUDIT_ACTIONS, recordWebhookAudit } from "@/core/audit";
@@ -124,7 +124,12 @@ async function writeActivity(
   const existingUser = await db
     .select({ personId: schema.users.personId })
     .from(schema.users)
-    .where(eq(schema.users.personId, personId))
+    .where(
+      and(
+        eq(schema.users.personId, personId),
+        eq(schema.users.workspaceId, workspaceId)
+      )
+    )
     .get();
 
   if (!existingUser) {

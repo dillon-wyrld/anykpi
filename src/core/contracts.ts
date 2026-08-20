@@ -579,11 +579,38 @@ export const ApiKeyScopeSchema = z.enum(['read', 'write', 'admin']);
 
 export const SessionCreateRequestSchema = z.object({
   key: z.string().min(1),
+  workspace: z.string().optional(),
 });
 
 export const SessionStatusResponseSchema = z.object({
   authenticated: z.boolean(),
   workspace: z.string().optional(),
+  workspaces: z.array(z.string()).optional(),
+  authorized: z.boolean().optional(),
+});
+
+export const WorkspaceIdSchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9_-]{0,63}$/, "Invalid workspace id");
+
+export const WorkspaceRecordSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  createdAt: z.string().datetime(),
+  archivedAt: z.string().datetime().nullable(),
+});
+
+export const WorkspaceListResponseSchema = z.object({
+  workspaces: z.array(WorkspaceRecordSchema),
+});
+
+export const WorkspaceCreateRequestSchema = z.object({
+  id: WorkspaceIdSchema,
+  name: z.string().min(1).max(80),
+});
+
+export const WorkspaceArchiveRequestSchema = z.object({
+  id: WorkspaceIdSchema,
 });
 
 export const APIKeyCreateRequestSchema = z.object({
@@ -779,6 +806,10 @@ export type ExportResponse = z.infer<typeof ExportResponseSchema>;
 export type ApiKeyScope = z.infer<typeof ApiKeyScopeSchema>;
 export type SessionCreateRequest = z.infer<typeof SessionCreateRequestSchema>;
 export type SessionStatusResponse = z.infer<typeof SessionStatusResponseSchema>;
+export type WorkspaceRecord = z.infer<typeof WorkspaceRecordSchema>;
+export type WorkspaceListResponse = z.infer<typeof WorkspaceListResponseSchema>;
+export type WorkspaceCreateRequest = z.infer<typeof WorkspaceCreateRequestSchema>;
+export type WorkspaceArchiveRequest = z.infer<typeof WorkspaceArchiveRequestSchema>;
 export type APIKeyCreateRequest = z.infer<typeof APIKeyCreateRequestSchema>;
 export type APIKeyResponse = z.infer<typeof APIKeyResponseSchema>;
 export type APIKeyDowngradeRequest = z.infer<typeof APIKeyDowngradeRequestSchema>;

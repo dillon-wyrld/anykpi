@@ -21,7 +21,7 @@ export async function gate(
   if (options.write !== true) {
     const session = readBrowserSession(request);
     if (session) {
-      const auth = authFromSession(session);
+      const auth = authFromSession(session, options.workspace ?? undefined);
       const resolved = resolveWorkspace(auth, options.workspace, false);
       if ("ok" in resolved && resolved.ok === false) {
         return { ok: false, response: authResponse(resolved) };

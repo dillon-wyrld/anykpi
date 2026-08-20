@@ -25,6 +25,10 @@ import {
   APIKeyDowngradeResponseSchema,
   SessionCreateRequestSchema,
   SessionStatusResponseSchema,
+  WorkspaceListResponseSchema,
+  WorkspaceCreateRequestSchema,
+  WorkspaceArchiveRequestSchema,
+  WorkspaceRecordSchema,
   AuditListResponseSchema,
   OutreachQueueRequestSchema,
   OutreachIdRequestSchema,
@@ -83,6 +87,7 @@ export async function GET(request: NextRequest) {
       { name: 'Ingest', description: 'Direct event collection' },
       { name: 'Keys', description: 'API key management' },
       { name: 'Session', description: 'Browser session cookie for live dashboard reads' },
+      { name: 'Workspaces', description: 'Named workspaces with isolated users, accounts, metrics, and config' },
       { name: 'Audit', description: 'Action audit log' },
       { name: 'Outreach', description: 'Persisted PMF+ outreach drafts with per-send approval and outcome tags' }
     ],
@@ -974,7 +979,7 @@ export async function GET(request: NextRequest) {
           tags: ['Session'],
           summary: 'Session status',
           description:
-            'Whether the signed browser cookie is valid. Demo stays public-read without a session. Never returns the API key.',
+            'Whether the signed browser cookie is valid, and which live workspaces it has unlocked. Demo stays public-read without a session. Never returns the API key.',
           security: [],
           responses: {
             200: {
@@ -991,7 +996,7 @@ export async function GET(request: NextRequest) {
           tags: ['Session'],
           summary: 'Start a browser session',
           description:
-            'Verify the API key once and set a signed httpOnly SameSite cookie. Live views then load without putting the key in a URL. Writes still require the key.',
+            'Verify the API key once and set a signed httpOnly SameSite cookie. A second POST with another workspace key merges that unlock onto the same cookie. Writes still require the key.',
           security: [],
           requestBody: {
             required: true,
@@ -1039,6 +1044,113 @@ export async function GET(request: NextRequest) {
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(SessionStatusResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/v1/workspaces': {
+        get: {
+          tags: ['Workspaces'],
+          summary: 'List workspaces',
+          description:
+            'Catalog for the dashboard switcher (id, name, archivedAt). Live data still requires a key or a session unlock.',
+          security: [],
+          responses: {
+            200: {
+              description: 'Workspace catalog',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(WorkspaceListResponseSchema)
+                }
+              }
+            }
+          }
+        },
+        post: {
+          tags: ['Workspaces'],
+          summary: 'Create a workspace',
+          description: 'Admin / env key only. Id must be a lowercase slug.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(WorkspaceCreateRequestSchema)
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Workspace created',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      workspace: zodToJsonSchema(WorkspaceRecordSchema)
+                    }
+                  }
+                }
+              }
+            },
+            400: {
+              description: 'Invalid or duplicate id',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Unauthorized',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        },
+        patch: {
+          tags: ['Workspaces'],
+          summary: 'Archive a workspace',
+          description: 'Admin / env key only. Demo cannot be archived.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(WorkspaceArchiveRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Workspace archived',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      workspace: zodToJsonSchema(WorkspaceRecordSchema)
+                    }
+                  }
+                }
+              }
+            },
+            400: {
+              description: 'Demo cannot be archived',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            404: {
+              description: 'Workspace not found',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
                 }
               }
             }

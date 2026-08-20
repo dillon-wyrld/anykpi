@@ -36,15 +36,14 @@ export type ConfigUpsert = {
 };
 
 /**
- * Insert or update config on the unique (key, workspace_id) pair
- * that the table declares.
+ * Insert or update config on the composite (workspace_id, key) primary key.
  */
 export async function upsertConfig(values: ConfigUpsert): Promise<void> {
   await db
     .insert(schema.config)
     .values(values)
     .onConflictDoUpdate({
-      target: [schema.config.key, schema.config.workspaceId],
+      target: [schema.config.workspaceId, schema.config.key],
       set: {
         value: values.value,
       },

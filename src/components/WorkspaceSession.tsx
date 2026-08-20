@@ -15,6 +15,7 @@ type SessionState = "loading" | "in" | "out";
 type WorkspaceSessionValue = {
   workspace: string;
   status: SessionState;
+  workspaces: string[];
   enter: () => void;
   logout: () => Promise<void>;
 };
@@ -35,6 +36,9 @@ export function WorkspaceSessionProvider({
   const [status, setStatus] = useState<SessionState>(() =>
     workspace === "demo" ? "in" : "loading"
   );
+  const [workspaces, setWorkspaces] = useState<string[]>(
+    workspace === "demo" ? ["demo"] : []
+  );
 
   useEffect(() => {
     if (workspace === "demo") {
@@ -44,12 +48,18 @@ export function WorkspaceSessionProvider({
 
     let cancelled = false;
     setStatus("loading");
-    void fetch("/api/session")
+    void fetch(`/api/session?workspace=${encodeURIComponent(workspace)}`)
       .then(async (response) => {
-        const data = (await response.json()) as { authenticated?: boolean };
-        if (!cancelled) {
-          setStatus(data.authenticated === true ? "in" : "out");
-        }
+        const data = (await response.json()) as {
+          authenticated?: boolean;
+          authorized?: boolean;
+          workspaces?: string[];
+        };
+        if (cancelled) return;
+        const unlocked =
+          data.authenticated === true && data.authorized === true;
+        setWorkspaces(Array.isArray(data.workspaces) ? data.workspaces : []);
+        setStatus(unlocked ? "in" : "out");
       })
       .catch(() => {
         if (!cancelled) setStatus("out");
@@ -62,10 +72,14 @@ export function WorkspaceSessionProvider({
 
   const enter = useCallback(() => {
     setStatus("in");
-  }, []);
+    setWorkspaces((current) =>
+      current.includes(workspace) ? current : [...current, workspace]
+    );
+  }, [workspace]);
 
   const logout = useCallback(async () => {
     await fetch("/api/session", { method: "DELETE" });
+    setWorkspaces([]);
     if (workspace !== "demo") {
       setStatus("out");
     }
@@ -73,7 +87,7 @@ export function WorkspaceSessionProvider({
 
   return (
     <WorkspaceSessionContext.Provider
-      value={{ workspace, status, enter, logout }}
+      value={{ workspace, status, workspaces, enter, logout }}
     >
       {children}
     </WorkspaceSessionContext.Provider>
@@ -130,7 +144,7 @@ export function LiveWorkspaceGate({ children }: { children: ReactNode }) {
       const response = await fetch("/api/session", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ key: presented }),
+        body: JSON.stringify({ key: presented, workspace }),
       });
       if (!response.ok) {
         setError("That key was not accepted.");
@@ -146,10 +160,13 @@ export function LiveWorkspaceGate({ children }: { children: ReactNode }) {
 
   return (
     <div className="bg-panel border border-border rounded-lg p-8 max-w-md">
-      <h2 className="font-display text-xl font-semibold mb-2">Live workspace</h2>
+      <h2 className="font-display text-xl font-semibold mb-2">
+        Unlock {workspace}
+      </h2>
       <p className="text-sub text-sm mb-6">
-        Enter the API key for this instance. It is stored in a signed cookie on
-        this browser and never added to the URL.
+        Enter the API key for this workspace. It is stored as a signed
+        unlock on this browser and never added to the URL. Each live
+        workspace needs its own key the first time you switch to it.
       </p>
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
@@ -176,7 +193,7 @@ export function LiveWorkspaceGate({ children }: { children: ReactNode }) {
           disabled={submitting || key.trim().length === 0}
           className="px-4 py-2 bg-accent text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
         >
-          {submitting ? "Opening…" : "Open live workspace"}
+          {submitting ? "Opening…" : "Open workspace"}
         </button>
       </form>
     </div>

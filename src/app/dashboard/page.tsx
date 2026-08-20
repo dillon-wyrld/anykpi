@@ -13,6 +13,7 @@ import {
   SessionLogout,
   WorkspaceSessionProvider,
 } from "@/components/WorkspaceSession";
+import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 
 function DashboardContent() {
   const searchParams = useSearchParams();
@@ -57,20 +58,7 @@ function DashboardContent() {
         <div className="flex-1" />
 
         <div className="border-t border-rule pt-3 mt-3">
-          <div className="px-2 mb-2">
-            <div className="eyebrow text-[9px] mb-1">Workspace</div>
-            <select
-              value={workspace}
-              onChange={(e) => {
-                const newWorkspace = e.target.value;
-                window.location.href = `/dashboard?workspace=${newWorkspace}&view=${view}`;
-              }}
-              className="w-full text-xs bg-panel border border-border rounded px-2 py-1 font-mono"
-            >
-              <option value="demo">demo</option>
-              <option value="live">live</option>
-            </select>
-          </div>
+          <WorkspaceSwitcher workspace={workspace} view={view} />
 
           <Link
             href="/connect"

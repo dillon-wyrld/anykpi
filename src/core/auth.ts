@@ -50,6 +50,8 @@ export type AuthOk = {
   actor: AuthActor;
   /** Bound workspace for hashed keys. */
   keyWorkspace?: string;
+  /** Workspaces unlocked on a browser session (ANY-39). */
+  authorizedWorkspaces?: string[];
   canChooseWorkspace: boolean;
   scope: ApiKeyScope;
   keyId?: string;
@@ -319,6 +321,11 @@ export function resolveWorkspace(
   }
 
   const bound = auth.keyWorkspace || LIVE_WORKSPACE;
+  const authorized = new Set(
+    (auth.authorizedWorkspaces ?? []).filter((id) => id.length > 0)
+  );
+  if (auth.keyWorkspace) authorized.add(auth.keyWorkspace);
+
   if (write) {
     if (asked && asked !== bound) {
       return { workspace: bound };
@@ -326,7 +333,7 @@ export function resolveWorkspace(
     return { workspace: bound };
   }
 
-  if (!asked || asked === DEMO_WORKSPACE || asked === bound) {
+  if (!asked || asked === DEMO_WORKSPACE || authorized.has(asked)) {
     return { workspace: asked || bound };
   }
 

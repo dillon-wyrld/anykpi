@@ -22,6 +22,10 @@ import { POST as postOutreachSend } from "@/app/api/v1/outreach/send/route";
 import { POST as postOutreachOutcome } from "@/app/api/v1/outreach/outcome/route";
 import { DELETE as deleteUser } from "@/app/api/v1/users/[id]/route";
 import {
+  PATCH as archiveWorkspaceRoute,
+  POST as createWorkspaceRoute,
+} from "@/app/api/v1/workspaces/route";
+import {
   AUDIT_ACTIONS,
   WRITE_HTTP_ROUTES,
   WRITE_ROUTE_MODULES,
@@ -67,6 +71,7 @@ afterEach(async () => {
   await db.delete(schema.mrrSnapshots).where(eq(schema.mrrSnapshots.workspaceId, WS));
   await db.delete(schema.subscriptionEvents).where(eq(schema.subscriptionEvents.workspaceId, WS));
   await db.delete(schema.tombstones).where(eq(schema.tombstones.workspaceId, WS));
+  await db.delete(schema.workspaces).where(eq(schema.workspaces.id, WS));
 });
 
 function asAdmin(url: string, method: string, body?: unknown) {
@@ -399,6 +404,33 @@ const drivers: Record<(typeof WRITE_HTTP_ROUTES)[number]["action"], Driver> = {
     );
     expect(res.status).toBe(200);
     return { actor: AUDIT_ACTOR_ENV, subject: "audit-delete" };
+  },
+  [AUDIT_ACTIONS.workspaceCreate]: async () => {
+    await db.delete(schema.workspaces).where(eq(schema.workspaces.id, WS));
+    const res = await createWorkspaceRoute(
+      asAdmin("http://localhost:3000/api/v1/workspaces", "POST", {
+        id: WS,
+        name: "Audit log",
+      })
+    );
+    expect(res.status).toBe(201);
+    return { actor: AUDIT_ACTOR_ENV, subject: WS };
+  },
+  [AUDIT_ACTIONS.workspaceArchive]: async () => {
+    await db.delete(schema.workspaces).where(eq(schema.workspaces.id, WS));
+    const created = await createWorkspaceRoute(
+      asAdmin("http://localhost:3000/api/v1/workspaces", "POST", {
+        id: WS,
+        name: "Audit log",
+      })
+    );
+    expect(created.status).toBe(201);
+    await db.delete(schema.auditLog).where(eq(schema.auditLog.workspaceId, WS));
+    const res = await archiveWorkspaceRoute(
+      asAdmin("http://localhost:3000/api/v1/workspaces", "PATCH", { id: WS })
+    );
+    expect(res.status).toBe(200);
+    return { actor: AUDIT_ACTOR_ENV, subject: WS };
   },
 };
 

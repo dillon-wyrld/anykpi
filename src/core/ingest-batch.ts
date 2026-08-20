@@ -171,7 +171,9 @@ export function runIngestBatch(
     for (const batch of chunk(users, WRITE_CHUNK)) {
       tx.insert(schema.users)
         .values(batch)
-        .onConflictDoNothing({ target: schema.users.personId })
+        .onConflictDoNothing({
+          target: [schema.users.workspaceId, schema.users.personId],
+        })
         .run();
     }
     for (const batch of chunk(activity, WRITE_CHUNK)) {

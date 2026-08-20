@@ -8,6 +8,7 @@ import {
 import { GET as getDotplot } from "@/app/api/views/dotplot/route";
 import { POST as postEvent } from "@/app/api/ingest/event/route";
 import { POST as postSync } from "@/app/api/v1/sync/route";
+import { POST as createKey } from "@/app/api/v1/keys/route";
 import { SESSION_COOKIE_NAME } from "./session";
 
 const ADMIN = "session-admin-key";
@@ -85,6 +86,32 @@ describe("POST /api/session", () => {
     );
     expect(wrong.status).toBe(401);
   });
+
+  it("merges a second workspace onto the existing cookie", async () => {
+    process.env.ANYKPI_API_KEY = ADMIN;
+    process.env.ANYKPI_SECRET = "session-test-secret";
+    vi.stubEnv("NODE_ENV", "test");
+
+    const first = await postSession(
+      post("http://localhost:3000/api/session", { key: ADMIN, workspace: "live" })
+    );
+    expect(first.status).toBe(200);
+    const cookie = sessionCookiePair(first);
+
+    const second = await postSession(
+      new NextRequest("http://localhost:3000/api/session", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          cookie,
+        },
+        body: JSON.stringify({ key: ADMIN, workspace: "iso-b" }),
+      })
+    );
+    expect(second.status).toBe(200);
+    const body = (await second.json()) as { workspaces?: string[] };
+    expect(body.workspaces?.sort()).toEqual(["iso-b", "live"]);
+  });
 });
 
 describe("browser session authorizes live reads only", () => {
@@ -141,5 +168,38 @@ describe("browser session authorizes live reads only", () => {
       get("http://localhost:3000/api/views/dotplot?workspace=demo")
     );
     expect(demo.status).toBe(200);
+  });
+
+  it("a hashed-key session does not unlock another live workspace", async () => {
+    process.env.ANYKPI_API_KEY = ADMIN;
+    process.env.ANYKPI_SECRET = "session-test-secret";
+    vi.stubEnv("NODE_ENV", "test");
+
+    const minted = await createKey(
+      post("http://localhost:3000/api/v1/keys", {
+        name: "live-only",
+        scope: "read",
+        workspace: "live",
+      }, { authorization: `Bearer ${ADMIN}` })
+    );
+    expect(minted.status).toBe(201);
+    const { key } = (await minted.json()) as { key: string };
+
+    const login = await postSession(
+      post("http://localhost:3000/api/session", { key, workspace: "live" })
+    );
+    expect(login.status).toBe(200);
+    const cookie = sessionCookiePair(login);
+
+    const status = await getSession(
+      get("http://localhost:3000/api/session?workspace=iso-b", { cookie })
+    );
+    const body = (await status.json()) as { authorized?: boolean };
+    expect(body.authorized).toBe(false);
+
+    const other = await getDotplot(
+      get("http://localhost:3000/api/views/dotplot?workspace=iso-b", { cookie })
+    );
+    expect(other.status).toBe(401);
   });
 });

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { AUDIT_ACTIONS, recordWriteAudit } from "@/core/audit";
 import { authorize, authResponse, resolveWorkspace } from "@/core/auth";
 import {
@@ -83,7 +83,12 @@ export async function POST(request: NextRequest) {
     const existingUser = await db
       .select({ personId: schema.users.personId })
       .from(schema.users)
-      .where(eq(schema.users.personId, personId))
+      .where(
+        and(
+          eq(schema.users.personId, personId),
+          eq(schema.users.workspaceId, workspaceId)
+        )
+      )
       .get();
 
     if (!existingUser) {
