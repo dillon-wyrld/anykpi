@@ -34,7 +34,7 @@ export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
 
 /**
  * Every HTTP write route that must produce an audit row today.
- * MCP write tools land later (ANY-28); the HTTP hook is already wired.
+ * MCP write tools record `mcp.call` via recordMcpWriteAudit on /api/mcp.
  */
 export const WRITE_HTTP_ROUTES = [
   { method: "POST", path: "/api/ingest/identify", action: AUDIT_ACTIONS.ingestIdentify },

@@ -63,10 +63,13 @@ Tools:
 - \`get_cohorts\` — retention, smile flags, PMF verdict; optional split (max 3 series)
 - \`get_wbr\` — WBR metrics and exception sentences
 - \`get_calendar\` — events in range by source
+- \`connect_source\` — store per-source credentials encrypted at rest (requires write scope)
+- \`trigger_sync\` — run a connector sync for one source or all (requires write scope)
+- \`import_csv\` — import users or events from CSV (requires write scope)
 - \`install_sdk\` — SDK snippet for a web app (stdio MCP)
 - \`configure_value_events\` — map event names to classes core/search/share/pay (stdio MCP; requires write scope)
 
-stdio server: src/mcp/server.ts. HTTP tools/list advertises the five read tools above.
+stdio server: src/mcp/server.ts. HTTP tools/list advertises the five read tools and the three write tools above.
 
 ## CLI
 
