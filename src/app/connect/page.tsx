@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { browserSnippet } from "@/sdk";
 import {
@@ -13,6 +13,12 @@ import {
 } from "@/core/csv-parse";
 import { AuditReadout } from "./AuditReadout";
 import { ConnectorHealthPanel } from "./ConnectorHealthPanel";
+import {
+  DEFAULT_COMPANY_NAME,
+  DEMO_HOME_CITY,
+  formatCompanyDayLabel,
+  HOME_CITY_PRESETS,
+} from "@/core/company-day";
 
 export default function ConnectPage() {
   const [selectedPath, setSelectedPath] = useState<"existing" | "sdk" | "csv" | null>(null);
@@ -56,6 +62,99 @@ export default function ConnectPage() {
     rotated?: boolean;
     error?: string;
   } | null>(null);
+  const [companyName, setCompanyName] = useState(DEFAULT_COMPANY_NAME);
+  const [foundedDate, setFoundedDate] = useState("");
+  const [homeCityLabel, setHomeCityLabel] = useState(DEMO_HOME_CITY.label);
+  const [homeCityTimezone, setHomeCityTimezone] = useState(DEMO_HOME_CITY.timezone);
+  const [customTimezone, setCustomTimezone] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileStatus, setProfileStatus] = useState<{
+    ok: boolean;
+    error?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const headers: Record<string, string> = {};
+    if (adminKey) headers.Authorization = `Bearer ${adminKey}`;
+    fetch(`/api/v1/config?workspace=${encodeURIComponent(workspaceId)}`, {
+      headers,
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then(
+        (
+          data: {
+            companyName?: string;
+            foundedAt?: string | null;
+            homeCity?: { timezone: string; label: string } | null;
+          } | null
+        ) => {
+          if (!data) return;
+          setCompanyName(data.companyName || DEFAULT_COMPANY_NAME);
+          setFoundedDate(data.foundedAt ? data.foundedAt.slice(0, 10) : "");
+          if (data.homeCity) {
+            setHomeCityLabel(data.homeCity.label);
+            setHomeCityTimezone(data.homeCity.timezone);
+            setCustomTimezone(
+              !HOME_CITY_PRESETS.some(
+                (preset) =>
+                  preset.timezone === data.homeCity?.timezone &&
+                  preset.label === data.homeCity.label
+              )
+            );
+          }
+        }
+      )
+      .catch(() => {
+        // Leave the form at defaults when the workspace is locked
+      });
+  }, [workspaceId, adminKey]);
+
+  const handleSaveCompanyProfile = async () => {
+    setProfileSaving(true);
+    setProfileStatus(null);
+    try {
+      const response = await fetch("/api/v1/config", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(adminKey ? { Authorization: `Bearer ${adminKey}` } : {}),
+        },
+        body: JSON.stringify({
+          workspaceId,
+          companyName,
+          foundedAt: foundedDate || null,
+          homeCity:
+            homeCityLabel.trim() && homeCityTimezone.trim()
+              ? { timezone: homeCityTimezone.trim(), label: homeCityLabel.trim() }
+              : null,
+        }),
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        companyName?: string;
+        foundedAt?: string | null;
+        homeCity?: { timezone: string; label: string } | null;
+      };
+      if (!response.ok) {
+        setProfileStatus({
+          ok: false,
+          error: data.error || "Could not save company profile",
+        });
+        return;
+      }
+      if (data.companyName) setCompanyName(data.companyName);
+      setFoundedDate(data.foundedAt ? data.foundedAt.slice(0, 10) : "");
+      if (data.homeCity) {
+        setHomeCityLabel(data.homeCity.label);
+        setHomeCityTimezone(data.homeCity.timezone);
+      }
+      setProfileStatus({ ok: true });
+    } catch {
+      setProfileStatus({ ok: false, error: "Could not save company profile" });
+    } finally {
+      setProfileSaving(false);
+    }
+  };
 
   const handleGenerateApiKey = async () => {
     try {
@@ -311,6 +410,138 @@ export default function ConnectPage() {
             Three paths. All doable by a human OR an AI agent. Choose one:
           </p>
         </div>
+
+        <section className="bg-panel border border-border rounded-lg p-6 space-y-4 mb-12">
+          <div>
+            <h2 className="font-display text-lg font-semibold">Company profile</h2>
+            <p className="text-sm text-sub mt-1">
+              Name, founded date, and home city for this workspace. Setting the
+              name changes {formatCompanyDayLabel(companyName)}.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                Workspace
+              </label>
+              <input
+                type="text"
+                value={workspaceId}
+                onChange={(e) => setWorkspaceId(e.target.value)}
+                placeholder="live"
+                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                ANYKPI API key
+              </label>
+              <input
+                type="password"
+                value={adminKey}
+                onChange={(e) => setAdminKey(e.target.value)}
+                placeholder="Required to save a live workspace"
+                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                Company name
+              </label>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                placeholder={DEFAULT_COMPANY_NAME}
+                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                Founded date
+              </label>
+              <input
+                type="date"
+                value={foundedDate}
+                onChange={(e) => setFoundedDate(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                Home city
+              </label>
+              <input
+                type="text"
+                value={homeCityLabel}
+                onChange={(e) => setHomeCityLabel(e.target.value)}
+                placeholder="San Francisco"
+                className="w-full px-3 py-2 text-sm bg-bg border border-border rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
+                Time zone (IANA)
+              </label>
+              {customTimezone ? (
+                <input
+                  type="text"
+                  value={homeCityTimezone}
+                  onChange={(e) => setHomeCityTimezone(e.target.value)}
+                  placeholder="America/Los_Angeles"
+                  className="w-full px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                />
+              ) : (
+                <select
+                  value={`${homeCityTimezone}|${homeCityLabel}`}
+                  onChange={(e) => {
+                    if (e.target.value === "custom") {
+                      setCustomTimezone(true);
+                      return;
+                    }
+                    const [timezone, ...labelParts] = e.target.value.split("|");
+                    setHomeCityTimezone(timezone);
+                    setHomeCityLabel(labelParts.join("|"));
+                  }}
+                  className="w-full px-3 py-2 text-sm bg-bg border border-border rounded"
+                >
+                  {HOME_CITY_PRESETS.map((preset) => (
+                    <option
+                      key={`${preset.timezone}-${preset.label}`}
+                      value={`${preset.timezone}|${preset.label}`}
+                    >
+                      {preset.label} ({preset.timezone})
+                    </option>
+                  ))}
+                  <option value="custom">Custom IANA time zone…</option>
+                </select>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <p className="text-sm">
+              <span className="text-faint uppercase tracking-wider text-xs font-mono mr-2">
+                Preview
+              </span>
+              <span className="font-semibold">{formatCompanyDayLabel(companyName)}</span>
+            </p>
+            <button
+              type="button"
+              onClick={handleSaveCompanyProfile}
+              disabled={profileSaving}
+              className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90 disabled:opacity-50"
+            >
+              {profileSaving ? "Saving…" : "Save profile"}
+            </button>
+          </div>
+          {profileStatus && (
+            <p className={`text-sm ${profileStatus.ok ? "text-accent" : "text-red-500"}`}>
+              {profileStatus.ok
+                ? `Saved. ${formatCompanyDayLabel(companyName)}.`
+                : profileStatus.error}
+            </p>
+          )}
+        </section>
 
         <div className="grid md:grid-cols-3 gap-6 mb-12">
           <button

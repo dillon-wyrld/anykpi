@@ -101,6 +101,8 @@ Returns:
 - `POST /api/v1/outreach/outcome` — Tag replied / interviewed / converted (PMF+ conversion by cluster)
 - `POST /api/v1/sync` — Trigger a sync (one source or all; requires an API key)
 - `POST /api/v1/import` — Import users or events from CSV (requires an API key)
+- `GET /api/v1/config` — Company profile (name, founded date, home city)
+- `PATCH /api/v1/config` — Update the company profile (write scope; founded date cannot be in the future)
 - `GET /api/v1/export` — Users, events, and read models as JSON or CSV (requires a key on live)
 - `GET /api/v1/keys` — List key metadata (scope, last used, legacy)
 - `POST /api/v1/keys` — Generate API key (defaults to read)
@@ -128,6 +130,8 @@ anykpi users --cluster='🔥 Power daily'
 anykpi cohorts --json
 anykpi wbr --section=Finance
 anykpi calendar --source=stripe
+anykpi config
+anykpi config --name YourCo --founded 2024-08-20 --city "San Francisco" --timezone America/Los_Angeles
 anykpi connect stripe --api-key rk_... --secret-key whsec_...
 anykpi connect github --api-key ghp_... --project-id owner/repo
 anykpi sync --source=stripe

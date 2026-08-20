@@ -64,6 +64,7 @@ test("every --help command succeeds and track is visible in /api/v1/users", asyn
     ],
     keys: ["--json"],
     workspaces: [],
+    config: ["--workspace", "demo", "--json"],
     identify: [
       userId,
       "--name",

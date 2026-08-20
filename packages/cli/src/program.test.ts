@@ -60,6 +60,19 @@ describe("published CLI surface", () => {
     expect(fromHelp).toContain("identify");
     expect(fromHelp).toContain("track");
     expect(fromHelp).toContain("workspaces");
+    expect(fromHelp).toContain("config");
+  });
+
+  it("advertises config for the company profile", () => {
+    const program = createProgram();
+    const names = program.commands.map((command) => command.name());
+    const help = program.helpInformation();
+    const config = program.commands.find((command) => command.name() === "config");
+
+    expect(names).toContain("config");
+    expect(help).toMatch(/\bconfig\b/);
+    expect(commandsFromHelp(help)).toContain("config");
+    expect(config?.description()).toMatch(/company profile/i);
   });
 
   it("advertises outreach for listing drafts and tagging outcomes", () => {

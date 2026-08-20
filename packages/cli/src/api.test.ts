@@ -381,6 +381,72 @@ describe("CLI ingest client", () => {
     expect(printed).not.toContain("Ada");
   });
 
+  it("config GETs /api/v1/config and PATCHes name, founded date, and home city", async () => {
+    isolatedHome();
+    process.env.ANYKPI_API_KEY = "test-key";
+    process.env.ANYKPI_API_URL = "http://instance.test";
+
+    const profile = {
+      workspaceId: "live",
+      companyName: "Harbor",
+      foundedAt: "2020-01-15T00:00:00.000Z",
+      homeCity: { timezone: "America/Los_Angeles", label: "San Francisco" },
+      dayLabel: "Day of Harbor",
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          ...profile,
+          companyName: "YourCo",
+          dayLabel: "Day of YourCo",
+          foundedAt: null,
+          homeCity: null,
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => profile,
+      });
+    vi.stubGlobal("fetch", fetchMock);
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    const program = createProgram();
+    program.exitOverride();
+    await program.parseAsync(["config", "--workspace", "live"], { from: "user" });
+    await program.parseAsync(
+      [
+        "config",
+        "--workspace",
+        "live",
+        "--name",
+        "Harbor",
+        "--founded",
+        "2020-01-15",
+        "--city",
+        "San Francisco",
+        "--timezone",
+        "America/Los_Angeles",
+      ],
+      { from: "user" }
+    );
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "http://instance.test/api/v1/config?workspace=live"
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("http://instance.test/api/v1/config");
+    expect((fetchMock.mock.calls[1]?.[1] as RequestInit).method).toBe("PATCH");
+    expect(JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body))).toEqual({
+      workspaceId: "live",
+      companyName: "Harbor",
+      foundedAt: "2020-01-15",
+      homeCity: { timezone: "America/Los_Angeles", label: "San Francisco" },
+    });
+    const printed = log.mock.calls.map((call) => call.join(" ")).join("\n");
+    expect(printed).toContain("Day of Harbor");
+  });
+
   it("keys lists metadata and keys downgrade POSTs /api/v1/keys/downgrade", async () => {
     isolatedHome();
     process.env.ANYKPI_API_KEY = "test-key";

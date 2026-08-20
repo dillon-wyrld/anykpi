@@ -10,6 +10,7 @@ import {
   startOfLocalDay,
 } from "@/core/views/calendar-math";
 import { useFreshness } from "@/components/useFreshness";
+import { formatCompanyDayLabel } from "@/core/company-day";
 
 interface CalendarEvent {
   id: number;
@@ -95,6 +96,7 @@ export default function Calendar({ workspace }: CalendarProps) {
 
   const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
+  const [dayLabel, setDayLabel] = useState(formatCompanyDayLabel(null));
   const [loading, setLoading] = useState(true);
   const initialSyncDone = useRef(false);
 
@@ -122,6 +124,17 @@ export default function Calendar({ workspace }: CalendarProps) {
   useEffect(() => {
     loadCalendar(false);
   }, [loadCalendar]);
+
+  useEffect(() => {
+    fetch(`/api/v1/config?workspace=${encodeURIComponent(workspace)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { dayLabel?: string } | null) => {
+        if (data?.dayLabel) setDayLabel(data.dayLabel);
+      })
+      .catch(() => {
+        // Keep the default Day of YourCo label
+      });
+  }, [workspace]);
 
   useFreshness({
     workspace,
@@ -361,6 +374,10 @@ export default function Calendar({ workspace }: CalendarProps) {
         </span>
 
         <span style={{ flex: 1 }} />
+
+        <span className="text-xs border border-border rounded-lg px-2 py-1 bg-panel">
+          {dayLabel}
+        </span>
 
         <div className="flex gap-1 border border-border rounded-lg overflow-hidden">
           <button

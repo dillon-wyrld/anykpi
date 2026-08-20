@@ -57,6 +57,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   centuries), in `src/core/day.ts`. Home timezone is the existing
   config table (`home_timezone:<workspace>`); `company_name` / `home_city`
   stay for ANY-52.
+- Company profile per workspace (ANY-52): `company_name` and `home_city`
+  (IANA timezone + label) sit beside `founded_at` in the existing config
+  table. `/connect` and `anykpi config` set all three. Demo seeds as
+  YourCo in San Francisco. A founded date in the future is refused.
+  Setting the name changes `Day of <name>`.
 - Postgres query-compat and CI matrix (ANY-47): view builders and
   read-model writers share one query shape on SQLite and Postgres.
   Timestamps stay Date objects, upserts use `excluded`, and writes that

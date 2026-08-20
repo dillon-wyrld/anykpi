@@ -111,6 +111,14 @@ export function foundedAtConfigKey(workspaceId: string): string {
   return `founded_at:${workspaceId}`;
 }
 
+export function companyNameConfigKey(workspaceId: string): string {
+  return `company_name:${workspaceId}`;
+}
+
+export function homeCityConfigKey(workspaceId: string): string {
+  return `home_city:${workspaceId}`;
+}
+
 export function utcMidnight(date: Date): Date {
   return new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
