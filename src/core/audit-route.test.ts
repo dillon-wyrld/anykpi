@@ -16,6 +16,9 @@ import { DELETE as deleteKey } from "@/app/api/v1/keys/[id]/route";
 import { POST as downgradeKeys } from "@/app/api/v1/keys/downgrade/route";
 import { POST as postStripeWebhook } from "@/app/api/webhooks/stripe/route";
 import { POST as postMcp } from "@/app/api/mcp/route";
+import { POST as postOutreach } from "@/app/api/v1/outreach/route";
+import { POST as postOutreachApprove } from "@/app/api/v1/outreach/approve/route";
+import { POST as postOutreachSend } from "@/app/api/v1/outreach/send/route";
 import {
   AUDIT_ACTIONS,
   WRITE_HTTP_ROUTES,
@@ -55,6 +58,8 @@ afterEach(async () => {
   await db.delete(schema.sources).where(eq(schema.sources.workspaceId, WS));
   await db.delete(schema.syncState).where(eq(schema.syncState.workspaceId, WS));
   await db.delete(schema.apiKeys).where(eq(schema.apiKeys.workspaceId, WS));
+  await db.delete(schema.outreachDelivery).where(eq(schema.outreachDelivery.workspaceId, WS));
+  await db.delete(schema.outreach).where(eq(schema.outreach.workspaceId, WS));
   await db.delete(schema.personRevenue).where(eq(schema.personRevenue.workspaceId, WS));
   await db.delete(schema.mrrSnapshots).where(eq(schema.mrrSnapshots.workspaceId, WS));
   await db.delete(schema.subscriptionEvents).where(eq(schema.subscriptionEvents.workspaceId, WS));
@@ -281,6 +286,79 @@ const drivers: Record<(typeof WRITE_HTTP_ROUTES)[number]["action"], Driver> = {
     );
     expect(res.status).toBe(200);
     return { actor: AUDIT_ACTOR_WEBHOOK, subject: "evt_fixture_sub_created" };
+  },
+  [AUDIT_ACTIONS.outreachQueue]: async () => {
+    const res = await postOutreach(
+      asAdmin("http://localhost:3000/api/v1/outreach", "POST", {
+        workspaceId: WS,
+        personId: "audit-outreach",
+        body: "hey — 15 minutes?",
+      })
+    );
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { draft: { id: string } };
+    return { actor: AUDIT_ACTOR_ENV, subject: body.draft.id };
+  },
+  [AUDIT_ACTIONS.outreachApprove]: async () => {
+    const queued = await postOutreach(
+      asAdmin("http://localhost:3000/api/v1/outreach", "POST", {
+        workspaceId: WS,
+        personId: "audit-approve",
+        body: "hey — 15 minutes?",
+      })
+    );
+    const { draft } = (await queued.json()) as { draft: { id: string } };
+    const res = await postOutreachApprove(
+      asAdmin("http://localhost:3000/api/v1/outreach/approve", "POST", {
+        workspaceId: WS,
+        id: draft.id,
+      })
+    );
+    expect(res.status).toBe(200);
+    return { actor: AUDIT_ACTOR_ENV, subject: draft.id };
+  },
+  [AUDIT_ACTIONS.outreachSend]: async () => {
+    await db.insert(schema.users).values({
+      personId: "audit-send",
+      name: "Ada",
+      email: "ada@example.com",
+      workspaceId: WS,
+    });
+    const queued = await postOutreach(
+      asAdmin("http://localhost:3000/api/v1/outreach", "POST", {
+        workspaceId: WS,
+        personId: "audit-send",
+        body: "hey — 15 minutes?",
+      })
+    );
+    const { draft } = (await queued.json()) as { draft: { id: string } };
+    const approved = await postOutreachApprove(
+      asAdmin("http://localhost:3000/api/v1/outreach/approve", "POST", {
+        workspaceId: WS,
+        id: draft.id,
+      })
+    );
+    expect(approved.status).toBe(200);
+    process.env.ANYKPI_SECRET = originalSecret ?? "vitest-anykpi-secret";
+    await saveSourceConfig(WS, "resend", {
+      apiKey: "re_audit",
+      from: "founder@example.com",
+    });
+    const previousFetch = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response("{}", { status: 200 })) as typeof fetch;
+    try {
+      const res = await postOutreachSend(
+        asAdmin("http://localhost:3000/api/v1/outreach/send", "POST", {
+          workspaceId: WS,
+          id: draft.id,
+        })
+      );
+      expect(res.status).toBe(200);
+    } finally {
+      globalThis.fetch = previousFetch;
+    }
+    return { actor: AUDIT_ACTOR_ENV, subject: draft.id };
   },
 };
 

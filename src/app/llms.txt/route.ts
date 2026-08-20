@@ -38,6 +38,10 @@ OpenAPI spec: /api/openapi
 - GET /api/v1/sync — connector sync status
 - GET /api/v1/freshness — last ingest + per-source last-sync stamps (views poll this)
 - GET /api/v1/audit — action log (actor, action, subject, timestamp). Filter by actor and since to ask what an agent did yesterday
+- GET /api/v1/outreach — persisted PMF+ outreach drafts
+- POST /api/v1/outreach — queue a waiting draft (write scope)
+- POST /api/v1/outreach/approve — approve a draft (browser session or admin key only; a write key cannot approve)
+- POST /api/v1/outreach/send — deliver an approved draft (unapproved drafts are refused)
 - POST /api/v1/connect — store per-source credentials (encrypted at rest; never returned; csv stores import mapping)
 - POST /api/v1/import — CSV import for users and events (sources store + column-mapping preview; writes keyed)
 - GET /api/v1/export — users, events, and read models as JSON or CSV files (connector read models restore by re-sync)
@@ -66,10 +70,13 @@ Tools:
 - \`connect_source\` — store per-source credentials encrypted at rest (requires write scope)
 - \`trigger_sync\` — run a connector sync for one source or all (requires write scope)
 - \`import_csv\` — import users or events from CSV (requires write scope)
+- \`queue_outreach\` — persist a waiting draft (write scope)
+- \`approve_outreach\` — approve a persisted draft (session or admin only)
+- \`send_outreach\` — deliver an approved draft; unapproved drafts are refused
 - \`install_sdk\` — SDK snippet for a web app (stdio MCP)
 - \`configure_value_events\` — map event names to classes core/search/share/pay (stdio MCP; requires write scope)
 
-stdio server: src/mcp/server.ts. HTTP tools/list advertises the five read tools and the three write tools above.
+stdio server: src/mcp/server.ts. HTTP tools/list advertises the five read tools, the three ANY-28 write tools, and outreach queue/approve/send.
 
 ## CLI
 

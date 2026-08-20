@@ -22,7 +22,14 @@ import {
   type ResearchSubject,
 } from "@/core/research";
 import * as schema from "@/core/schema";
-import { demoPmfRuns, pmfRunFromResearch, type PmfRun } from "@/core/views/pmf";
+import {
+  demoPmfRuns,
+  pmfRunFromResearch,
+  type PmfDraft,
+  type PmfRun,
+} from "@/core/views/pmf";
+import { listOutreach } from "@/outreach";
+import { parseOutreachState } from "@/outreach";
 
 function toSubject(row: {
   personId: string;
@@ -96,11 +103,25 @@ export async function GET(request: NextRequest) {
       pmfRunFromResearch(result)
     );
     const runs = workspace === "demo" ? [...cachedRuns, ...demoPmfRuns()] : cachedRuns;
+    const persisted = await listOutreach(workspace);
+    const queue: PmfDraft[] = persisted.map((row) => ({
+      id: row.id,
+      personId: row.personId,
+      message: row.body,
+      state: parseOutreachState(row.state),
+      approvedBy: row.approvedBy,
+    }));
+    const byPerson = new Map(queue.map((draft) => [draft.personId, draft]));
+    for (const run of runs) {
+      run.queue = run.people
+        .map((person) => byPerson.get(person.personId))
+        .filter((draft): draft is PmfDraft => Boolean(draft));
+    }
     const candidates = await loadCandidates(workspace);
 
     const personId = searchParams.get("user");
     if (!personId) {
-      return NextResponse.json({ runs, candidates });
+      return NextResponse.json({ runs, candidates, queue });
     }
 
     const user = await loadUser(workspace, personId);
@@ -111,6 +132,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       runs,
       candidates,
+      queue,
       disclosure: discloseResearch(toSubject(user)),
     });
   } catch {

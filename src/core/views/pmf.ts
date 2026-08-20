@@ -5,7 +5,7 @@
 import type { ResearchResult } from "@/core/contracts";
 
 export type PmfConfidence = "high" | "medium" | "low";
-export type PmfDraftState = "waiting" | "edited" | "approved";
+export type PmfDraftState = "waiting" | "edited" | "approved" | "sent";
 
 export interface PmfClaim {
   title: string;
@@ -36,9 +36,11 @@ export interface PmfPerson {
 }
 
 export interface PmfDraft {
+  id?: string;
   personId: string;
   message: string;
   state: PmfDraftState;
+  approvedBy?: string | null;
 }
 
 export interface PmfGroupRollup {
@@ -116,7 +118,9 @@ export function pmfRunTotals(runs: PmfRun[]): {
     peopleResearched: runs.reduce((sum, r) => sum + r.people.length, 0),
     queuedTotal: runs.reduce((sum, r) => sum + r.queue.length, 0),
     waitingCount: runs.reduce(
-      (sum, r) => sum + r.queue.filter((d) => d.state === "waiting").length,
+      (sum, r) =>
+        sum + r.queue.filter((d) => d.state === "waiting" || d.state === "edited")
+          .length,
       0
     ),
   };

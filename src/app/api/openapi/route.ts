@@ -25,6 +25,11 @@ import {
   SessionCreateRequestSchema,
   SessionStatusResponseSchema,
   AuditListResponseSchema,
+  OutreachQueueRequestSchema,
+  OutreachIdRequestSchema,
+  OutreachListResponseSchema,
+  OutreachDraftResponseSchema,
+  OutreachSendResponseSchema,
   ErrorResponseSchema,
   IngestIdentifyRequestSchema,
   IngestEventRequestSchema,
@@ -75,7 +80,8 @@ export async function GET(request: NextRequest) {
       { name: 'Ingest', description: 'Direct event collection' },
       { name: 'Keys', description: 'API key management' },
       { name: 'Session', description: 'Browser session cookie for live dashboard reads' },
-      { name: 'Audit', description: 'Action audit log' }
+      { name: 'Audit', description: 'Action audit log' },
+      { name: 'Outreach', description: 'Persisted PMF+ outreach drafts with per-send approval' }
     ],
     paths: {
       '/api/v1/overview': {
@@ -415,6 +421,130 @@ export async function GET(request: NextRequest) {
             },
             401: {
               description: 'Live workspace requires an API key',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/v1/outreach': {
+        get: {
+          tags: ['Outreach'],
+          summary: 'List outreach drafts',
+          description: 'Persisted drafts (waiting / approved / sent) for the workspace.',
+          parameters: [
+            {
+              name: 'workspace',
+              in: 'query',
+              schema: { type: 'string', default: 'demo' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Drafts with view_url',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(OutreachListResponseSchema)
+                }
+              }
+            }
+          }
+        },
+        post: {
+          tags: ['Outreach'],
+          summary: 'Queue an outreach draft',
+          description:
+            'Persist a waiting draft. Write scope can queue. Approval is a separate action (session or admin only).',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(OutreachQueueRequestSchema)
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Draft queued',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(OutreachDraftResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Missing or invalid API key',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/v1/outreach/approve': {
+        post: {
+          tags: ['Outreach'],
+          summary: 'Approve an outreach draft',
+          description:
+            'Mark a persisted draft approved. Browser session or admin-scoped key only. A write key that queued the draft cannot approve it.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(OutreachIdRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Draft approved',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(OutreachDraftResponseSchema)
+                }
+              }
+            },
+            403: {
+              description: 'Write-scoped key cannot approve',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/v1/outreach/send': {
+        post: {
+          tags: ['Outreach'],
+          summary: 'Send an approved outreach draft',
+          description:
+            'Calls the single delivery function with the persisted row. Unapproved drafts are refused. Every send is logged with timestamp, recipient, and the approving actor.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(OutreachIdRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Draft sent and logged',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(OutreachSendResponseSchema)
+                }
+              }
+            },
+            403: {
+              description: 'Draft is not approved',
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(ErrorResponseSchema)
