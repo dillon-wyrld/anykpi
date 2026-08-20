@@ -37,6 +37,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Playwright coverage for the `/connect` mint flow and live workspace
+  auth gate (ANY-43). Demo stays public-read; live views load only after
+  a minted key starts a browser session.
 - GitHub connector (ANY-11): token-based read of releases, stars, and
   commit cadence. Releases land as calendar events; star count and
   weekly commits land as WBR context. Token is stored via `/connect`
