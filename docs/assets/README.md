@@ -20,6 +20,11 @@ pnpm readme:assets
 | `wbr.png` | Weekly Business Review |
 | `calendar.png` | Calendar (read-only) |
 | `pmf.png` | PMF+ |
+| `wordmark-nav.png` | Nav logo row — modular-tile wordmark + `beta` tag |
+| `wordmark-light.png` | Wordmark on a light ground |
+| `wordmark-dark.png` | Wordmark on a dark ground |
+| `icon-light.png` | K-tile tab icon on a light ground |
+| `icon-dark.png` | K-tile tab icon on a dark ground |
 | `tour.gif` | Short tour that clicks through all five views |
 
 ## GIF

@@ -25,6 +25,23 @@ describe("out-of-the-box docs tell the truth", () => {
     expect(existsSync(resolve(root, "docs/assets/tour.gif"))).toBe(true);
   });
 
+  it("readme:assets captures the wordmark and tab icon on light and dark grounds", () => {
+    const script = read("scripts/capture-readme-assets.ts");
+    const assetsReadme = read("docs/assets/README.md");
+    expect(script).toContain("wordmark-nav.png");
+    expect(script).toContain("wordmark-light.png");
+    expect(script).toContain("wordmark-dark.png");
+    expect(script).toContain("icon-light.png");
+    expect(script).toContain("icon-dark.png");
+    expect(assetsReadme).toContain("wordmark-nav.png");
+    expect(assetsReadme).toContain("icon-dark.png");
+    expect(existsSync(resolve(root, "docs/assets/wordmark-nav.png"))).toBe(true);
+    expect(existsSync(resolve(root, "docs/assets/wordmark-light.png"))).toBe(true);
+    expect(existsSync(resolve(root, "docs/assets/wordmark-dark.png"))).toBe(true);
+    expect(existsSync(resolve(root, "docs/assets/icon-light.png"))).toBe(true);
+    expect(existsSync(resolve(root, "docs/assets/icon-dark.png"))).toBe(true);
+  });
+
   it("README documents the prebuilt GHCR image", () => {
     expect(readme).toContain("ghcr.io/dillon-wyrld/anykpi");
     expect(readme).toContain("docker run -p 3000:3000");
