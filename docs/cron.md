@@ -10,9 +10,10 @@ in-process timer cannot keep data fresh if the server is not running.
 SYNC_INTERVAL_MINUTES=0
 ```
 
-Trigger the same path a human or agent uses for "sync now":
+Trigger the same path a human or agent uses for "sync now" on `/connect`:
 `POST /api/v1/sync`. Writes require an API key. Omit `source` to refresh
 every registered connector; pass one source to refresh only that pull.
+The `/connect` health panel shows next run from `SYNC_INTERVAL_MINUTES`.
 
 ```bash
 # Every 15 minutes — one workspace

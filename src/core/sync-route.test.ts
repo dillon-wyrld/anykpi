@@ -107,6 +107,8 @@ describe("POST /api/v1/sync auth", () => {
       get("http://localhost:3000/api/v1/sync?workspace=demo")
     );
     expect(response.status).toBe(200);
+    const body = (await response.json()) as { syncIntervalMinutes?: number };
+    expect(typeof body.syncIntervalMinutes).toBe("number");
   });
 });
 

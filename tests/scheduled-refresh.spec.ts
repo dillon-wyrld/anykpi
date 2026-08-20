@@ -5,7 +5,7 @@ const WS = "e2e-sched-unhealthy";
 
 /**
  * A failing source must be visible on GET /api/v1/overview (and
- * get_overview). The /connect health panel is a later ticket.
+ * get_overview). /connect renders that state as human copy (ANY-19).
  *
  * The short-interval "data no older than 20 minutes" path lives in
  * `src/core/scheduler.test.ts` so it can use recorded fixtures without

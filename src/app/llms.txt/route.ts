@@ -35,7 +35,7 @@ OpenAPI spec: /api/openapi
 - GET /api/v1/cohorts — retention curves with smile detection; optional split by platform, country, or cluster (max 3 series)
 - GET /api/v1/wbr — Weekly Business Review (6 weeks, 12 months YOY, exceptions)
 - GET /api/v1/calendar — multi-source event timeline
-- GET /api/v1/sync — connector sync status
+- GET /api/v1/sync — connector sync status (includes syncIntervalMinutes)
 - GET /api/v1/freshness — last ingest + per-source last-sync stamps (views poll this)
 - GET /api/v1/audit — action log (actor, action, subject, timestamp). Filter by actor and since to ask what an agent did yesterday
 - GET /api/v1/outreach — persisted PMF+ outreach drafts
@@ -88,7 +88,7 @@ login mints a key via POST /api/v1/keys (default scope read; pass --scope write 
 
 ## Connectors
 
-Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub. Sync is pull-only into local read models; ANYKPI never writes back. Stripe also accepts a signature-verified webhook at POST /api/webhooks/stripe so revenue stays minutes-fresh. Connector setup is the /connect UI or \`anykpi connect\`. Config is encrypted at rest with ANYKPI_SECRET. Env vars are a deprecated read-only fallback. Calendar ICS is read-only forever. The Node process pulls connected sources every SYNC_INTERVAL_MINUTES (default 15) from instrumentation.ts. Set 0 and POST /api/v1/sync from cron — see docs/cron.md.
+Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub. Sync is pull-only into local read models; ANYKPI never writes back. Stripe also accepts a signature-verified webhook at POST /api/webhooks/stripe so revenue stays minutes-fresh. Connector setup is the /connect UI or \`anykpi connect\`. /connect shows last sync, rows pulled, next run (SYNC_INTERVAL_MINUTES), a plain-language error with a next step, and Sync now. Config is encrypted at rest with ANYKPI_SECRET. Env vars are a deprecated read-only fallback. Calendar ICS is read-only forever. The Node process pulls connected sources every SYNC_INTERVAL_MINUTES (default 15) from instrumentation.ts. Set 0 and POST /api/v1/sync from cron — see docs/cron.md.
 
 ## More
 

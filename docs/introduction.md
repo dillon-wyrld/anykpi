@@ -19,7 +19,10 @@ Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub.
 
 ```bash
 # Via UI
-Visit /connect and enter credentials
+Visit /connect and enter credentials. The same page is the trust
+surface for connected sources: last sync, rows pulled, next scheduled
+run (`SYNC_INTERVAL_MINUTES`), a plain-language error with a next step,
+and Sync now.
 
 # Via CLI ingest (same read models the connectors write)
 anykpi identify user123 --name="Jane Doe"
@@ -84,7 +87,7 @@ Returns:
 - `GET /api/v1/cohorts` — Retention with PMF signal; optional split by platform, country, or cluster (max 3 series)
 - `GET /api/v1/wbr` — Weekly Business Review metrics
 - `GET /api/v1/calendar` — Multi-source events
-- `GET /api/v1/sync` — Connector status
+- `GET /api/v1/sync` — Connector status (`syncIntervalMinutes` is `SYNC_INTERVAL_MINUTES`)
 - `GET /api/v1/freshness` — Last ingest + per-source last-sync stamps
 - `GET /api/v1/audit` — Action audit log (filter by actor and since/until)
 - `GET /api/v1/outreach` — Persisted PMF+ outreach drafts

@@ -12,6 +12,7 @@ import {
   type ImportKind,
 } from "@/core/csv-parse";
 import { AuditReadout } from "./AuditReadout";
+import { ConnectorHealthPanel } from "./ConnectorHealthPanel";
 
 export default function ConnectPage() {
   const [selectedPath, setSelectedPath] = useState<"existing" | "sdk" | "csv" | null>(null);
@@ -1046,6 +1047,8 @@ export default function ConnectPage() {
         )}
 
         <div className="mt-12 space-y-8">
+          <ConnectorHealthPanel apiKey={adminKey} workspace={workspaceId} />
+
           <AuditReadout apiKey={adminKey} />
 
           <section>

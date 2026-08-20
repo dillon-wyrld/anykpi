@@ -45,6 +45,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   send is logged with timestamp, recipient, and the approving actor, and
   writes an audit row. Mail credentials (Resend or SMTP) are stored via
   ANY-46 (`POST /api/v1/connect` source `resend` or `smtp`).
+- Connector health panel on `/connect` (ANY-19): per source, last sync,
+  rows pulled, next scheduled run (`SYNC_INTERVAL_MINUTES`), a
+  plain-language error with a next step, and Sync now. A failed source
+  is rendered from `sync_state` / `syncHealth` — not a status code.
 - MCP write tools (ANY-28): `connect_source`, `trigger_sync`, and
   `import_csv` so an agent can connect data unattended. Each requires a
   write-scoped key, returns a `view_url`, and records `mcp.call` on the

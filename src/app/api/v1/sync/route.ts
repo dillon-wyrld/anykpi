@@ -18,6 +18,7 @@ import {
   readJsonBounded,
 } from '@/core/errors';
 import { getConnector, resolveSources, sync } from '@/connectors';
+import { parseSyncIntervalMinutes } from '@/core/scheduler-env';
 
 async function loadStates(workspace: string) {
   const syncStates = await db
@@ -51,6 +52,7 @@ export async function GET(request: NextRequest) {
     const response = SyncResponseSchema.parse({
       states: await loadStates(workspace),
       workspace,
+      syncIntervalMinutes: parseSyncIntervalMinutes(),
     });
 
     return NextResponse.json(response);
