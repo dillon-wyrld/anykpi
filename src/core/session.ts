@@ -61,6 +61,8 @@ export function authFromSession(session: BrowserSession): AuthOk {
     actor: session.actor,
     keyWorkspace: session.workspace,
     canChooseWorkspace: session.canChooseWorkspace,
+    // Browser session is read-only. Writes stay key-only (ANY-38).
+    scope: "read",
   };
 }
 
