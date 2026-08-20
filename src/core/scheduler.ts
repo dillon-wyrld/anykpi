@@ -59,7 +59,7 @@ export function parseSyncIntervalMinutes(
 }
 
 export function shouldStartScheduler(
-  env: NodeJS.ProcessEnv = process.env
+  env: Record<string, string | undefined> = process.env
 ): boolean {
   if (env.NEXT_RUNTIME === "edge") return false;
   if (env.NEXT_PHASE === "phase-production-build") return false;

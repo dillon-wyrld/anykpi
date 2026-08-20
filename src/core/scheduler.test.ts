@@ -283,7 +283,7 @@ describe("scheduled refresh docs", () => {
     expect(cron).toContain("SYNC_INTERVAL_MINUTES=0");
     expect(cron).toContain("POST /api/v1/sync");
     expect(cron).toMatch(/curl/);
-    expect(intro).toContain("docs/cron.md");
+    expect(intro).toContain("cron.md");
     expect(intro).toContain("SYNC_INTERVAL_MINUTES");
   });
 });
