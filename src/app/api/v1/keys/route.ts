@@ -8,9 +8,32 @@ import {
   authorize,
   authResponse,
   canBootstrapFirstKey,
+  DEFAULT_NEW_KEY_SCOPE,
   LIVE_WORKSPACE,
+  MINT_ADMIN_KEY_ERROR,
 } from "@/core/auth";
-import { badRequest, internalError, logServerError } from "@/core/errors";
+import { badRequest, forbidden, internalError, logServerError } from "@/core/errors";
+
+function keyMetadata(row: {
+  id: string;
+  name: string;
+  createdAt: Date;
+  lastUsedAt: Date | null;
+  scope: string | null;
+  legacy: boolean | null;
+}, rawKey?: string) {
+  return APIKeyResponseSchema.parse({
+    id: row.id,
+    ...(rawKey ? { key: rawKey } : {}),
+    name: row.name,
+    scope: row.scope === "read" || row.scope === "write" || row.scope === "admin"
+      ? row.scope
+      : "write",
+    legacy: row.legacy === true,
+    lastUsedAt: row.lastUsedAt ? row.lastUsedAt.toISOString() : null,
+    createdAt: row.createdAt.toISOString(),
+  });
+}
 
 /**
  * POST /api/v1/keys
@@ -18,6 +41,7 @@ import { badRequest, internalError, logServerError } from "@/core/errors";
  * Mint a key. Never unauthenticated on a public/production interface.
  * First key is allowed only when the table is empty and this is local/dev,
  * or when the caller already has a valid env/admin or hashed key.
+ * New keys default to read.
  */
 export async function POST(request: NextRequest) {
   const auth = await authorize(request, { write: true });
@@ -31,6 +55,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
     const params = APIKeyCreateRequestSchema.parse(body);
+    const scope = params.scope ?? DEFAULT_NEW_KEY_SCOPE;
+
+    if (scope === "admin" && (!auth.ok || auth.scope !== "admin")) {
+      return forbidden(MINT_ADMIN_KEY_ERROR);
+    }
 
     let workspaceId = LIVE_WORKSPACE;
     if (auth.ok && auth.canChooseWorkspace) {
@@ -51,16 +80,24 @@ export async function POST(request: NextRequest) {
       name: params.name,
       workspaceId,
       createdAt: new Date(),
+      scope,
+      legacy: false,
     });
 
-    const response = APIKeyResponseSchema.parse({
-      id: keyId,
-      key: rawKey,
-      name: params.name,
-      createdAt: new Date().toISOString(),
-    });
-
-    return NextResponse.json(response, { status: 201 });
+    return NextResponse.json(
+      keyMetadata(
+        {
+          id: keyId,
+          name: params.name,
+          createdAt: new Date(),
+          lastUsedAt: null,
+          scope,
+          legacy: false,
+        },
+        rawKey
+      ),
+      { status: 201 }
+    );
   } catch (error) {
     if (error instanceof Error && error.name === "ZodError") {
       return badRequest();
@@ -75,6 +112,7 @@ export async function POST(request: NextRequest) {
  * GET /api/v1/keys
  *
  * List API key metadata (never the raw key). Requires a valid key.
+ * Includes scope, last-used, and a `legacy` flag for pre-scope keys.
  */
 export async function GET(request: NextRequest) {
   const auth = await authorize(request, { write: false });
@@ -90,13 +128,7 @@ export async function GET(request: NextRequest) {
       ? keys
       : keys.filter((k) => (k.workspaceId || LIVE_WORKSPACE) === auth.keyWorkspace);
 
-    const response = visible.map((k) =>
-      APIKeyResponseSchema.parse({
-        id: k.id,
-        name: k.name,
-        createdAt: k.createdAt.toISOString(),
-      })
-    );
+    const response = visible.map((k) => keyMetadata(k));
 
     return NextResponse.json({ keys: response });
   } catch {

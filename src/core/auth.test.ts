@@ -110,6 +110,9 @@ describe("authorize", () => {
     );
     expect(headerKey.ok).toBe(true);
     expect(statusOf(headerKey)).toBe(200);
+    if (headerKey.ok) {
+      expect(headerKey.scope).toBe("admin");
+    }
   });
 
   it("wrong key → 401", async () => {
@@ -138,6 +141,7 @@ describe("authorize", () => {
         actor: "hashed",
         keyWorkspace: "live",
         canChooseWorkspace: false,
+        scope: "write",
       },
       "demo",
       true
@@ -145,11 +149,52 @@ describe("authorize", () => {
     expect("workspace" in hashed && hashed.workspace).toBe("live");
 
     const env = resolveWorkspace(
-      { ok: true, actor: "env", canChooseWorkspace: true },
+      { ok: true, actor: "env", canChooseWorkspace: true, scope: "admin" },
       "team-a",
       true
     );
     expect("workspace" in env && env.workspace).toBe("team-a");
+  });
+
+  it("hashed read key is refused on writes with 403", async () => {
+    const { db } = await import("./db");
+    const schema = await import("./schema");
+    const { eq } = await import("drizzle-orm");
+
+    process.env.ANYKPI_API_KEY = "test-admin-key";
+    vi.stubEnv("NODE_ENV", "test");
+
+    const raw = "ak_read.test-secret";
+    const id = "ak_read_auth_test";
+    await db.insert(schema.apiKeys).values({
+      id,
+      hashedKey: sha256Hex(raw),
+      name: "reader",
+      workspaceId: "live",
+      createdAt: new Date(),
+      scope: "read",
+      legacy: false,
+    });
+
+    const denied = await authorize(requestWith({ Authorization: `Bearer ${raw}` }), {
+      write: true,
+    });
+    expect(denied.ok).toBe(false);
+    expect(statusOf(denied)).toBe(403);
+    if (!denied.ok) {
+      expect(denied.error).toMatch(/read/i);
+    }
+
+    const allowed = await authorize(requestWith({ Authorization: `Bearer ${raw}` }), {
+      workspace: "live",
+      write: false,
+    });
+    expect(allowed.ok).toBe(true);
+    if (allowed.ok) {
+      expect(allowed.scope).toBe("read");
+    }
+
+    await db.delete(schema.apiKeys).where(eq(schema.apiKeys.id, id));
   });
 
   it("production without ANYKPI_API_KEY refuses live reads and writes with 503", async () => {

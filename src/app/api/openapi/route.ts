@@ -19,6 +19,8 @@ import {
   ImportResponseSchema,
   APIKeyCreateRequestSchema,
   APIKeyResponseSchema,
+  APIKeyDowngradeRequestSchema,
+  APIKeyDowngradeResponseSchema,
   ErrorResponseSchema,
   IngestIdentifyRequestSchema,
   IngestEventRequestSchema,
@@ -621,13 +623,21 @@ export async function GET(request: NextRequest) {
                   schema: zodToJsonSchema(ErrorResponseSchema)
                 }
               }
+            },
+            403: {
+              description: 'Read-only key cannot mint keys',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
             }
           }
         },
         get: {
           tags: ['Keys'],
           summary: 'List API keys',
-          description: 'Get all API keys (actual keys not included)',
+          description: 'Get all API keys (actual keys not included). Includes scope, lastUsedAt, and legacy.',
           responses: {
             200: {
               description: 'List of API keys',
@@ -644,6 +654,43 @@ export async function GET(request: NextRequest) {
                   }
                 }
               }
+            }
+          }
+        }
+      },
+      '/api/v1/keys/downgrade': {
+        post: {
+          tags: ['Keys'],
+          summary: 'Downgrade legacy keys',
+          description:
+            'Convert migrated (legacy) write keys to read. Omit id to downgrade every visible legacy key. CLI: anykpi keys downgrade.',
+          requestBody: {
+            required: false,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(APIKeyDowngradeRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Legacy keys downgraded to read',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(APIKeyDowngradeResponseSchema)
+                }
+              }
+            },
+            403: {
+              description: 'Read-only key cannot downgrade',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            404: {
+              description: 'Key id not found or not legacy'
             }
           }
         }

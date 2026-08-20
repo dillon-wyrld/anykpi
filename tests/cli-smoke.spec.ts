@@ -47,7 +47,19 @@ test("every --help command succeeds and track is visible in /api/v1/users", asyn
   const platform = `cli-smoke-${stamp}`;
 
   const extras: Record<string, string[]> = {
-    login: ["--url", API_URL, "--key", API_KEY, "--name", "CLI Smoke", "--workspace", "demo"],
+    login: [
+      "--url",
+      API_URL,
+      "--key",
+      API_KEY,
+      "--name",
+      "CLI Smoke",
+      "--workspace",
+      "demo",
+      "--scope",
+      "write",
+    ],
+    keys: ["--json"],
     workspaces: [],
     identify: [
       userId,

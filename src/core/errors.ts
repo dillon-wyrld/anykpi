@@ -20,6 +20,10 @@ export function unauthorized(error = "Unauthorized"): NextResponse {
   return NextResponse.json({ error }, { status: 401 });
 }
 
+export function forbidden(error = "Forbidden"): NextResponse {
+  return NextResponse.json({ error }, { status: 403 });
+}
+
 export function tooManyRequests(retryAfterSeconds: number): NextResponse {
   return NextResponse.json(
     { error: "Too Many Requests" },

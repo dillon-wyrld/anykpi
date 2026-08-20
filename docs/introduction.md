@@ -87,7 +87,9 @@ Returns:
 - `GET /api/v1/freshness` — Last ingest + per-source last-sync stamps
 - `POST /api/v1/sync` — Trigger a sync (one source or all; requires an API key)
 - `POST /api/v1/import` — Import users or events from CSV (requires an API key)
-- `POST /api/v1/keys` — Generate API key
+- `GET /api/v1/keys` — List key metadata (scope, last used, legacy)
+- `POST /api/v1/keys` — Generate API key (defaults to read)
+- `POST /api/v1/keys/downgrade` — Convert legacy write keys to read
 - `POST /api/ingest/identify` — Identify user
 - `POST /api/ingest/event` — Track event
 - `POST /api/ingest/webhook/:source` — Realtime push (HMAC; [recipes](webhooks.md))
@@ -99,6 +101,8 @@ Returns:
 ```bash
 # Install
 npx @anykpi/cli login
+anykpi keys
+anykpi keys downgrade
 
 # Query
 anykpi overview
