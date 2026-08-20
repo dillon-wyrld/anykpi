@@ -21,6 +21,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Rate-limited and size-bounded the ingest endpoints.
 
 ### Fixed
+- E2E after the Postgres matrix (ANY-47): `anykpi export --json --out`
+  prints a receipt instead of echoing the full dump (CLI smoke was
+  dying with `exited null` / maxBuffer on the demo workspace). MCP
+  HAPPY_PATH covers `queue_outreach` / `approve_outreach` /
+  `send_outreach` and those tools return `viewUrl`. `@anykpi/sdk`
+  flushes immediately when `flushIntervalMs` is 0 so the npm-install
+  consumer does not hang on an unref'd timer.
 - Sync-state and config upserts now target unique indexes
   (`sync_state (workspace_id, source)` and `config (key, workspace_id)`)
   so a second write updates the existing row instead of erroring or

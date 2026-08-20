@@ -3,7 +3,7 @@ export interface AnykpiConfig {
   workspaceId?: string;
   apiKey?: string;
   debug?: boolean;
-  /** Delay before an automatic flush. 0 sends on the next timer tick. */
+  /** Delay before an automatic flush. 0 flushes immediately (no unref'd timer). */
   flushIntervalMs?: number;
   /** Backoff between flush retries after a network or 5xx failure. */
   retryDelayMs?: number;

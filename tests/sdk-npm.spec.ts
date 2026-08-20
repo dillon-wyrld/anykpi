@@ -51,7 +51,7 @@ test("npm i @anykpi/sdk then track() delivers an event to the local instance", a
 
   writeFileSync(
     join(consumerDir, "run.mjs"),
-    `import { identify, init, track } from "@anykpi/sdk";
+    `import { flush, identify, init, track } from "@anykpi/sdk";
 
 const endpoint = process.env.ANYKPI_API_URL;
 const apiKey = process.env.ANYKPI_API_KEY;
@@ -62,6 +62,7 @@ const client = init({ endpoint, apiKey, workspaceId: "demo" });
 await identify({ userId, properties: { name: "SDK npm user", platform } });
 await track("sdk_npm_event", { platform });
 await client.track("sdk_npm_again", { platform });
+await flush();
 `
   );
 
@@ -78,7 +79,9 @@ await client.track("sdk_npm_again", { platform });
     timeout: 30000,
   });
   if (run.status !== 0) {
-    throw new Error(`SDK consumer failed\n${run.stdout}\n${run.stderr}`);
+    throw new Error(
+      `SDK consumer failed status=${run.status} signal=${run.signal} error=${run.error?.message ?? ""}\n${run.stdout}\n${run.stderr}`
+    );
   }
 
   await expectUserVisibleViaRestAndMcp(request, { userId, platform });

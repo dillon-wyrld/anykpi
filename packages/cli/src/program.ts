@@ -363,7 +363,21 @@ export function createProgram(): Command {
         spinner.stop();
 
         if (options.json) {
-          console.log(JSON.stringify({ ...data, written }, null, 2));
+          // --out already persisted the payload. Echoing users/events/read
+          // models again blows spawn buffers in smoke tests and duplicates
+          // the file. Print the receipt agents parse.
+          const receipt = options.out
+            ? {
+                format: data.format,
+                workspaceId: data.workspaceId,
+                exportedAt: data.exportedAt,
+                counts: data.counts,
+                restore: data.restore,
+                written,
+                view_url: data.view_url,
+              }
+            : { ...data, written };
+          console.log(JSON.stringify(receipt, null, 2));
           return;
         }
 
