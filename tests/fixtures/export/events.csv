@@ -1,0 +1,7 @@
+personId,timestamp,eventName,eventClass,platform,externalId
+export_ada,2026-01-05T12:00:00.000Z,song_played,core,web,evt_ada_w0
+export_ada,2026-01-12T12:00:00.000Z,song_played,core,web,evt_ada_w1
+export_ada,2026-02-02T12:00:00.000Z,song_played,core,web,evt_ada_w4
+export_grace,2026-01-05T13:00:00.000Z,song_played,core,ios,evt_grace_w0
+export_alan,2026-01-12T14:00:00.000Z,search_query,search,web,evt_alan_w0
+export_alan,2026-01-19T14:00:00.000Z,song_played,core,web,evt_alan_w1

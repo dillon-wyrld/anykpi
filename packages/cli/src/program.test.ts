@@ -13,6 +13,18 @@ describe("published CLI surface", () => {
     expect(commandsFromHelp(help)).toContain("import");
   });
 
+  it("advertises export for users, events, and read models", () => {
+    const program = createProgram();
+    const names = program.commands.map((command) => command.name());
+    const help = program.helpInformation();
+    const exportCmd = program.commands.find((command) => command.name() === "export");
+
+    expect(names).toContain("export");
+    expect(help).toMatch(/\bexport\b/);
+    expect(commandsFromHelp(help)).toContain("export");
+    expect(exportCmd?.description()).toMatch(/read models/i);
+  });
+
   it("advertises connect for storing source config", () => {
     const program = createProgram();
     const names = program.commands.map((command) => command.name());
@@ -43,6 +55,7 @@ describe("published CLI surface", () => {
     expect(fromHelp).toContain("sync");
     expect(fromHelp).toContain("connect");
     expect(fromHelp).toContain("import");
+    expect(fromHelp).toContain("export");
     expect(fromHelp).toContain("identify");
     expect(fromHelp).toContain("track");
     expect(fromHelp).toContain("workspaces");

@@ -88,6 +88,7 @@ Returns:
 - `GET /api/v1/freshness` — Last ingest + per-source last-sync stamps
 - `POST /api/v1/sync` — Trigger a sync (one source or all; requires an API key)
 - `POST /api/v1/import` — Import users or events from CSV (requires an API key)
+- `GET /api/v1/export` — Users, events, and read models as JSON or CSV (requires a key on live)
 - `GET /api/v1/keys` — List key metadata (scope, last used, legacy)
 - `POST /api/v1/keys` — Generate API key (defaults to read)
 - `POST /api/v1/keys/downgrade` — Convert legacy write keys to read
@@ -121,6 +122,7 @@ anykpi sync --source=github
 anykpi sync --source=posthog
 anykpi connect csv --kind=events --map user_id=personId
 anykpi import events.csv --kind=events
+anykpi export --format csv --out ./backup
 
 # Ingest
 anykpi identify user123 --name="Jane Doe" --email="jane@example.com"
@@ -128,6 +130,8 @@ anykpi track user123 song_played
 ```
 
 Every command returns `view_url` for proof.
+
+Your data is yours: `anykpi export` writes users, events, and read models. Snapshot the SQLite file with the procedure in [Backup](backup.md). Connector-backed read models restore by re-syncing the source — CSV import writes users and events only.
 
 ### MCP
 

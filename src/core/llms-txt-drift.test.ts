@@ -162,4 +162,13 @@ describe("llms.txt does not drift from OpenAPI or MCP tools", () => {
     expect(sectionBody(text, "Connectors")).toMatch(/ANYKPI_SECRET/);
     expect(sectionBody(agents, "Connectors")).toMatch(/ANYKPI_SECRET/);
   });
+
+  it("lists export as a CLI command backed by GET /api/v1/export", async () => {
+    const text = await llmsTxt();
+    expect(sectionBody(text, "CLI")).toMatch(/\bexport\b/);
+    expect(sectionBody(text, "REST")).toContain("/api/v1/export");
+    const agents = readFileSync(resolve(root, "AGENTS.md"), "utf8");
+    expect(sectionBody(agents, "CLI")).toMatch(/\bexport\b/);
+    expect(sectionBody(agents, "REST")).toContain("/api/v1/export");
+  });
 });
