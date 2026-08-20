@@ -48,6 +48,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- ANYKPI wordmark and tab icon (ANY-51): dashboard nav and wall-mode
+  masthead render the modular-tile mark at 19px with the quiet `beta`
+  tag. Light and dark-ground 2×/3× assets live in `public/brand/`. The
+  tab icon is the K-tile glyph.
 - Shared day clock (ANY-53): day number, time left today, week number,
   and the next-milestone ladder (100, 200, … 365, 500, 730, 1000, then
   centuries), in `src/core/day.ts`. Home timezone is the existing

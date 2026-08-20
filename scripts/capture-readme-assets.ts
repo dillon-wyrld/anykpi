@@ -11,6 +11,11 @@
  *   docs/assets/wbr.png
  *   docs/assets/calendar.png
  *   docs/assets/pmf.png
+ *   docs/assets/wordmark-nav.png
+ *   docs/assets/wordmark-light.png
+ *   docs/assets/wordmark-dark.png
+ *   docs/assets/icon-light.png
+ *   docs/assets/icon-dark.png
  *   docs/assets/tour.gif
  *
  * The GIF is encoded with ffmpeg from a Playwright video of the five-view tour.
@@ -111,6 +116,65 @@ async function waitForView(page: Page, view: View): Promise<void> {
 
 function viewUrl(view: View): string {
   return `${BASE_URL}/dashboard?workspace=demo&view=${view.id}`;
+}
+
+async function captureOnGround(
+  page: Page,
+  dest: string,
+  src: string,
+  ground: "light" | "dark",
+  box: { width: number; height: number },
+  imgStyle: string
+): Promise<void> {
+  const bg = ground === "dark" ? "#18181b" : "#fbfbfb";
+  await page.setViewportSize(box);
+  await page.setContent(
+    `<html><body style="margin:0;background:${bg};display:flex;align-items:center;justify-content:center;width:${box.width}px;height:${box.height}px">
+       <img src="${src}" style="${imgStyle}" alt="" />
+     </body></html>`,
+    { waitUntil: "load" }
+  );
+  await page.locator("img").waitFor({ state: "visible" });
+  await page.screenshot({ path: dest, type: "png", fullPage: true });
+}
+
+async function captureBrand(page: Page): Promise<void> {
+  await page.setViewportSize(VIEWPORT);
+  await page.goto(`${BASE_URL}/dashboard?workspace=demo&view=dotplot`, {
+    waitUntil: "load",
+  });
+  await page.waitForSelector('[data-testid="wordmark"]', { timeout: 30_000 });
+  await page.evaluate(() => document.fonts.ready);
+  await sleep(150);
+
+  const navDest = join(ASSETS_DIR, "wordmark-nav.png");
+  console.log(`Capturing wordmark nav → ${navDest}`);
+  await page.locator('[data-testid="logo-row"]').screenshot({
+    path: navDest,
+    type: "png",
+  });
+
+  const wordmarkLight = `${BASE_URL}/brand/wordmark-light@3x.png`;
+  const wordmarkDark = `${BASE_URL}/brand/wordmark-dark@3x.png`;
+  const iconSrc = `${BASE_URL}/brand/icon-32.png`;
+
+  const lightDest = join(ASSETS_DIR, "wordmark-light.png");
+  console.log(`Capturing wordmark on light ground → ${lightDest}`);
+  await captureOnGround(page, lightDest, wordmarkLight, "light", { width: 220, height: 64 }, "height:19px;width:auto;display:block");
+
+  const darkDest = join(ASSETS_DIR, "wordmark-dark.png");
+  console.log(`Capturing wordmark on dark ground → ${darkDest}`);
+  await captureOnGround(page, darkDest, wordmarkDark, "dark", { width: 220, height: 64 }, "height:19px;width:auto;display:block");
+
+  const iconLight = join(ASSETS_DIR, "icon-light.png");
+  console.log(`Capturing tab icon on light ground → ${iconLight}`);
+  await captureOnGround(page, iconLight, iconSrc, "light", { width: 72, height: 72 }, "width:32px;height:32px;display:block");
+
+  const iconDark = join(ASSETS_DIR, "icon-dark.png");
+  console.log(`Capturing tab icon on dark ground → ${iconDark}`);
+  await captureOnGround(page, iconDark, iconSrc, "dark", { width: 72, height: 72 }, "width:32px;height:32px;display:block");
+
+  await page.setViewportSize(VIEWPORT);
 }
 
 async function captureStills(page: Page): Promise<string[]> {
@@ -239,6 +303,7 @@ async function main(): Promise<void> {
 
       const stillPage = await context.newPage();
       stills = await captureStills(stillPage);
+      await captureBrand(stillPage);
       await stillPage.close();
 
       const tourPage = await context.newPage();
