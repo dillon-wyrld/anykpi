@@ -34,11 +34,14 @@ import {
   persistWorkspaceMilestones,
 } from "../core/milestones";
 import { upsertConfig } from "../core/upsert";
+import { ensureDefaultWorkspaces } from "../core/workspaces";
 
 const WORKSPACE = "demo";
 
 export async function seedDemo() {
   console.log("Seeding demo workspace with canonical dataset...");
+
+  await ensureDefaultWorkspaces();
   
   // Clear existing demo data
   await db.delete(schema.users).where(eq(schema.users.workspaceId, WORKSPACE));

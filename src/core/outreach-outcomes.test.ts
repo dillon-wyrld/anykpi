@@ -61,14 +61,14 @@ async function seedPerson(personId: string, cluster: string | null, name = perso
   });
 }
 
-describe("ANY-27 does not take the next drizzle migration", () => {
-  it("leaves schema.ts and 0008 for ANY-38", () => {
+describe("ANY-27 does not take a drizzle migration", () => {
+  it("keeps outcomes in config, not a dedicated table", () => {
     const root = resolve(__dirname, "../..");
     const journal = JSON.parse(
       readFileSync(resolve(root, "drizzle/meta/_journal.json"), "utf8")
     ) as { entries: Array<{ tag: string }> };
-    expect(journal.entries.at(-1)?.tag).toBe("0007_outreach");
-    expect(journal.entries.some((entry) => entry.tag.startsWith("0008"))).toBe(false);
+    expect(journal.entries.some((entry) => entry.tag === "0007_outreach")).toBe(true);
+    expect(journal.entries.some((entry) => /outcome/i.test(entry.tag))).toBe(false);
     const schema = readFileSync(resolve(root, "src/core/schema.ts"), "utf8");
     expect(schema).not.toMatch(/outcome/);
   });

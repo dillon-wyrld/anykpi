@@ -66,7 +66,9 @@ export async function insertUserIfAbsent(row: {
       accountId: null,
       workspaceId: row.workspaceId,
     })
-    .onConflictDoNothing({ target: schema.users.personId })
+    .onConflictDoNothing({
+      target: [schema.users.workspaceId, schema.users.personId],
+    })
     .returning({ personId: schema.users.personId });
   return written.length;
 }

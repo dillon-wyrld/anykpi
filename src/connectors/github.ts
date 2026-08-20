@@ -172,7 +172,7 @@ async function upsertWbrMetric(opts: {
       workspaceId: opts.workspaceId,
     })
     .onConflictDoUpdate({
-      target: [schema.metricDefs.metricId],
+      target: [schema.metricDefs.workspaceId, schema.metricDefs.metricId],
       set: {
         name: opts.name,
         section: GITHUB_WBR_SECTION,

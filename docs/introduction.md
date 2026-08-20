@@ -64,6 +64,9 @@ curl http://localhost:3000/api/v1/overview?workspace=demo
 
 curl http://localhost:3000/api/v1/overview?workspace=live \
   -H "Authorization: Bearer $ANYKPI_API_KEY"
+
+# Two live workspaces stay isolated — the same distinct_id is two rows.
+# GET /api/v1/workspaces lists the catalog the dashboard switcher uses.
 ```
 
 Returns:

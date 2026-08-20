@@ -252,6 +252,7 @@ describe("approved send is logged", () => {
     const cookie = `${SESSION_COOKIE_NAME}=${signSession({
       actor: "env",
       workspace: WS,
+      workspaces: [WS],
       canChooseWorkspace: true,
       exp: Math.floor(Date.now() / 1000) + 3600,
     })}`;

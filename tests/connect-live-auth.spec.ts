@@ -14,17 +14,17 @@ async function expectDemoPublic(page: Page) {
   await page.waitForSelector('svg[role="img"]', { timeout: 15_000 });
   await expect(page).toHaveURL(/workspace=demo/);
   await expect(page.getByRole("button", { name: "Open Dave" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Live workspace" })).toHaveCount(
+  await expect(page.getByRole("heading", { name: "Unlock live" })).toHaveCount(
     0
   );
 }
 
 async function expectLiveGate(page: Page) {
   await page.goto("/dashboard?workspace=live&view=dotplot");
-  await expect(page.getByRole("heading", { name: "Live workspace" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Unlock live" })).toBeVisible();
   await expect(page.getByLabel("API key")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Open live workspace" })
+    page.getByRole("button", { name: "Open workspace" })
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Day" })).toHaveCount(0);
   await expect(page).toHaveURL(/workspace=live/);
@@ -57,10 +57,10 @@ test.describe("Connect flow and live auth gate", () => {
     await expectLiveGate(page);
 
     await page.getByLabel("API key").fill("not-a-real-key");
-    await page.getByRole("button", { name: "Open live workspace" }).click();
+    await page.getByRole("button", { name: "Open workspace" }).click();
     await expect(page.getByText("That key was not accepted.")).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Live workspace" })
+      page.getByRole("heading", { name: "Unlock live" })
     ).toBeVisible();
 
     await expectDemoPublic(page);
@@ -79,13 +79,13 @@ test.describe("Connect flow and live auth gate", () => {
 
     await expectLiveGate(page);
     await page.getByLabel("API key").fill(mintedKey);
-    await page.getByRole("button", { name: "Open live workspace" }).click();
+    await page.getByRole("button", { name: "Open workspace" }).click();
 
     await expect(page.getByRole("button", { name: "Day" })).toBeVisible({
       timeout: 15_000,
     });
     await expect(
-      page.getByRole("heading", { name: "Live workspace" })
+      page.getByRole("heading", { name: "Unlock live" })
     ).toHaveCount(0);
     await expect(page).toHaveURL(/workspace=live/);
     expect(page.url()).not.toContain(mintedKey);
@@ -138,7 +138,7 @@ test.describe("Connect flow and live auth gate", () => {
       timeout: 15_000,
     });
     await page.getByRole("button", { name: "Log out" }).click();
-    await expect(page.getByRole("heading", { name: "Live workspace" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Unlock live" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Day" })).toHaveCount(0);
 
     await expectDemoPublic(page);

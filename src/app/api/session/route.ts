@@ -8,6 +8,7 @@ import {
   authResponse,
   extractApiKey,
   LIVE_WORKSPACE,
+  resolveWorkspace,
 } from "@/core/auth";
 import {
   badRequest,
@@ -18,17 +19,36 @@ import {
   readJsonBounded,
 } from "@/core/errors";
 import {
+  mergeSessions,
   readBrowserSession,
   SESSION_COOKIE_NAME,
+  sessionAuthorizes,
   sessionCookieOptions,
   sessionFromAuth,
   sessionSecret,
   signSession,
 } from "@/core/session";
+import { ensureWorkspace } from "@/core/workspaces";
 
-function sessionStatus(authenticated: boolean, workspace?: string) {
+function sessionStatus(input: {
+  authenticated: boolean;
+  workspace?: string;
+  workspaces?: string[];
+  authorized?: boolean;
+}) {
   return SessionStatusResponseSchema.parse(
-    authenticated ? { authenticated: true, workspace } : { authenticated: false }
+    input.authenticated
+      ? {
+          authenticated: true,
+          workspace: input.workspace,
+          workspaces: input.workspaces ?? [],
+          authorized: input.authorized ?? true,
+        }
+      : {
+          authenticated: false,
+          workspaces: input.workspaces,
+          authorized: false,
+        }
   );
 }
 
@@ -46,21 +66,34 @@ function clearSessionCookie(response: NextResponse) {
 /**
  * GET /api/session
  *
- * Whether the signed browser cookie is valid. Never returns the API key.
+ * Whether the signed browser cookie is valid, and whether it unlocks
+ * the requested workspace. Never returns the API key.
  */
 export async function GET(request: NextRequest) {
+  const requested =
+    request.nextUrl.searchParams.get("workspace") ?? undefined;
   const session = readBrowserSession(request);
   if (!session) {
-    return NextResponse.json(sessionStatus(false));
+    return NextResponse.json(sessionStatus({ authenticated: false }));
   }
-  return NextResponse.json(sessionStatus(true, session.workspace));
+  const workspace = requested || session.workspace;
+  const authorized = sessionAuthorizes(session, workspace);
+  return NextResponse.json(
+    sessionStatus({
+      authenticated: true,
+      workspace: authorized ? workspace : session.workspace,
+      workspaces: session.workspaces,
+      authorized,
+    })
+  );
 }
 
 /**
  * POST /api/session
  *
  * Verify the API key once and set a signed httpOnly SameSite cookie.
- * The key is not stored in the cookie and must not be placed in a URL.
+ * A second POST with another workspace's key merges that workspace onto
+ * the existing ticket (one unlock per workspace). The key is not stored.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -78,6 +111,10 @@ export async function POST(request: NextRequest) {
       parsed.success && parsed.data.key.trim().length > 0
         ? parsed.data.key.trim()
         : null;
+    const requestedWorkspace =
+      parsed.success && parsed.data.workspace?.trim()
+        ? parsed.data.workspace.trim()
+        : undefined;
     const key = fromBody ?? extractApiKey(request);
     if (!key) {
       return authResponse({ ok: false, status: 401, error: "Unauthorized" });
@@ -87,10 +124,36 @@ export async function POST(request: NextRequest) {
       headers: { authorization: `Bearer ${key}` },
     });
     const auth = await authorize(probe, {
-      workspace: LIVE_WORKSPACE,
+      workspace: requestedWorkspace || LIVE_WORKSPACE,
       write: false,
     });
     if (!auth.ok) return authResponse(auth);
+
+    const resolved = resolveWorkspace(
+      auth,
+      requestedWorkspace || LIVE_WORKSPACE,
+      false
+    );
+    if ("ok" in resolved && resolved.ok === false) {
+      return authResponse(resolved);
+    }
+    const unlocked = (resolved as { workspace: string }).workspace;
+    if (unlocked === "demo") {
+      return authResponse({
+        ok: false,
+        status: 401,
+        error: "Unauthorized",
+      });
+    }
+    if (
+      requestedWorkspace &&
+      requestedWorkspace !== "demo" &&
+      !auth.canChooseWorkspace &&
+      auth.keyWorkspace &&
+      auth.keyWorkspace !== requestedWorkspace
+    ) {
+      return authResponse({ ok: false, status: 401, error: "Unauthorized" });
+    }
 
     if (!sessionSecret()) {
       return NextResponse.json(
@@ -99,9 +162,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const token = signSession(sessionFromAuth(auth));
+    await ensureWorkspace(unlocked);
+    const incoming = sessionFromAuth(auth, unlocked);
+    incoming.workspace = unlocked;
+    incoming.workspaces = [unlocked];
+    const merged = mergeSessions(readBrowserSession(request), incoming);
+    merged.workspace = unlocked;
+
+    const token = signSession(merged);
     const response = NextResponse.json(
-      sessionStatus(true, auth.keyWorkspace || LIVE_WORKSPACE)
+      sessionStatus({
+        authenticated: true,
+        workspace: unlocked,
+        workspaces: merged.workspaces,
+        authorized: true,
+      })
     );
     applySessionCookie(response, token);
     return response;
@@ -117,7 +192,7 @@ export async function POST(request: NextRequest) {
  * Logout: clear the signed cookie. Demo stays public-read without a session.
  */
 export async function DELETE() {
-  const response = NextResponse.json(sessionStatus(false));
+  const response = NextResponse.json(sessionStatus({ authenticated: false }));
   clearSessionCookie(response);
   return response;
 }
