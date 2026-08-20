@@ -248,8 +248,10 @@ Every exception row states, in plain words, the rule that fired (`Rule: 2 or mor
 SQLite via `DATABASE_PATH` is the zero-config default (see `.env.example`).
 The sqlite-core schema is the source of truth through v0.x. A Postgres
 mirror lives in `src/core/schema.pg.ts` with migrations under `drizzle/pg`.
-When `DATABASE_URL` is a `postgres://` URL, the Docker entrypoint applies
-those migrations instead of `drizzle/sqlite`.
+When `DATABASE_URL` is a `postgres://` URL, the process applies those
+migrations and runs the same view-builder and read-model queries against
+Postgres. CI runs the full suite on SQLite and Postgres (PGlite in unit
+tests) on every push.
 
 ## API Reference
 

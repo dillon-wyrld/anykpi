@@ -388,7 +388,7 @@ describe("DELETE /api/v1/users/:id", () => {
     });
     expect(events.status).toBe("ok");
 
-    runIngestBatch(WS, [
+    await runIngestBatch(WS, [
       {
         userId: "csv-batch",
         eventName: "song_played",

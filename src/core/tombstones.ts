@@ -36,8 +36,8 @@ export function identifiersForPerson(input: PersonIdentifiers): string[] {
   return [...ids];
 }
 
-export function loadTombstoneSet(workspaceId: string): Set<string> {
-  const rows = db
+export async function loadTombstoneSet(workspaceId: string): Promise<Set<string>> {
+  const rows = await db
     .select({ externalId: schema.tombstones.externalId })
     .from(schema.tombstones)
     .where(eq(schema.tombstones.workspaceId, workspaceId))

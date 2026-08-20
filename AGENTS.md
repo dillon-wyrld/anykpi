@@ -74,8 +74,8 @@ Read responses include a view_url that opens `/dashboard` in the workspace and v
 
 - `src/app/api` — HTTP routes (REST, MCP, views, OpenAPI, `/llms.txt`)
 - `src/instrumentation.ts` — process-lifetime scheduled refresh (`SYNC_INTERVAL_MINUTES`, default 15; `0` + `POST /api/v1/sync` for external cron, see `docs/cron.md`)
-- `src/core` — auth, Zod contracts, view-state, read-model loaders, export, `anykpi.config.json` loader (WBR exception thresholds beside the database). `schema.ts` (sqlite-core) is the v0.x source of truth; `schema.pg.ts` is the Postgres mirror
-- `drizzle/sqlite`, `drizzle/pg` — per-dialect migrations (Docker selects by `DATABASE_URL`)
+- `src/core` — auth, Zod contracts, view-state, read-model loaders, export, `anykpi.config.json` loader (WBR exception thresholds beside the database). `schema.ts` (sqlite-core) is the v0.x source of truth; `schema.pg.ts` is the Postgres mirror. View builders and read-model writers are query-compat on both engines
+- `drizzle/sqlite`, `drizzle/pg` — per-dialect migrations (the process selects by `DATABASE_URL`)
 - `src/mcp/server.ts` — stdio MCP server
 - `src/connectors` — PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub
 - `src/demo` — canonical demo dataset

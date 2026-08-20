@@ -2,12 +2,33 @@ import { mkdirSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import Database from "better-sqlite3";
+import { PGlite } from "@electric-sql/pglite";
+import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
+import { TEST_DB_GLOBAL } from "./src/core/dialect";
+import { applyPgliteMigrations } from "./src/core/pglite-migrate";
+import { installQueryCompat } from "./src/core/query-compat";
+import * as schema from "./src/core/schema";
 
 const dir = join(tmpdir(), "anykpi-vitest");
 mkdirSync(dir, { recursive: true });
 process.env.DATABASE_PATH = join(dir, `anykpi-${process.pid}.db`);
 process.env.ANYKPI_SECRET ??= "vitest-anykpi-secret";
 
+const usePglite =
+  process.env.ANYKPI_DB_ENGINE === "postgres" ||
+  process.env.ANYKPI_DB_ENGINE === "postgresql";
+
+if (usePglite) {
+  // Unit tests talk to in-process PGlite. A real DATABASE_URL (e2e / host)
+  // must not leak into this process or db.ts would open postgres.js instead.
+  delete process.env.DATABASE_URL;
+  process.env.ANYKPI_DB_ENGINE = "postgres";
+  const client = new PGlite();
+  await applyPgliteMigrations(client);
+  const postgresDb = drizzlePglite(client, { schema });
+  installQueryCompat(postgresDb as never);
+  (globalThis as Record<string, unknown>)[TEST_DB_GLOBAL] = postgresDb;
+} else {
 const sqlite = new Database(process.env.DATABASE_PATH);
 sqlite.exec(`
   CREATE TABLE IF NOT EXISTS workspaces (
@@ -258,3 +279,4 @@ sqlite.exec(`
   );
 `);
 sqlite.close();
+}

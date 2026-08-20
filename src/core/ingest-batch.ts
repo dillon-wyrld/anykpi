@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import { count, eq } from "drizzle-orm";
 import { BATCH_INGEST_MAX_EVENTS } from "./contracts";
 import { db } from "./db";
+import { writeInTransaction } from "./query-compat";
 import * as schema from "./schema";
 import { loadTombstoneSet, matchesTombstone } from "./tombstones";
 import { classifyEventName } from "./webhook";
@@ -84,8 +85,8 @@ export function ingestEventExternalId(input: {
   return createHash("sha256").update(material).digest("hex");
 }
 
-export function countWorkspaceActivity(workspaceId: string): number {
-  const row = db
+export async function countWorkspaceActivity(workspaceId: string): Promise<number> {
+  const row = await db
     .select({ n: count() })
     .from(schema.activity)
     .where(eq(schema.activity.workspaceId, workspaceId))
@@ -145,13 +146,13 @@ export function prepareBatchEvents(
 }
 
 /**
- * Insert users and activity in a single SQLite transaction.
+ * Insert users and activity in a single transaction.
  * Duplicates on (workspaceId, externalId) are no-ops.
  */
-export function runIngestBatch(
+export async function runIngestBatch(
   workspaceId: string,
   events: IngestBatchEventInput[]
-): IngestBatchWriteResult {
+): Promise<IngestBatchWriteResult> {
   if (events.length === 0) {
     return { accepted: 0, inserted: 0, duplicates: 0 };
   }
@@ -160,33 +161,54 @@ export function runIngestBatch(
   }
 
   const prepared = prepareBatchEvents(workspaceId, events);
-  const tombstoned = loadTombstoneSet(workspaceId);
+  const tombstoned = await loadTombstoneSet(workspaceId);
   const users = prepared.users.filter((user) => !matchesTombstone(tombstoned, user));
   const activity = prepared.activity.filter(
     (row) => !matchesTombstone(tombstoned, { personId: row.personId })
   );
-  const before = countWorkspaceActivity(workspaceId);
+  const before = await countWorkspaceActivity(workspaceId);
 
-  db.transaction((tx) => {
-    for (const batch of chunk(users, WRITE_CHUNK)) {
-      tx.insert(schema.users)
-        .values(batch)
-        .onConflictDoNothing({
-          target: [schema.users.workspaceId, schema.users.personId],
-        })
-        .run();
+  await writeInTransaction(
+    db,
+    (tx) => {
+      for (const batch of chunk(users, WRITE_CHUNK)) {
+        tx.insert(schema.users)
+          .values(batch)
+          .onConflictDoNothing({
+            target: [schema.users.workspaceId, schema.users.personId],
+          })
+          .run();
+      }
+      for (const batch of chunk(activity, WRITE_CHUNK)) {
+        tx.insert(schema.activity)
+          .values(batch)
+          .onConflictDoNothing({
+            target: [schema.activity.workspaceId, schema.activity.externalId],
+          })
+          .run();
+      }
+    },
+    async (tx) => {
+      for (const batch of chunk(users, WRITE_CHUNK)) {
+        await tx
+          .insert(schema.users)
+          .values(batch)
+          .onConflictDoNothing({
+            target: [schema.users.workspaceId, schema.users.personId],
+          });
+      }
+      for (const batch of chunk(activity, WRITE_CHUNK)) {
+        await tx
+          .insert(schema.activity)
+          .values(batch)
+          .onConflictDoNothing({
+            target: [schema.activity.workspaceId, schema.activity.externalId],
+          });
+      }
     }
-    for (const batch of chunk(activity, WRITE_CHUNK)) {
-      tx.insert(schema.activity)
-        .values(batch)
-        .onConflictDoNothing({
-          target: [schema.activity.workspaceId, schema.activity.externalId],
-        })
-        .run();
-    }
-  });
+  );
 
-  const inserted = countWorkspaceActivity(workspaceId) - before;
+  const inserted = (await countWorkspaceActivity(workspaceId)) - before;
   return {
     accepted: events.length,
     inserted,

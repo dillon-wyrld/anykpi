@@ -1,20 +1,17 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
 import Database from "better-sqlite3";
-import * as schema from "./schema";
+import postgres from "postgres";
 import { chmodSync, existsSync, mkdirSync } from "fs";
 import { dirname, resolve } from "path";
+import { isPostgresUrl, sqlEngine, TEST_DB_GLOBAL } from "./dialect";
+import { installQueryCompat } from "./query-compat";
+import * as schema from "./schema";
 
-const dbPath = process.env.DATABASE_PATH || resolve(process.cwd(), "data", "anykpi.db");
+export type AppDatabase = BetterSQLite3Database<typeof schema>;
 
-// Ensure the parent directory exists before better-sqlite3 opens the file.
-// db.ts is imported at build time (page-data collection) and by scripts/init-db
-// before it creates its own dir, so a fresh clone or fresh Docker volume would
-// otherwise crash with "Cannot open database because the directory does not exist".
-mkdirSync(dirname(dbPath), { recursive: true });
-
-const sqlite = new Database(dbPath, { timeout: 5000 });
-sqlite.pragma("busy_timeout = 5000");
-sqlite.pragma("journal_mode = WAL");
+const dbPath =
+  process.env.DATABASE_PATH || resolve(process.cwd(), "data", "anykpi.db");
 
 function restrictDbFileMode(path: string) {
   try {
@@ -26,13 +23,41 @@ function restrictDbFileMode(path: string) {
   }
 }
 
-restrictDbFileMode(dbPath);
-restrictDbFileMode(`${dbPath}-wal`);
-restrictDbFileMode(`${dbPath}-shm`);
+function tablePkColumns(sqlite: Database.Database, table: string): string[] {
+  const cols = sqlite.prepare(`PRAGMA table_info(${table})`).all() as {
+    name: string;
+    pk: number;
+  }[];
+  return cols
+    .filter((col) => col.pk > 0)
+    .sort((a, b) => a.pk - b.pk)
+    .map((col) => col.name);
+}
 
-function ensureApiKeyWorkspaceColumn() {
+function rebuildTable(
+  sqlite: Database.Database,
+  table: string,
+  createSql: string,
+  columns: string[],
+  indexSql = ""
+) {
+  const quoted = columns.map((col) => `"${col}"`).join(", ");
+  sqlite.exec(`
+    PRAGMA foreign_keys=OFF;
+    ${createSql}
+    INSERT INTO "__new_${table}" (${quoted}) SELECT ${quoted} FROM "${table}";
+    DROP TABLE "${table}";
+    ALTER TABLE "__new_${table}" RENAME TO "${table}";
+    ${indexSql}
+    PRAGMA foreign_keys=ON;
+  `);
+}
+
+function ensureApiKeyWorkspaceColumn(sqlite: Database.Database) {
   try {
-    const cols = sqlite.prepare("PRAGMA table_info(api_keys)").all() as { name: string }[];
+    const cols = sqlite.prepare("PRAGMA table_info(api_keys)").all() as {
+      name: string;
+    }[];
     if (cols.length === 0) return;
     if (!cols.some((c) => c.name === "workspace_id")) {
       sqlite.exec(
@@ -54,9 +79,11 @@ function ensureApiKeyWorkspaceColumn() {
   }
 }
 
-function ensureActivityExternalId() {
+function ensureActivityExternalId(sqlite: Database.Database) {
   try {
-    const cols = sqlite.prepare("PRAGMA table_info(activity)").all() as { name: string }[];
+    const cols = sqlite.prepare("PRAGMA table_info(activity)").all() as {
+      name: string;
+    }[];
     if (cols.length === 0) return;
     if (!cols.some((c) => c.name === "external_id")) {
       sqlite.exec("ALTER TABLE activity ADD COLUMN external_id TEXT");
@@ -69,7 +96,7 @@ function ensureActivityExternalId() {
   }
 }
 
-function ensureTombstones() {
+function ensureTombstones(sqlite: Database.Database) {
   try {
     sqlite.exec(`
       CREATE TABLE IF NOT EXISTS tombstones (
@@ -88,36 +115,7 @@ function ensureTombstones() {
   }
 }
 
-function tablePkColumns(table: string): string[] {
-  const cols = sqlite.prepare(`PRAGMA table_info(${table})`).all() as {
-    name: string;
-    pk: number;
-  }[];
-  return cols
-    .filter((col) => col.pk > 0)
-    .sort((a, b) => a.pk - b.pk)
-    .map((col) => col.name);
-}
-
-function rebuildTable(
-  table: string,
-  createSql: string,
-  columns: string[],
-  indexSql = ""
-) {
-  const quoted = columns.map((col) => `"${col}"`).join(", ");
-  sqlite.exec(`
-    PRAGMA foreign_keys=OFF;
-    ${createSql}
-    INSERT INTO "__new_${table}" (${quoted}) SELECT ${quoted} FROM "${table}";
-    DROP TABLE "${table}";
-    ALTER TABLE "__new_${table}" RENAME TO "${table}";
-    ${indexSql}
-    PRAGMA foreign_keys=ON;
-  `);
-}
-
-function ensureWorkspaceIsolation() {
+function ensureWorkspaceIsolation(sqlite: Database.Database) {
   try {
     sqlite.exec(`
       CREATE TABLE IF NOT EXISTS workspaces (
@@ -139,9 +137,10 @@ function ensureWorkspaceIsolation() {
       )
       .run("live", "Live", now);
 
-    const usersPk = tablePkColumns("users");
+    const usersPk = tablePkColumns(sqlite, "users");
     if (usersPk.length > 0 && usersPk.join(",") !== "workspace_id,person_id") {
       rebuildTable(
+        sqlite,
         "users",
         `CREATE TABLE "__new_users" (
           person_id TEXT NOT NULL,
@@ -178,12 +177,13 @@ function ensureWorkspaceIsolation() {
       );
     }
 
-    const accountsPk = tablePkColumns("accounts");
+    const accountsPk = tablePkColumns(sqlite, "accounts");
     if (
       accountsPk.length > 0 &&
       accountsPk.join(",") !== "workspace_id,account_id"
     ) {
       rebuildTable(
+        sqlite,
         "accounts",
         `CREATE TABLE "__new_accounts" (
           account_id TEXT NOT NULL,
@@ -210,12 +210,10 @@ function ensureWorkspaceIsolation() {
       );
     }
 
-    const metricPk = tablePkColumns("metric_defs");
-    if (
-      metricPk.length > 0 &&
-      metricPk.join(",") !== "workspace_id,metric_id"
-    ) {
+    const metricPk = tablePkColumns(sqlite, "metric_defs");
+    if (metricPk.length > 0 && metricPk.join(",") !== "workspace_id,metric_id") {
       rebuildTable(
+        sqlite,
         "metric_defs",
         `CREATE TABLE "__new_metric_defs" (
           metric_id TEXT NOT NULL,
@@ -250,10 +248,11 @@ function ensureWorkspaceIsolation() {
       );
     }
 
-    const configPk = tablePkColumns("config");
+    const configPk = tablePkColumns(sqlite, "config");
     if (configPk.length > 0 && configPk.join(",") !== "workspace_id,key") {
       sqlite.exec("DROP INDEX IF EXISTS config_key_workspace_uidx;");
       rebuildTable(
+        sqlite,
         "config",
         `CREATE TABLE "__new_config" (
           key TEXT NOT NULL,
@@ -283,12 +282,42 @@ function ensureWorkspaceIsolation() {
   }
 }
 
-ensureApiKeyWorkspaceColumn();
-ensureActivityExternalId();
-ensureTombstones();
-ensureWorkspaceIsolation();
+function openSqlite(): AppDatabase {
+  mkdirSync(dirname(dbPath), { recursive: true });
+  const sqlite = new Database(dbPath, { timeout: 5000 });
+  sqlite.pragma("busy_timeout = 5000");
+  sqlite.pragma("journal_mode = WAL");
+  restrictDbFileMode(dbPath);
+  restrictDbFileMode(`${dbPath}-wal`);
+  restrictDbFileMode(`${dbPath}-shm`);
+  ensureApiKeyWorkspaceColumn(sqlite);
+  ensureActivityExternalId(sqlite);
+  ensureTombstones(sqlite);
+  ensureWorkspaceIsolation(sqlite);
+  return drizzle(sqlite, { schema });
+}
 
-export const db = drizzle(sqlite, { schema });
+function openPostgres(): AppDatabase {
+  const url = process.env.DATABASE_URL;
+  if (!url || !isPostgresUrl(url)) {
+    throw new Error(
+      "Postgres requires DATABASE_URL (postgres://). Unit tests inject PGlite via vitest.setup."
+    );
+  }
+  const client = postgres(url, { max: 8 });
+  const postgresDb = drizzlePostgres(client, { schema }) as unknown as AppDatabase;
+  installQueryCompat(postgresDb);
+  return postgresDb;
+}
+
+function createDb(): AppDatabase {
+  const injected = (globalThis as Record<string, unknown>)[TEST_DB_GLOBAL];
+  if (injected) return injected as AppDatabase;
+  if (sqlEngine() === "postgres") return openPostgres();
+  return openSqlite();
+}
+
+export const db = createDb();
 
 export function getDb() {
   return db;
