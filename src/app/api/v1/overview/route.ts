@@ -6,6 +6,8 @@ import { OverviewResponseSchema } from '@/core/contracts';
 import { gate } from '@/core/session-auth';
 import { publicBaseUrl } from '@/core/view-state';
 import { internalError, logServerError } from '@/core/errors';
+import { dayClockFields, workspaceDayClock } from '@/core/day';
+import { loadFoundedAt } from '@/core/milestones';
 import { loadSyncHealth } from '@/core/sync-health';
 import { loadCohortsView } from '@/core/views/cohorts';
 import { loadWbrView } from '@/core/views/wbr';
@@ -26,8 +28,14 @@ export async function GET(request: NextRequest) {
 
     const users = await db.select().from(schema.users).where(eq(schema.users.workspaceId, workspace));
     const totalUsers = users.length;
+    const now = new Date();
+    const clock = await workspaceDayClock(workspace, {
+      foundedAt: await loadFoundedAt(workspace),
+      signupDates: users.map((user) => user.signupDate),
+      now,
+    });
 
-    const today = new Date();
+    const today = new Date(now);
     today.setHours(0, 0, 0, 0);
     const activeToday = await db
       .select()
@@ -61,6 +69,7 @@ export async function GET(request: NextRequest) {
 
     const response = OverviewResponseSchema.parse({
       workspace,
+      ...dayClockFields(clock),
       totalUsers,
       activeToday: activeTodayCount,
       weeklyActive: weeklyActiveCount,

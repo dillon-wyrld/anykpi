@@ -232,6 +232,10 @@ export const PersonPanelResponseSchema = z.object({
 
 export const OverviewResponseSchema = z.object({
   workspace: z.string(),
+  dayN: z.number().int().nonnegative(),
+  weekN: z.number().int().positive(),
+  timeLeftToday: z.string(),
+  nextMilestone: z.number().int().positive(),
   totalUsers: z.number(),
   activeToday: z.number(),
   weeklyActive: z.number(),

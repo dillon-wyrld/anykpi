@@ -21,6 +21,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Rate-limited and size-bounded the ingest endpoints.
 
 ### Fixed
+- One shared day clock (ANY-53): MCP `get_overview` no longer computes
+  Day N from a private `2024-01-01` instant. REST overview, MCP
+  overview, and the calendar birthday all read `src/core/day.ts`,
+  anchored to the workspace home timezone.
 - E2E after the Postgres matrix (ANY-47): `anykpi export --json --out`
   prints a receipt instead of echoing the full dump (CLI smoke was
   dying with `exited null` / maxBuffer on the demo workspace). MCP
@@ -44,6 +48,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Shared day clock (ANY-53): day number, time left today, week number,
+  and the next-milestone ladder (100, 200, … 365, 500, 730, 1000, then
+  centuries), in `src/core/day.ts`. Home timezone is the existing
+  config table (`home_timezone:<workspace>`); `company_name` / `home_city`
+  stay for ANY-52.
 - Postgres query-compat and CI matrix (ANY-47): view builders and
   read-model writers share one query shape on SQLite and Postgres.
   Timestamps stay Date objects, upserts use `excluded`, and writes that

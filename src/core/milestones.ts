@@ -13,6 +13,11 @@ import { eq } from "drizzle-orm";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import {
+  anniversaryOnOrBefore,
+  DEFAULT_HOME_TIMEZONE,
+  loadHomeTimezone,
+} from "@/core/day";
+import {
   buildCohortRows,
   cohortWindow,
   type CohortRow,
@@ -68,6 +73,8 @@ export interface DetectMilestonesInput {
   activity: MilestoneActivity[];
   foundedAt?: Date | null;
   asOf?: Date;
+  /** Workspace home timezone; defaults to UTC so existing UTC fixtures stay put. */
+  timeZone?: string;
   /** Injected smile rows for unit tests; live detection builds these. */
   cohorts?: MilestoneCohort[];
   cohortBaseDate?: Date;
@@ -208,26 +215,6 @@ function daysByPerson(activity: MilestoneActivity[]): Map<string, number[]> {
   return out;
 }
 
-function anniversaryOnOrBefore(foundedAt: Date, asOf: Date): Date | null {
-  const founded = utcMidnight(foundedAt);
-  const asOfDay = utcMidnight(asOf);
-  if (asOfDay.getTime() < founded.getTime()) return null;
-
-  const month = founded.getUTCMonth();
-  const date = founded.getUTCDate();
-  let year = asOfDay.getUTCFullYear();
-  let anniversary = new Date(Date.UTC(year, month, date));
-  if (anniversary.getTime() > asOfDay.getTime()) {
-    year -= 1;
-    anniversary = new Date(Date.UTC(year, month, date));
-  }
-  if (anniversary.getTime() < founded.getTime()) return null;
-  if (year === founded.getUTCFullYear() && anniversary.getTime() === founded.getTime()) {
-    return null;
-  }
-  return anniversary;
-}
-
 function buildSmileCohorts(
   users: MilestonePerson[],
   activity: MilestoneActivity[]
@@ -334,7 +321,11 @@ function detectCompanyBirthday(
 ): DetectedMilestone | null {
   const foundedAt = input.foundedAt ?? sortSignups(input.users)[0]?.signupDate;
   if (!foundedAt) return null;
-  const anniversary = anniversaryOnOrBefore(foundedAt, asOf);
+  const anniversary = anniversaryOnOrBefore(
+    foundedAt,
+    asOf,
+    input.timeZone ?? DEFAULT_HOME_TIMEZONE
+  );
   if (!anniversary) return null;
   const subject = String(anniversary.getUTCFullYear());
   return {
@@ -466,7 +457,7 @@ export async function detectWorkspaceMilestones(
   workspaceId: string,
   asOf: Date = new Date()
 ): Promise<DetectedMilestone[]> {
-  const [users, activity, foundedAt] = await Promise.all([
+  const [users, activity, foundedAt, timeZone] = await Promise.all([
     db.select().from(schema.users).where(eq(schema.users.workspaceId, workspaceId)).all(),
     db
       .select()
@@ -474,6 +465,7 @@ export async function detectWorkspaceMilestones(
       .where(eq(schema.activity.workspaceId, workspaceId))
       .all(),
     loadFoundedAt(workspaceId),
+    loadHomeTimezone(workspaceId),
   ]);
 
   return detectMilestones({
@@ -488,6 +480,7 @@ export async function detectWorkspaceMilestones(
     })),
     foundedAt,
     asOf,
+    timeZone,
   });
 }
 

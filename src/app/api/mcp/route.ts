@@ -19,6 +19,8 @@ import {
   loadCohortsView,
   parseCohortCompareOptions,
 } from "@/core/views/cohorts";
+import { dayClockFields, workspaceDayClock } from "@/core/day";
+import { loadFoundedAt } from "@/core/milestones";
 import { loadSyncHealth } from "@/core/sync-health";
 import { loadWbrView } from "@/core/views/wbr";
 import { loadCalendarView } from "@/core/views/calendar";
@@ -155,11 +157,17 @@ async function handleMCPRequest(
           .where(eq(schema.users.workspaceId, workspace))
           .all();
 
+        const clock = await workspaceDayClock(workspace, {
+          foundedAt: await loadFoundedAt(workspace),
+          signupDates: users.map((user) => user.signupDate),
+        });
+
         return {
           content: [
             {
               type: "text",
               text: JSON.stringify({
+                ...dayClockFields(clock),
                 totalUsers: users.length,
                 syncHealth: await loadSyncHealth(workspace),
                 viewUrl: buildViewUrl(`${baseUrl}/dashboard`, { view: "dotplot" }),

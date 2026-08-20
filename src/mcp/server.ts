@@ -15,6 +15,8 @@ import {
   runMcpWriteTool,
   type McpWriteArgs,
 } from "@/core/mcp-write-tools";
+import { dayClockFields, workspaceDayClock } from "@/core/day";
+import { loadFoundedAt } from "@/core/milestones";
 import { buildViewUrl, queryUsersPayload } from "@/core/view-state";
 import {
   CohortCompareError,
@@ -205,16 +207,18 @@ export function createMCPServer() {
             .where(eq(schema.syncState.workspaceId, workspace))
             .all();
 
+          const clock = await workspaceDayClock(workspace, {
+            foundedAt: await loadFoundedAt(workspace),
+            signupDates: users.map((user) => user.signupDate),
+          });
+
           return {
             content: [
               {
                 type: "text",
                 text: JSON.stringify(
                   {
-                    dayN: Math.floor(
-                      (new Date().getTime() - new Date("2024-01-01").getTime()) /
-                        (1000 * 60 * 60 * 24)
-                    ),
+                    ...dayClockFields(clock),
                     totalUsers: users.length,
                     syncHealth: syncStates.map((s) => ({
                       source: s.source,
