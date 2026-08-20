@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { startFakeSmtp } from "./helpers/fake-smtp";
 import { callMcpTool, parseMcpPayload } from "./helpers/verify-ingest";
 
 const SNAPSHOT = JSON.parse(
@@ -56,6 +57,25 @@ const HAPPY_PATH: Record<
     fields: ["imported", "kind", "workspaceId", "viewUrl"],
     write: true,
   },
+  queue_outreach: {
+    args: {
+      workspace: "demo",
+      personId: "p1",
+      body: "hey Dave — 15 minutes on the product?",
+    },
+    fields: ["draft", "viewUrl", "view_url"],
+    write: true,
+  },
+  approve_outreach: {
+    args: { workspace: "demo", id: "" },
+    fields: ["draft", "viewUrl", "view_url"],
+    write: true,
+  },
+  send_outreach: {
+    args: { workspace: "demo", id: "" },
+    fields: ["draft", "delivery", "viewUrl", "view_url"],
+    write: true,
+  },
 };
 
 test("tools/list matches the schema snapshot", async ({ request }) => {
@@ -76,26 +96,59 @@ test("every advertised tool has a happy-path call that returns its fields", asyn
   const advertised = SNAPSHOT.tools.map((tool) => tool.name);
   expect(advertised.sort()).toEqual(Object.keys(HAPPY_PATH).sort());
 
-  for (const tool of SNAPSHOT.tools) {
-    const happy = HAPPY_PATH[tool.name];
-    expect(happy, `add HAPPY_PATH args and fields for ${tool.name}`).toBeDefined();
-
-    const headers = happy.write
-      ? { Authorization: `Bearer ${API_KEY}` }
-      : undefined;
-    const { response, body } = await callMcpTool(
+  const smtp = await startFakeSmtp();
+  let outreachId = "";
+  try {
+    const connected = await callMcpTool(
       request,
-      tool.name,
-      happy.args,
-      headers
+      "connect_source",
+      {
+        workspace: "demo",
+        source: "smtp",
+        credentials: {
+          host: "127.0.0.1",
+          port: String(smtp.port),
+          from: "founder@example.com",
+        },
+      },
+      { Authorization: `Bearer ${API_KEY}` }
     );
-    expect(response.ok(), `${tool.name} HTTP ${response.status()}`).toBeTruthy();
+    expect(connected.response.ok(), "smtp connect for send_outreach").toBeTruthy();
 
-    const payload = parseMcpPayload(body);
-    for (const field of happy.fields) {
-      expect(payload, `${tool.name} missing field ${field}`).toHaveProperty(field);
+    for (const tool of SNAPSHOT.tools) {
+      const happy = HAPPY_PATH[tool.name];
+      expect(happy, `add HAPPY_PATH args and fields for ${tool.name}`).toBeDefined();
+
+      const args = { ...happy.args };
+      if (tool.name === "approve_outreach" || tool.name === "send_outreach") {
+        expect(outreachId, `${tool.name} needs a queued draft id`).toBeTruthy();
+        args.id = outreachId;
+      }
+
+      const headers = happy.write
+        ? { Authorization: `Bearer ${API_KEY}` }
+        : undefined;
+      const { response, body } = await callMcpTool(
+        request,
+        tool.name,
+        args,
+        headers
+      );
+      expect(response.ok(), `${tool.name} HTTP ${response.status()}`).toBeTruthy();
+
+      const payload = parseMcpPayload(body);
+      for (const field of happy.fields) {
+        expect(payload, `${tool.name} missing field ${field}`).toHaveProperty(field);
+      }
+      expect(String(payload.viewUrl)).toContain("/dashboard");
+
+      if (tool.name === "queue_outreach") {
+        const draft = payload.draft as { id?: string };
+        outreachId = draft.id ?? "";
+      }
     }
-    expect(String(payload.viewUrl)).toContain("/dashboard");
+  } finally {
+    await smtp.close();
   }
 });
 

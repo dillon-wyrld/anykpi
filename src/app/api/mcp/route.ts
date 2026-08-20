@@ -29,6 +29,7 @@ import {
   outreachMcpAction,
 } from "@/outreach/mcp";
 import { gateOutreach } from "@/outreach";
+import { outreachViewUrl } from "@/outreach/http";
 
 type ToolArgs = {
   workspace?: string;
@@ -272,8 +273,18 @@ async function handleMCPRequest(
           (error as Error & { status: number }).status = called.status;
           throw error;
         }
+        const viewUrl = outreachViewUrl(request, workspace);
         return {
-          content: [{ type: "text", text: JSON.stringify(called.payload) }],
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                ...called.payload,
+                viewUrl,
+                view_url: viewUrl,
+              }),
+            },
+          ],
         };
       }
 

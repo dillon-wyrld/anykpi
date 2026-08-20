@@ -14,10 +14,13 @@ function run(args: string[], env: NodeJS.ProcessEnv): string {
     encoding: "utf8",
     env,
     timeout: 30000,
+    maxBuffer: 10 * 1024 * 1024,
   });
   const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
   if (result.status !== 0) {
-    throw new Error(`anykpi ${args.join(" ")} exited ${result.status}\n${output}`);
+    throw new Error(
+      `anykpi ${args.join(" ")} exited ${result.status} signal=${result.signal} error=${result.error?.message ?? ""}\n${output}`
+    );
   }
   return output;
 }
@@ -106,7 +109,13 @@ test("every --help command succeeds and track is visible in /api/v1/users", asyn
       "--json",
     ],
     sync: ["--workspace", "demo", "--json"],
-    export: ["--workspace", "demo", "--json"],
+    export: [
+      "--workspace",
+      "demo",
+      "--json",
+      "--out",
+      join(home, "cli-smoke-export.json"),
+    ],
     outreach: ["--workspace", "demo", "--json"],
   };
 
@@ -125,6 +134,8 @@ test("every --help command succeeds and track is visible in /api/v1/users", asyn
     const output = run([command, ...extra], env);
     expect(output.length, `${command} produced no output`).toBeGreaterThan(0);
   }
+
+  expect(existsSync(join(home, "cli-smoke-export.json"))).toBeTruthy();
 
   const users = await request.get(
     `/api/v1/users?workspace=demo&platform=${encodeURIComponent(platform)}`

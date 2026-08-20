@@ -337,6 +337,50 @@ describe("CLI ingest client", () => {
     expect(readFileSync(join(out, "events.csv"), "utf8")).toMatch(/song_played|played/);
   });
 
+  it("export --json --out prints a receipt without repeating the dump", async () => {
+    const dir = isolatedHome();
+    process.env.ANYKPI_API_KEY = "test-key";
+    process.env.ANYKPI_API_URL = "http://instance.test";
+
+    const out = join(dir, "backup.json");
+    const payload = {
+      format: "json",
+      workspaceId: "demo",
+      exportedAt: "2026-08-20T00:00:00.000Z",
+      counts: { users: 1, events: 1, readModelRows: 0 },
+      restore: {
+        usersAndEvents: "Re-import users.csv then events.csv with anykpi import.",
+        connectorReadModels:
+          "Connector-backed read models restore by re-syncing the source.",
+      },
+      users: [{ personId: "p1", name: "Ada" }],
+      events: [{ personId: "p1", eventName: "played" }],
+      view_url: "http://instance.test/dashboard?workspace=demo&view=dotplot",
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => payload,
+      })
+    );
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    const program = createProgram();
+    program.exitOverride();
+    await program.parseAsync(
+      ["export", "--workspace", "demo", "--json", "--out", out],
+      { from: "user" }
+    );
+
+    const written = JSON.parse(readFileSync(out, "utf8")) as { users: unknown[] };
+    expect(written.users).toHaveLength(1);
+    const printed = log.mock.calls.map((call) => call.join(" ")).join("\n");
+    expect(printed).toContain('"written"');
+    expect(printed).toContain(out);
+    expect(printed).not.toContain("Ada");
+  });
+
   it("keys lists metadata and keys downgrade POSTs /api/v1/keys/downgrade", async () => {
     isolatedHome();
     process.env.ANYKPI_API_KEY = "test-key";

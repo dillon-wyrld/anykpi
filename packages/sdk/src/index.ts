@@ -144,6 +144,9 @@ export class Anykpi {
   }
 
   private scheduleFlush(): Promise<void> {
+    if (this.config.flushIntervalMs <= 0) {
+      return this.flush();
+    }
     const wait = this.ensureGate();
     if (this.flushTimer === null && !this.sending) {
       this.flushTimer = setTimeout(() => {
