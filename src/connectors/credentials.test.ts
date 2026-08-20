@@ -5,6 +5,7 @@ const original = {
   POSTHOG_API_KEY: process.env.POSTHOG_API_KEY,
   POSTHOG_PROJECT_ID: process.env.POSTHOG_PROJECT_ID,
   POSTHOG_HOST: process.env.POSTHOG_HOST,
+  MERCURY_API_KEY: process.env.MERCURY_API_KEY,
 };
 
 afterEach(() => {
@@ -25,6 +26,14 @@ describe("connector credential resolution", () => {
     expect(resolveCredentials("posthog")).toEqual({
       apiKey: "phx_env",
       projectId: "proj_env",
+    });
+  });
+
+  it("resolves a stored Mercury token over the deprecated env fallback", () => {
+    process.env.MERCURY_API_KEY = "secret-token:env";
+    expect(envFallback("mercury")).toEqual({ apiKey: "secret-token:env" });
+    expect(resolveCredentials("mercury", { apiKey: "secret-token:stored" })).toEqual({
+      apiKey: "secret-token:stored",
     });
   });
 

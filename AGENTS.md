@@ -48,7 +48,7 @@ HTTP `POST /api/mcp`. stdio: `src/mcp/server.ts`. `tools/list` is open. `tools/c
 
 ## Connectors
 
-Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, ICS. Pull-only (Stripe also accepts a signature-verified webhook at `POST /api/webhooks/stripe`). Connector setup is the `/connect` UI or `anykpi connect`. Config is encrypted at rest with `ANYKPI_SECRET`. Env vars are a deprecated read-only fallback. Calendar ICS is read-only forever.
+Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS. Pull-only (Stripe also accepts a signature-verified webhook at `POST /api/webhooks/stripe`). Connector setup is the `/connect` UI or `anykpi connect`. Config is encrypted at rest with `ANYKPI_SECRET`. Env vars are a deprecated read-only fallback. Calendar ICS is read-only forever.
 
 ## view_url
 
@@ -59,7 +59,7 @@ Read responses include a view_url that opens `/dashboard` in the workspace and v
 - `src/app/api` — HTTP routes (REST, MCP, views, OpenAPI, `/llms.txt`)
 - `src/core` — auth, Zod contracts, view-state, read-model loaders, `anykpi.config.json` loader (WBR exception thresholds beside the database)
 - `src/mcp/server.ts` — stdio MCP server
-- `src/connectors` — PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, ICS
+- `src/connectors` — PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS
 - `src/demo` — canonical demo dataset
 - `packages/cli` — CLI
 - `docs/introduction.md` — human docs

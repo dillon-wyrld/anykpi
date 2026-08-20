@@ -24,8 +24,9 @@
  * Config contract:
  * - The registry loads decrypted source config and passes it as
  *   `opts.config`. Connectors must not log it.
- * - Env vars (POSTHOG_*, MIXPANEL_*, AMPLITUDE_*, STRIPE_*, REVENUECAT_*)
- *   are a deprecated read-only fallback when stored config is missing a field.
+ * - Env vars (POSTHOG_*, MIXPANEL_*, AMPLITUDE_*, STRIPE_*, REVENUECAT_*,
+ *   MERCURY_*) are a deprecated read-only fallback when stored config is
+ *   missing a field.
  */
 
 import { and, eq } from "drizzle-orm";
@@ -39,6 +40,7 @@ import { upsertSyncState } from "@/core/upsert";
 import { syncAmplitude } from "./amplitude";
 import { ICS_SOURCE, ICS_SOURCE_NAME, syncIcs } from "./ics";
 import { withSourceLock } from "./lock";
+import { syncMercury } from "./mercury";
 import { syncMixpanel } from "./mixpanel";
 import { syncPostHog } from "./posthog";
 import { syncRevenueCat } from "./revenuecat";
@@ -52,6 +54,7 @@ export { SyncResultSchema, ConnectorHealthSchema } from "@/core/contracts";
 
 export { syncAmplitude } from "./amplitude";
 export { syncIcs } from "./ics";
+export { syncMercury } from "./mercury";
 export { syncMixpanel } from "./mixpanel";
 export { syncPostHog } from "./posthog";
 export { syncRevenueCat } from "./revenuecat";
@@ -93,6 +96,12 @@ export const revenuecatConnector: Connector = {
   sync: syncRevenueCat,
 };
 
+export const mercuryConnector: Connector = {
+  source: "mercury",
+  name: "Mercury",
+  sync: syncMercury,
+};
+
 export const icsConnector: Connector = {
   source: ICS_SOURCE,
   name: ICS_SOURCE_NAME,
@@ -106,6 +115,7 @@ export const registry: Record<string, Connector> = {
   amplitude: amplitudeConnector,
   stripe: stripeConnector,
   revenuecat: revenuecatConnector,
+  mercury: mercuryConnector,
   ics: icsConnector,
 };
 

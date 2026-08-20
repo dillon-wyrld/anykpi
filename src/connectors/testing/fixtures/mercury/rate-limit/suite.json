@@ -1,0 +1,24 @@
+{
+  "source": "mercury",
+  "description": "429 on accounts list",
+  "fixtures": [
+    {
+      "name": "accounts-rate-limited",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/api/v1/accounts"
+      },
+      "response": {
+        "status": 429,
+        "headers": {
+          "retry-after": "1"
+        },
+        "body": {
+          "errors": {
+            "message": "Too many requests"
+          }
+        }
+      }
+    }
+  ]
+}

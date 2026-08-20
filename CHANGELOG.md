@@ -33,7 +33,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
-- ICS calendar connector: paste a feed URL (stored via the ANY-46
+- Mercury connector (ANY-15): read-only account balances and trailing
+  posted transactions into `balance_snapshots`. Monthly burn and runway
+  months are computed from the last 90 days; the token is stored via
+  ANY-46. Offline fixture tests only.
+- ICS calendar connector: paste a feed URL (stored via the ANY-46)
   sources table), poll on `POST /api/v1/sync`, and fill the read-only
   Calendar view / `get_calendar`. Recurring expansion stays on the local
   wall clock across DST (ANY-10). No schema migration.

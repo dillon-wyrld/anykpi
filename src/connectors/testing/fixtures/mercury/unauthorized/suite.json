@@ -1,0 +1,21 @@
+{
+  "source": "mercury",
+  "description": "401 on accounts list",
+  "fixtures": [
+    {
+      "name": "accounts-unauthorized",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/api/v1/accounts"
+      },
+      "response": {
+        "status": 401,
+        "body": {
+          "errors": {
+            "message": "Invalid token"
+          }
+        }
+      }
+    }
+  ]
+}

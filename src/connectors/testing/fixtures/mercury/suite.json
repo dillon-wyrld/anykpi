@@ -1,0 +1,63 @@
+{
+  "source": "mercury",
+  "description": "Alias of happy-path pages for registry tests",
+  "fixtures": [
+    {
+      "name": "accounts",
+      "request": {
+        "method": "GET",
+        "urlPattern": "/api/v1/accounts"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "accounts": [
+            {
+              "id": "11111111-1111-1111-1111-111111111111",
+              "name": "Checking",
+              "status": "active",
+              "type": "mercury",
+              "kind": "checking",
+              "currentBalance": 186000,
+              "availableBalance": 186000
+            }
+          ],
+          "page": {}
+        }
+      }
+    },
+    {
+      "name": "checking-transactions",
+      "request": {
+        "method": "GET",
+        "urlIncludes": "/account/11111111-1111-1111-1111-111111111111/transactions"
+      },
+      "response": {
+        "status": 200,
+        "body": {
+          "total": 3,
+          "transactions": [
+            {
+              "id": "tx-payroll-1",
+              "amount": -31000,
+              "status": "sent",
+              "kind": "outgoingPayment"
+            },
+            {
+              "id": "tx-payroll-2",
+              "amount": -31000,
+              "status": "sent",
+              "kind": "outgoingPayment"
+            },
+            {
+              "id": "tx-payroll-3",
+              "amount": -31000,
+              "status": "sent",
+              "kind": "outgoingPayment"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
