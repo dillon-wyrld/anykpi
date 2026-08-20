@@ -84,6 +84,7 @@ Returns:
 **All endpoints:**
 - `GET /api/v1/overview` — Company snapshot, including connector `syncHealth`
 - `GET /api/v1/users` — Query users (filter by cluster, platform, dates)
+- `DELETE /api/v1/users/{id}` — Purge a person and write a tombstone (API key only; a browser session is refused)
 - `GET /api/v1/cohorts` — Retention with PMF signal; optional split by platform, country, or cluster (max 3 series)
 - `GET /api/v1/wbr` — Weekly Business Review metrics
 - `GET /api/v1/calendar` — Multi-source events

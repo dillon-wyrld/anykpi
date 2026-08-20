@@ -24,6 +24,7 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 
 - `GET /api/v1/overview` — company snapshot (includes connector `syncHealth`)
 - `GET /api/v1/users` — query users (cluster, platform, dates, limit, offset)
+- `DELETE /api/v1/users/{id}` — purge a person and write a tombstone (key-only; survives re-sync)
 - `GET /api/v1/cohorts` — retention with smile detection; optional `split` by platform, country, or cluster (max 3 series)
 - `GET /api/v1/wbr` — Weekly Business Review
 - `GET /api/v1/calendar` — multi-source timeline

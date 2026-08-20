@@ -32,6 +32,7 @@ export const AUDIT_ACTIONS = {
   outreachApprove: "outreach.approve",
   outreachSend: "outreach.send",
   outreachOutcome: "outreach.outcome",
+  usersDelete: "users.delete",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -56,6 +57,7 @@ export const WRITE_HTTP_ROUTES = [
   { method: "POST", path: "/api/v1/outreach/approve", action: AUDIT_ACTIONS.outreachApprove },
   { method: "POST", path: "/api/v1/outreach/send", action: AUDIT_ACTIONS.outreachSend },
   { method: "POST", path: "/api/v1/outreach/outcome", action: AUDIT_ACTIONS.outreachOutcome },
+  { method: "DELETE", path: "/api/v1/users/:id", action: AUDIT_ACTIONS.usersDelete },
 ] as const;
 
 /** Route modules that perform writes (including the MCP mutation hook). */
@@ -72,6 +74,7 @@ export const WRITE_ROUTE_MODULES = [
   "src/app/api/v1/keys/downgrade/route.ts",
   "src/app/api/webhooks/stripe/route.ts",
   "src/app/api/mcp/route.ts",
+  "src/app/api/v1/users/[id]/route.ts",
 ] as const;
 
 export type AuditEntry = {

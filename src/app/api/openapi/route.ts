@@ -4,6 +4,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 import {
   OverviewResponseSchema,
   UsersListResponseSchema,
+  DeleteUserResponseSchema,
   CohortsResponseSchema,
   WBRResponseSchema,
   CalendarResponseSchema,
@@ -169,6 +170,49 @@ export async function GET(request: NextRequest) {
                   schema: zodToJsonSchema(ErrorResponseSchema)
                 }
               }
+            }
+          }
+        }
+      },
+      '/api/v1/users/{id}': {
+        delete: {
+          tags: ['Users'],
+          summary: 'Delete a person',
+          description:
+            'Purge a person and their events, cascade through person-level read models, and write a tombstone so a later connector sync, CSV import, or batch ingest cannot resurrect them. Key-only: a browser session is refused with 403 so the audit row names the deleting actor.',
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string' },
+              description: 'personId'
+            },
+            {
+              name: 'workspace',
+              in: 'query',
+              schema: { type: 'string', default: 'live' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Person deleted and tombstoned',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(DeleteUserResponseSchema)
+                }
+              }
+            },
+            403: {
+              description: 'Browser session or read-only key cannot delete',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            404: {
+              description: 'Person not found in the workspace'
             }
           }
         }

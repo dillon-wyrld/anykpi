@@ -14,6 +14,7 @@ import { and, eq } from "drizzle-orm";
 import type { SyncResult } from "@/core/contracts";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
+import { isTombstoned } from "@/core/tombstones";
 import { upsertSyncState } from "@/core/upsert";
 import { resolveCredentials } from "./credentials";
 import { failedSync } from "./http-status";
@@ -244,6 +245,7 @@ async function upsertPersonRevenue(row: {
   currency: string;
   workspaceId: string;
 }): Promise<void> {
+  if (await isTombstoned(row.workspaceId, row)) return;
   const existing = await db
     .select()
     .from(schema.personRevenue)
@@ -309,6 +311,9 @@ async function insertSubscriptionEvent(row: {
   sourceEventId: string;
   workspaceId: string;
 }): Promise<boolean> {
+  if (await isTombstoned(row.workspaceId, { personId: row.personId, accountId: row.accountId })) {
+    return false;
+  }
   await db
     .insert(schema.subscriptionEvents)
     .values({

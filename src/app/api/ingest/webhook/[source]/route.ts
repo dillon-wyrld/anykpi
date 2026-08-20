@@ -16,6 +16,7 @@ import {
 } from "@/core/errors";
 import { clientKeyFrom, rateLimit } from "@/core/rate-limit";
 import { loadSourceConfig } from "@/core/sources";
+import { isTombstoned } from "@/core/tombstones";
 import {
   classifyEventName,
   isSourceSlug,
@@ -95,15 +96,18 @@ async function writeActivity(
   }
 ): Promise<void> {
   const personId = `person_${event.userId}`;
-  const eventDate = new Date(event.timestamp || Date.now());
   const properties = event.properties ?? {};
+  const email = typeof properties.email === "string" ? properties.email : null;
+  if (await isTombstoned(workspaceId, { personId, email })) {
+    return;
+  }
+  const eventDate = new Date(event.timestamp || Date.now());
   const platform =
     typeof properties.platform === "string" ? properties.platform : "web";
   const name =
     typeof properties.name === "string"
       ? properties.name
       : `User ${event.userId}`;
-  const email = typeof properties.email === "string" ? properties.email : null;
   const emoji = typeof properties.emoji === "string" ? properties.emoji : null;
   const country =
     typeof properties.country === "string" ? properties.country : null;

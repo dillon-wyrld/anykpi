@@ -69,8 +69,28 @@ function ensureActivityExternalId() {
   }
 }
 
+function ensureTombstones() {
+  try {
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS tombstones (
+        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        workspace_id TEXT NOT NULL,
+        external_id TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS tombstones_workspace_idx
+        ON tombstones (workspace_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS tombstones_workspace_external_uidx
+        ON tombstones (workspace_id, external_id);
+    `);
+  } catch {
+    // Table may not exist until db:init / drizzle push
+  }
+}
+
 ensureApiKeyWorkspaceColumn();
 ensureActivityExternalId();
+ensureTombstones();
 
 export const db = drizzle(sqlite, { schema });
 

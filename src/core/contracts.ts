@@ -252,6 +252,12 @@ export const UsersListResponseSchema = z.object({
   view_url: z.string().optional(),
 });
 
+export const DeleteUserResponseSchema = z.object({
+  deleted: z.literal(true),
+  personId: z.string(),
+  workspace: z.string(),
+});
+
 export const CohortCompareSeriesSchema = z.object({
   key: z.string(),
   size: z.number().int().nonnegative(),
@@ -735,6 +741,7 @@ export type PersonPanelResponse = z.infer<typeof PersonPanelResponseSchema>;
 
 export type OverviewResponse = z.infer<typeof OverviewResponseSchema>;
 export type UsersListResponse = z.infer<typeof UsersListResponseSchema>;
+export type DeleteUserResponse = z.infer<typeof DeleteUserResponseSchema>;
 export type CohortsResponse = z.infer<typeof CohortsResponseSchema>;
 export type WBRResponse = z.infer<typeof WBRResponseSchema>;
 export type CalendarResponse = z.infer<typeof CalendarResponseSchema>;
