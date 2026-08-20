@@ -151,6 +151,23 @@ sqlite.exec(`
   );
   CREATE UNIQUE INDEX IF NOT EXISTS sources_workspace_source_uidx
     ON sources (workspace_id, source);
+  CREATE TABLE IF NOT EXISTS accounts (
+    account_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    entity TEXT,
+    seats INTEGER DEFAULT 0,
+    activated INTEGER DEFAULT 0,
+    mrr REAL DEFAULT 0,
+    renewal_date INTEGER,
+    workspace_id TEXT NOT NULL DEFAULT 'demo'
+  );
+  CREATE TABLE IF NOT EXISTS seats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id TEXT NOT NULL,
+    person_id TEXT NOT NULL,
+    role TEXT,
+    workspace_id TEXT NOT NULL DEFAULT 'demo'
+  );
   CREATE TABLE IF NOT EXISTS cal_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source TEXT NOT NULL,
