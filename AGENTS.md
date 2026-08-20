@@ -16,7 +16,7 @@ pnpm dev       # http://localhost:3000
 
 The first API key comes from the operator: set `ANYKPI_API_KEY` in the environment (see `.env.example`), or mint an additional key in the UI at `/connect` or `/agents` while presenting that operator key. There is deliberately no unauthenticated first-key endpoint.
 
-Demo workspace is public-read. Live workspaces and all writes require a key (`Authorization: Bearer` or `x-api-key`).
+Demo workspace is public-read. Live workspaces require a key (`Authorization: Bearer` or `x-api-key`) or a signed browser session cookie from `POST /api/session`. Writes stay key-only.
 
 ## REST
 
@@ -36,6 +36,7 @@ Demo workspace is public-read. Live workspaces and all writes require a key (`Au
 - `POST /api/v1/ingest/identify` / `POST /api/v1/ingest/event` — identify and track
 - `POST /api/ingest/batch` — batch track (up to 1k events; idempotent on activity.externalId)
 - `POST /api/ingest/webhook/:source` — realtime push; HMAC secret stored via connect
+- `POST /api/session` / `GET /api/session` / `DELETE /api/session` — browser session cookie for live dashboard reads (httpOnly + SameSite; writes stay key-only)
 
 ## MCP
 

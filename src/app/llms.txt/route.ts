@@ -16,6 +16,8 @@ Demo workspace is public-read (seeded fictional people). Live workspaces and all
 
 Send the key as \`Authorization: Bearer <key>\` or \`x-api-key: <key>\`.
 
+Humans on a deployed instance can POST /api/session with the key once. That sets a signed httpOnly SameSite cookie so live dashboard views load without putting the key in a URL. DELETE /api/session logs out. Writes still require the key.
+
 The first key comes from the operator: set ANYKPI_API_KEY in the environment, or mint an additional key in the UI (/connect or /agents) while presenting that operator key. There is deliberately no unauthenticated first-key endpoint.
 
 Hashed keys are workspace-bound and carry a scope: read, write, or admin. New keys default to read. ANYKPI_API_KEY is admin. Existing keys migrate to write and show as legacy until \`anykpi keys downgrade\`. A read key on a write returns 403. In production, if ANYKPI_API_KEY is unset and no valid hashed key is presented, live reads and writes return 503.

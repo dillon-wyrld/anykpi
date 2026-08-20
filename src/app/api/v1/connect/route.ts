@@ -3,7 +3,7 @@ import {
   ConnectSourceRequestSchema,
   ConnectSourceResponseSchema,
 } from "@/core/contracts";
-import { gate } from "@/core/auth";
+import { gate } from "@/core/session-auth";
 import {
   badRequest,
   internalError,

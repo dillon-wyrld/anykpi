@@ -3,6 +3,18 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   output: "standalone",
+  webpack: (config, { nextRuntime }) => {
+    // middleware.ts is Edge. instrumentation.ts still gets analyzed for that
+    // graph; stub Node builtins so the boot hook is not bundled into Edge.
+    if (nextRuntime === "edge") {
+      config.resolve.fallback = {
+        ...(config.resolve.fallback ?? {}),
+        fs: false,
+        path: false,
+      };
+    }
+    return config;
+  },
   async headers() {
     return [
       {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CohortsResponseSchema } from "@/core/contracts";
-import { gate } from "@/core/auth";
+import { gate } from "@/core/session-auth";
 import { publicBaseUrl } from "@/core/view-state";
 import { badRequest, internalError, logServerError } from "@/core/errors";
 import {

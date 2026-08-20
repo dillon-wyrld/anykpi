@@ -3,7 +3,7 @@ import { db } from '@/core/db';
 import * as schema from '@/core/schema';
 import { eq, and, gte, lte, sql, asc } from 'drizzle-orm';
 import { QueryUsersRequestSchema, UsersListResponseSchema } from '@/core/contracts';
-import { gate } from '@/core/auth';
+import { gate } from '@/core/session-auth';
 import { ensureWorkspaceClusters } from '@/core/clustering';
 import { publicBaseUrl } from '@/core/view-state';
 import { badRequest, internalError, logServerError } from '@/core/errors';

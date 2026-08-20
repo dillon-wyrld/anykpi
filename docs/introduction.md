@@ -55,7 +55,8 @@ Every view has a shareable URL.
 ### REST API
 
 ```bash
-# Demo workspace is public-read. Live data and all writes need a key.
+# Demo workspace is public-read. Live data needs a key or a browser session.
+# Writes always need a key. Humans: POST /api/session once (cookie, not a URL).
 curl http://localhost:3000/api/v1/overview?workspace=demo
 
 curl http://localhost:3000/api/v1/overview?workspace=live \
@@ -90,6 +91,8 @@ Returns:
 - `GET /api/v1/keys` — List key metadata (scope, last used, legacy)
 - `POST /api/v1/keys` — Generate API key (defaults to read)
 - `POST /api/v1/keys/downgrade` — Convert legacy write keys to read
+- `POST /api/session` — Start a browser session (signed httpOnly cookie; live views; key never in the URL)
+- `DELETE /api/session` — Log out (clear the cookie)
 - `POST /api/ingest/identify` — Identify user
 - `POST /api/ingest/event` — Track event
 - `POST /api/ingest/batch` — Batch track (up to 1k events; idempotent on `externalId`)
