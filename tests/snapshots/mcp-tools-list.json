@@ -138,6 +138,40 @@
           }
         }
       }
+    },
+    {
+      "name": "queue_outreach",
+      "description": "Queue a persisted outreach draft (waiting). Write scope can queue; it cannot approve.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": { "type": "string" },
+          "personId": { "type": "string" },
+          "body": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "approve_outreach",
+      "description": "Approve a persisted outreach draft. Browser session or admin key only — a write key cannot approve.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": { "type": "string" },
+          "id": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "send_outreach",
+      "description": "Deliver an approved outreach draft. Unapproved drafts are refused.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": { "type": "string" },
+          "id": { "type": "string" }
+        }
+      }
     }
   ]
 }

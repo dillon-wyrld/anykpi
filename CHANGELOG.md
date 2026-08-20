@@ -37,6 +37,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Outreach delivery with structural per-send approval (ANY-26): drafts
+  persist in `outreach` (waiting / approved / sent). The only delivery
+  function takes a persisted approval record and refuses anything else —
+  including via MCP. Write-scoped keys can queue drafts but cannot
+  approve them; approval is a browser session or an admin key. Every
+  send is logged with timestamp, recipient, and the approving actor, and
+  writes an audit row. Mail credentials (Resend or SMTP) are stored via
+  ANY-46 (`POST /api/v1/connect` source `resend` or `smtp`).
 - MCP write tools (ANY-28): `connect_source`, `trigger_sync`, and
   `import_csv` so an agent can connect data unattended. Each requires a
   write-scoped key, returns a `view_url`, and records `mcp.call` on the

@@ -279,6 +279,53 @@ export const auditLog = sqliteTable("audit_log", {
   ),
 }));
 
+/**
+ * Persisted PMF+ outreach draft. Delivery is structurally gated on
+ * `state = approved` plus `approved_by` — there is no send path that
+ * accepts a client-only draft.
+ */
+export const outreach = sqliteTable("outreach", {
+  id: text("id").primaryKey(),
+  workspaceId: text("workspace_id").notNull().default("live"),
+  personId: text("person_id").notNull(),
+  body: text("body").notNull(),
+  /** waiting | approved | sent */
+  state: text("state").notNull().default("waiting"),
+  approvedBy: text("approved_by"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  approvedAt: integer("approved_at", { mode: "timestamp" }),
+  sentAt: integer("sent_at", { mode: "timestamp" }),
+}, (table) => ({
+  workspaceIdx: index("outreach_workspace_idx").on(table.workspaceId),
+  workspacePersonIdx: index("outreach_workspace_person_idx").on(
+    table.workspaceId,
+    table.personId
+  ),
+  workspaceStateIdx: index("outreach_workspace_state_idx").on(
+    table.workspaceId,
+    table.state
+  ),
+}));
+
+/**
+ * Append-only send log. One row per successful delivery: timestamp,
+ * recipient, and the actor who approved the draft.
+ */
+export const outreachDelivery = sqliteTable("outreach_delivery", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  outreachId: text("outreach_id").notNull(),
+  workspaceId: text("workspace_id").notNull().default("live"),
+  recipient: text("recipient").notNull(),
+  approvedBy: text("approved_by").notNull(),
+  sentAt: integer("sent_at", { mode: "timestamp" }).notNull(),
+}, (table) => ({
+  workspaceSentIdx: index("outreach_delivery_workspace_sent_idx").on(
+    table.workspaceId,
+    table.sentAt
+  ),
+  outreachIdx: index("outreach_delivery_outreach_idx").on(table.outreachId),
+}));
+
 /** Cash balance and runway. Banking connectors fill this later. */
 export const balanceSnapshots = sqliteTable("balance_snapshots", {
   id: integer("id").primaryKey({ autoIncrement: true }),

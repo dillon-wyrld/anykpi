@@ -30,6 +30,10 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 - `GET /api/v1/sync` — connector status
 - `GET /api/v1/freshness` — last ingest + per-source last-sync stamps
 - `GET /api/v1/audit` — action audit log (actor, action, subject, timestamp)
+- `GET /api/v1/outreach` — persisted PMF+ outreach drafts
+- `POST /api/v1/outreach` — queue a waiting draft (write scope)
+- `POST /api/v1/outreach/approve` — approve a draft (browser session or admin key; write cannot approve)
+- `POST /api/v1/outreach/send` — deliver an approved draft (unapproved drafts are refused)
 - `POST /api/v1/connect` — store per-source credentials (encrypted at rest; source `csv` stores import mapping)
 - `POST /api/v1/import` — CSV import for users and events (uses the sources store; column-mapping preview)
 - `GET /api/v1/export` — users, events, and read models as JSON or CSV files
@@ -46,6 +50,7 @@ HTTP `POST /api/mcp`. stdio: `src/mcp/server.ts`. `tools/list` is open. `tools/c
 
 - `get_overview`, `query_users`, `get_cohorts`, `get_wbr`, `get_calendar`
 - write (requires write scope): `connect_source`, `trigger_sync`, `import_csv`
+- `queue_outreach`, `approve_outreach`, `send_outreach` (HTTP MCP; write can queue, only session/admin can approve, unapproved send is refused)
 - stdio also: `install_sdk`, `configure_value_events` (requires write scope)
 
 ## CLI

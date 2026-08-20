@@ -180,6 +180,35 @@ sqlite.exec(`
     ON audit_log (workspace_id, created_at);
   CREATE INDEX IF NOT EXISTS audit_log_workspace_actor_created_idx
     ON audit_log (workspace_id, actor, created_at);
+  CREATE TABLE IF NOT EXISTS outreach (
+    id TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL DEFAULT 'live',
+    person_id TEXT NOT NULL,
+    body TEXT NOT NULL,
+    state TEXT NOT NULL DEFAULT 'waiting',
+    approved_by TEXT,
+    created_at INTEGER NOT NULL,
+    approved_at INTEGER,
+    sent_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS outreach_workspace_idx
+    ON outreach (workspace_id);
+  CREATE INDEX IF NOT EXISTS outreach_workspace_person_idx
+    ON outreach (workspace_id, person_id);
+  CREATE INDEX IF NOT EXISTS outreach_workspace_state_idx
+    ON outreach (workspace_id, state);
+  CREATE TABLE IF NOT EXISTS outreach_delivery (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    outreach_id TEXT NOT NULL,
+    workspace_id TEXT NOT NULL DEFAULT 'live',
+    recipient TEXT NOT NULL,
+    approved_by TEXT NOT NULL,
+    sent_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS outreach_delivery_workspace_sent_idx
+    ON outreach_delivery (workspace_id, sent_at);
+  CREATE INDEX IF NOT EXISTS outreach_delivery_outreach_idx
+    ON outreach_delivery (outreach_id);
   CREATE TABLE IF NOT EXISTS cal_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     source TEXT NOT NULL,

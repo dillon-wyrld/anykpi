@@ -22,6 +22,13 @@ import {
 import { loadSyncHealth } from "@/core/sync-health";
 import { loadWbrView } from "@/core/views/wbr";
 import { loadCalendarView } from "@/core/views/calendar";
+import {
+  callOutreachMcpTool,
+  isOutreachMcpTool,
+  OUTREACH_MCP_TOOLS,
+  outreachMcpAction,
+} from "@/outreach/mcp";
+import { gateOutreach } from "@/outreach";
 
 type ToolArgs = {
   workspace?: string;
@@ -33,12 +40,16 @@ type ToolArgs = {
   payers?: boolean;
   split?: string;
   series?: string | string[];
+  personId?: string;
+  body?: string;
+  id?: string;
 } & McpWriteArgs;
 
 async function handleMCPRequest(
   body: Record<string, unknown>,
   workspaceOverride?: string,
-  request?: NextRequest
+  request?: NextRequest,
+  auth?: AuthOk
 ) {
   const method = body.method;
   const params = (body.params ?? {}) as {
@@ -125,6 +136,7 @@ async function handleMCPRequest(
           },
         },
         ...MCP_WRITE_TOOLS,
+        ...OUTREACH_MCP_TOOLS,
       ],
     };
   }
@@ -237,6 +249,34 @@ async function handleMCPRequest(
         };
       }
 
+      case "queue_outreach":
+      case "approve_outreach":
+      case "send_outreach": {
+        if (!auth || !isOutreachMcpTool(name)) {
+          return {
+            content: [{ type: "text", text: "Unauthorized" }],
+          };
+        }
+        const called = await callOutreachMcpTool({
+          name,
+          auth,
+          workspace,
+          args: {
+            personId: args?.personId,
+            body: args?.body,
+            id: args?.id,
+          },
+        });
+        if (!called.ok) {
+          const error = new Error(called.error);
+          (error as Error & { status: number }).status = called.status;
+          throw error;
+        }
+        return {
+          content: [{ type: "text", text: JSON.stringify(called.payload) }],
+        };
+      }
+
       case "get_calendar": {
         const data = await loadCalendarView(workspace);
         const start = args?.startDate ? Date.parse(args.startDate) : Number.NaN;
@@ -305,15 +345,28 @@ export async function POST(request: NextRequest) {
     let auth: AuthOk;
     if (method === "tools/call") {
       const toolName = params?.name as string | undefined;
-      const write = !isReadOnlyMcpTool(toolName);
-      const requested =
-        params?.arguments?.workspace || (write ? "live" : "demo");
-      const gated = await gate(request, { workspace: requested, write });
-      if (!gated.ok) {
-        return gated.response;
+      if (isOutreachMcpTool(toolName)) {
+        const requested = params?.arguments?.workspace || "demo";
+        const gated = await gateOutreach(request, {
+          workspace: requested,
+          action: outreachMcpAction(toolName),
+        });
+        if (!gated.ok) {
+          return gated.response;
+        }
+        workspace = gated.workspace;
+        auth = gated.auth;
+      } else {
+        const write = !isReadOnlyMcpTool(toolName);
+        const requested =
+          params?.arguments?.workspace || (write ? "live" : "demo");
+        const gated = await gate(request, { workspace: requested, write });
+        if (!gated.ok) {
+          return gated.response;
+        }
+        workspace = gated.workspace;
+        auth = gated.auth;
       }
-      workspace = gated.workspace;
-      auth = gated.auth;
     } else {
       const gated = await gate(request, { write: true });
       if (!gated.ok) {
@@ -323,7 +376,7 @@ export async function POST(request: NextRequest) {
       auth = gated.auth;
     }
 
-    const result = await handleMCPRequest(body, workspace, request);
+    const result = await handleMCPRequest(body, workspace, request, auth);
 
     if (method === "tools/call" && workspace) {
       await recordMcpWriteAudit({
@@ -348,6 +401,17 @@ export async function POST(request: NextRequest) {
           error: { code: -32602, message: error.message },
         },
         { status: 400 }
+      );
+    }
+    const status = (error as { status?: number })?.status;
+    if (typeof status === "number" && error instanceof Error) {
+      return NextResponse.json(
+        {
+          jsonrpc: "2.0",
+          id: null,
+          error: { code: -32000, message: error.message },
+        },
+        { status }
       );
     }
     logServerError("MCP request failed");

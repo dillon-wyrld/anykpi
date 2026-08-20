@@ -46,7 +46,7 @@ Don't have PostHog/Mixpanel/Amplitude? Add the ANYKPI SDK. Events land in the sa
 2. **Cohorts** — Retention curves with smile detection (PMF signal).
 3. **Weekly Business Review** — 6 weeks, 12 months YOY, exceptions auto-surfaced. Thresholds live in `anykpi.config.json` beside the database; see [WBR exception rules](#wbr-exception-rules).
 4. **Calendar** — Read-only timeline from connected sources.
-5. **PMF+** — Research one person from a public source after you approve the outgoing fields (listed verbatim). Outreach drafts stay queued — nothing auto-sends.
+5. **PMF+** — Research one person from a public source after you approve the outgoing fields (listed verbatim). Outreach drafts persist as waiting until a founder session or admin key approves each send. Nothing auto-sends.
 
 Every view has a shareable URL.
 
@@ -87,6 +87,10 @@ Returns:
 - `GET /api/v1/sync` — Connector status
 - `GET /api/v1/freshness` — Last ingest + per-source last-sync stamps
 - `GET /api/v1/audit` — Action audit log (filter by actor and since/until)
+- `GET /api/v1/outreach` — Persisted PMF+ outreach drafts
+- `POST /api/v1/outreach` — Queue a waiting draft (write scope)
+- `POST /api/v1/outreach/approve` — Approve a draft (browser session or admin key; a write key cannot approve)
+- `POST /api/v1/outreach/send` — Deliver an approved draft (unapproved drafts are refused)
 - `POST /api/v1/sync` — Trigger a sync (one source or all; requires an API key)
 - `POST /api/v1/import` — Import users or events from CSV (requires an API key)
 - `GET /api/v1/export` — Users, events, and read models as JSON or CSV (requires a key on live)

@@ -393,6 +393,8 @@ export const ConnectSourceIdSchema = z.enum([
   'github',
   'csv',
   'ics',
+  'resend',
+  'smtp',
 ]);
 
 /**
@@ -614,6 +616,56 @@ export const AuditListResponseSchema = z.object({
   total: z.number().int().nonnegative(),
 });
 
+export const OutreachStateSchema = z.enum(['waiting', 'approved', 'sent']);
+
+export const OutreachDraftSchema = z.object({
+  id: z.string(),
+  personId: z.string(),
+  body: z.string(),
+  state: OutreachStateSchema,
+  approvedBy: z.string().nullable(),
+  createdAt: z.string().datetime(),
+  approvedAt: z.string().datetime().nullable(),
+  sentAt: z.string().datetime().nullable(),
+  workspaceId: z.string(),
+});
+
+export const OutreachQueueRequestSchema = z.object({
+  personId: z.string().min(1),
+  body: z.string().min(1),
+  workspaceId: z.string().optional(),
+});
+
+export const OutreachIdRequestSchema = z.object({
+  id: z.string().min(1),
+  workspaceId: z.string().optional(),
+});
+
+export const OutreachDeliverySchema = z.object({
+  id: z.number().int(),
+  outreachId: z.string(),
+  recipient: z.string(),
+  approvedBy: z.string(),
+  sentAt: z.string().datetime(),
+  workspaceId: z.string(),
+});
+
+export const OutreachListResponseSchema = z.object({
+  drafts: z.array(OutreachDraftSchema),
+  view_url: z.string().optional(),
+});
+
+export const OutreachDraftResponseSchema = z.object({
+  draft: OutreachDraftSchema,
+  view_url: z.string().optional(),
+});
+
+export const OutreachSendResponseSchema = z.object({
+  draft: OutreachDraftSchema,
+  delivery: OutreachDeliverySchema,
+  view_url: z.string().optional(),
+});
+
 export const AuditQuerySchema = z.object({
   workspace: z.string().default('demo'),
   actor: z.string().optional(),
@@ -699,6 +751,14 @@ export type APIKeyDowngradeResponse = z.infer<typeof APIKeyDowngradeResponseSche
 export type AuditEntry = z.infer<typeof AuditEntrySchema>;
 export type AuditListResponse = z.infer<typeof AuditListResponseSchema>;
 export type AuditQuery = z.infer<typeof AuditQuerySchema>;
+export type OutreachState = z.infer<typeof OutreachStateSchema>;
+export type OutreachDraft = z.infer<typeof OutreachDraftSchema>;
+export type OutreachQueueRequest = z.infer<typeof OutreachQueueRequestSchema>;
+export type OutreachIdRequest = z.infer<typeof OutreachIdRequestSchema>;
+export type OutreachDelivery = z.infer<typeof OutreachDeliverySchema>;
+export type OutreachListResponse = z.infer<typeof OutreachListResponseSchema>;
+export type OutreachDraftResponse = z.infer<typeof OutreachDraftResponseSchema>;
+export type OutreachSendResponse = z.infer<typeof OutreachSendResponseSchema>;
 export type ResearchOutgoingField = z.infer<typeof ResearchOutgoingFieldSchema>;
 export type ResearchCandidate = z.infer<typeof ResearchCandidateSchema>;
 export type ResearchClaim = z.infer<typeof ResearchClaimSchema>;

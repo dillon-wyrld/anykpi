@@ -102,19 +102,83 @@ export default function PMF({ workspace }: PMFProps) {
     }
   };
 
-  const generateQueue = (run: PmfRun) => {
-    const queue = generatePmfQueue(run, { includeGift, giftAmount, giftType });
-    setRuns(runs.map((r) => (r.id === run.id ? { ...r, queue } : r)));
+  const generateQueue = async (run: PmfRun) => {
+    const drafts = generatePmfQueue(run, { includeGift, giftAmount, giftType });
+    const persisted = await Promise.all(
+      drafts.map(async (draft) => {
+        const response = await fetch("/api/v1/outreach", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            workspaceId: workspace,
+            personId: draft.personId,
+            body: draft.message,
+          }),
+        });
+        const data = (await response.json()) as {
+          draft?: { id: string; personId: string; body: string; state: "waiting" | "approved" | "sent" };
+          error?: string;
+        };
+        if (!response.ok || !data.draft) {
+          return { ...draft };
+        }
+        return {
+          id: data.draft.id,
+          personId: data.draft.personId,
+          message: data.draft.body,
+          state: data.draft.state,
+        };
+      })
+    );
+    setRuns(runs.map((r) => (r.id === run.id ? { ...r, queue: persisted } : r)));
   };
 
-  const approveDraft = (runId: string, personId: string) => {
+  const approveDraft = async (runId: string, draftId: string | undefined, personId: string) => {
+    if (!draftId) return;
+    const response = await fetch("/api/v1/outreach/approve", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ workspaceId: workspace, id: draftId }),
+    });
+    if (!response.ok) return;
+    const data = (await response.json()) as {
+      draft?: { id: string; state: "approved"; approvedBy?: string | null };
+    };
     setRuns(
       runs.map((r) => {
         if (r.id !== runId) return r;
         return {
           ...r,
           queue: r.queue.map((d) =>
-            d.personId === personId ? { ...d, state: "approved" as const } : d
+            d.personId === personId
+              ? {
+                  ...d,
+                  id: data.draft?.id ?? d.id,
+                  state: "approved" as const,
+                  approvedBy: data.draft?.approvedBy ?? d.approvedBy,
+                }
+              : d
+          ),
+        };
+      })
+    );
+  };
+
+  const sendDraft = async (runId: string, draftId: string | undefined, personId: string) => {
+    if (!draftId) return;
+    const response = await fetch("/api/v1/outreach/send", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ workspaceId: workspace, id: draftId }),
+    });
+    if (!response.ok) return;
+    setRuns(
+      runs.map((r) => {
+        if (r.id !== runId) return r;
+        return {
+          ...r,
+          queue: r.queue.map((d) =>
+            d.personId === personId ? { ...d, state: "sent" as const } : d
           ),
         };
       })
@@ -370,7 +434,7 @@ export default function PMF({ workspace }: PMFProps) {
                   )}
                   {run.status === "done" && run.queue.length === 0 && (
                     <button
-                      onClick={() => generateQueue(run)}
+                      onClick={() => void generateQueue(run)}
                       className="px-3 py-1.5 bg-accent text-white rounded-lg text-xs font-medium hover:bg-accent/90"
                     >
                       → Generate outreach
@@ -535,7 +599,9 @@ export default function PMF({ workspace }: PMFProps) {
                       <div
                         key={draft.personId}
                         className={`bg-panel border rounded-lg p-4 ${
-                          draft.state === "approved"
+                          draft.state === "sent"
+                            ? "border-green bg-green-50"
+                            : draft.state === "approved"
                             ? "border-green bg-green-50"
                             : draft.state === "edited"
                             ? "border-amber"
@@ -547,8 +613,10 @@ export default function PMF({ workspace }: PMFProps) {
                           <div className="flex-1">
                             <div className="font-semibold">{person.name}</div>
                             <div className="text-xs text-sub">
-                              {draft.state === "approved" ? (
-                                <span className="text-green">✓ Approved (nothing sends automatically)</span>
+                              {draft.state === "sent" ? (
+                                <span className="text-green">✓ Sent</span>
+                              ) : draft.state === "approved" ? (
+                                <span className="text-green">✓ Approved — send is a separate step</span>
                               ) : draft.state === "edited" ? (
                                 <span className="text-amber">Edited</span>
                               ) : (
@@ -562,15 +630,23 @@ export default function PMF({ workspace }: PMFProps) {
                           value={draft.message}
                           onChange={(e) => editDraft(run.id, draft.personId, e.target.value)}
                           className="w-full min-h-[120px] p-3 border border-border rounded bg-white text-sm font-mono resize-y mb-3"
-                          disabled={draft.state === "approved"}
+                          disabled={draft.state === "approved" || draft.state === "sent"}
                         />
 
-                        {draft.state !== "approved" && (
+                        {draft.state !== "approved" && draft.state !== "sent" && (
                           <button
-                            onClick={() => approveDraft(run.id, draft.personId)}
+                            onClick={() => void approveDraft(run.id, draft.id, draft.personId)}
                             className="px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent/90"
                           >
-                            ✓ Approve (ready to send manually)
+                            ✓ Approve
+                          </button>
+                        )}
+                        {draft.state === "approved" && (
+                          <button
+                            onClick={() => void sendDraft(run.id, draft.id, draft.personId)}
+                            className="px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent/90"
+                          >
+                            Send
                           </button>
                         )}
                       </div>

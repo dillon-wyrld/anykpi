@@ -28,6 +28,9 @@ export const AUDIT_ACTIONS = {
   keysDowngrade: "keys.downgrade",
   webhookStripe: "webhook.stripe",
   mcpCall: "mcp.call",
+  outreachQueue: "outreach.queue",
+  outreachApprove: "outreach.approve",
+  outreachSend: "outreach.send",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -48,6 +51,9 @@ export const WRITE_HTTP_ROUTES = [
   { method: "DELETE", path: "/api/v1/keys/:id", action: AUDIT_ACTIONS.keysRevoke },
   { method: "POST", path: "/api/v1/keys/downgrade", action: AUDIT_ACTIONS.keysDowngrade },
   { method: "POST", path: "/api/webhooks/stripe", action: AUDIT_ACTIONS.webhookStripe },
+  { method: "POST", path: "/api/v1/outreach", action: AUDIT_ACTIONS.outreachQueue },
+  { method: "POST", path: "/api/v1/outreach/approve", action: AUDIT_ACTIONS.outreachApprove },
+  { method: "POST", path: "/api/v1/outreach/send", action: AUDIT_ACTIONS.outreachSend },
 ] as const;
 
 /** Route modules that perform writes (including the MCP mutation hook). */
