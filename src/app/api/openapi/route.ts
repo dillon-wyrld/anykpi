@@ -273,7 +273,8 @@ export async function GET(request: NextRequest) {
         get: {
           tags: ['Sync'],
           summary: 'Get sync state',
-          description: 'Status of all connected sources with last sync time',
+          description:
+            'Status of all connected sources with last sync time and syncIntervalMinutes (SYNC_INTERVAL_MINUTES; 0 means the in-process scheduler is off)',
           parameters: [
             {
               name: 'workspace',

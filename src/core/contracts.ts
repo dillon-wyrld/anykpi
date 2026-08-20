@@ -285,6 +285,8 @@ export const CalendarResponseSchema = z.object({
 export const SyncResponseSchema = z.object({
   states: z.array(SyncStateSchema),
   workspace: z.string(),
+  /** Minutes between in-process pulls. 0 means the scheduler is off. */
+  syncIntervalMinutes: z.number().int().nonnegative(),
 });
 
 /** Lightweight poll payload: last ingest + per-source last-sync stamps. */

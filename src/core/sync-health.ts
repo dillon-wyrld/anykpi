@@ -1,6 +1,7 @@
 /**
  * Per-source sync health for get_overview / GET /api/v1/overview.
- * Failures are `status: "error"` — the /connect panel is a later surface.
+ * Failures are `status: "error"`. /connect renders that plus next-run
+ * and a human next step (see `connector-health.ts`).
  */
 
 import { eq } from "drizzle-orm";

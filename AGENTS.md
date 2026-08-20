@@ -27,7 +27,7 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 - `GET /api/v1/cohorts` — retention with smile detection; optional `split` by platform, country, or cluster (max 3 series)
 - `GET /api/v1/wbr` — Weekly Business Review
 - `GET /api/v1/calendar` — multi-source timeline
-- `GET /api/v1/sync` — connector status
+- `GET /api/v1/sync` — connector status (`syncIntervalMinutes` from `SYNC_INTERVAL_MINUTES`)
 - `GET /api/v1/freshness` — last ingest + per-source last-sync stamps
 - `GET /api/v1/audit` — action audit log (actor, action, subject, timestamp)
 - `GET /api/v1/outreach` — persisted PMF+ outreach drafts
@@ -59,7 +59,7 @@ HTTP `POST /api/mcp`. stdio: `src/mcp/server.ts`. `tools/list` is open. `tools/c
 
 ## Connectors
 
-Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub. Pull-only (Stripe also accepts a signature-verified webhook at `POST /api/webhooks/stripe`). Connector setup is the `/connect` UI or `anykpi connect`. Config is encrypted at rest with `ANYKPI_SECRET`. Env vars are a deprecated read-only fallback. Calendar ICS is read-only forever.
+Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub. Pull-only (Stripe also accepts a signature-verified webhook at `POST /api/webhooks/stripe`). Connector setup is the `/connect` UI or `anykpi connect`. `/connect` shows last sync, rows pulled, next run (`SYNC_INTERVAL_MINUTES`), a plain-language error with a next step, and Sync now. Config is encrypted at rest with `ANYKPI_SECRET`. Env vars are a deprecated read-only fallback. Calendar ICS is read-only forever.
 
 ## view_url
 
