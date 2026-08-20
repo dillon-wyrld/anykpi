@@ -12,8 +12,13 @@ import { envFallback } from "@/connectors/credentials";
 import { listConnectors, sync } from "@/connectors";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
+import { parseSyncIntervalMinutes } from "@/core/scheduler-env";
 
-export const DEFAULT_SYNC_INTERVAL_MINUTES = 15;
+export {
+  DEFAULT_SYNC_INTERVAL_MINUTES,
+  parseSyncIntervalMinutes,
+  shouldStartScheduler,
+} from "@/core/scheduler-env";
 
 /** Empty cursor: incremental sources start from the beginning (nightly). */
 export const FULL_PASS_CURSOR = "";
@@ -44,27 +49,6 @@ type SchedulerState = {
 const globalForScheduler = globalThis as typeof globalThis & {
   __anykpiScheduledRefresh?: SchedulerState;
 };
-
-export function parseSyncIntervalMinutes(
-  raw: string | undefined = process.env.SYNC_INTERVAL_MINUTES
-): number {
-  if (raw === undefined || raw.trim() === "") {
-    return DEFAULT_SYNC_INTERVAL_MINUTES;
-  }
-  const n = Number(raw);
-  if (!Number.isFinite(n) || n < 0) {
-    return DEFAULT_SYNC_INTERVAL_MINUTES;
-  }
-  return n;
-}
-
-export function shouldStartScheduler(
-  env: Record<string, string | undefined> = process.env
-): boolean {
-  if (env.NEXT_RUNTIME === "edge") return false;
-  if (env.NEXT_PHASE === "phase-production-build") return false;
-  return parseSyncIntervalMinutes(env.SYNC_INTERVAL_MINUTES) > 0;
-}
 
 export function nightlyKey(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10);
@@ -119,9 +103,15 @@ export async function runScheduledPass(opts?: {
 }): Promise<void> {
   const syncFn = opts?.syncFn ?? sync;
   const syncOpts = opts?.full ? { cursor: FULL_PASS_CURSOR } : undefined;
-  const targets = (await listScheduledTargets()).filter((target) =>
-    opts?.workspaceId ? target.workspaceId === opts.workspaceId : true
-  );
+  let targets: ScheduledTarget[] = [];
+  try {
+    targets = (await listScheduledTargets()).filter((target) =>
+      opts?.workspaceId ? target.workspaceId === opts.workspaceId : true
+    );
+  } catch {
+    // Schema may not exist yet (first boot before db:init). Retry next tick.
+    return;
+  }
   await Promise.all(
     targets.map(async ({ workspaceId, source }) => {
       try {

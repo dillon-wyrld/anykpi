@@ -21,6 +21,7 @@ describe("instrumentation register()", () => {
   });
 
   it("does not start a timer during next build", async () => {
+    vi.stubEnv("NEXT_RUNTIME", "nodejs");
     vi.stubEnv("NEXT_PHASE", "phase-production-build");
     vi.stubEnv("SYNC_INTERVAL_MINUTES", "15");
     const { register } = await import("@/instrumentation");
