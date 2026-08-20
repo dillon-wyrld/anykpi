@@ -37,6 +37,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Scheduled refresh (ANY-17): `instrumentation.ts` starts an in-process
+  pull every `SYNC_INTERVAL_MINUTES` (default 15). `0` disables for
+  hosts that `POST /api/v1/sync` from cron (`docs/cron.md`). Runs share
+  ANY-16's coalesce lock. A nightly full pass reconciles drift.
+  Failures mark the source error; `GET /api/v1/overview` and
+  `get_overview` expose `syncHealth`.
 - Action audit log (ANY-30): every write (ingest, connect, import, keys,
   sync, MCP mutation) records actor (key id, `env`, or `session`), action,
   subject, and timestamp. Query `GET /api/v1/audit` (filter by actor and

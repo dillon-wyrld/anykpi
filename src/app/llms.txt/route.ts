@@ -30,7 +30,7 @@ Successful overview, users, cohorts, WBR, and calendar responses include a view_
 
 OpenAPI spec: /api/openapi
 
-- GET /api/v1/overview — company snapshot (users, activity, retention, PMF signal, exceptions)
+- GET /api/v1/overview — company snapshot (users, activity, retention, PMF signal, exceptions, syncHealth)
 - GET /api/v1/users — query users (cluster, platform, signup dates, limit, offset; total + hasMore + nextOffset)
 - GET /api/v1/cohorts — retention curves with smile detection; optional split by platform, country, or cluster (max 3 series)
 - GET /api/v1/wbr — Weekly Business Review (6 weeks, 12 months YOY, exceptions)
@@ -78,7 +78,7 @@ login mints a key via POST /api/v1/keys (default scope read; pass --scope write 
 
 ## Connectors
 
-Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub. Sync is pull-only into local read models; ANYKPI never writes back. Stripe also accepts a signature-verified webhook at POST /api/webhooks/stripe so revenue stays minutes-fresh. Connector setup is the /connect UI or \`anykpi connect\`. Config is encrypted at rest with ANYKPI_SECRET. Env vars are a deprecated read-only fallback. Calendar ICS is read-only forever.
+Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub. Sync is pull-only into local read models; ANYKPI never writes back. Stripe also accepts a signature-verified webhook at POST /api/webhooks/stripe so revenue stays minutes-fresh. Connector setup is the /connect UI or \`anykpi connect\`. Config is encrypted at rest with ANYKPI_SECRET. Env vars are a deprecated read-only fallback. Calendar ICS is read-only forever. The Node process pulls connected sources every SYNC_INTERVAL_MINUTES (default 15) from instrumentation.ts. Set 0 and POST /api/v1/sync from cron — see docs/cron.md.
 
 ## More
 

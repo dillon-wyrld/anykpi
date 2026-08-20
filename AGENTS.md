@@ -22,7 +22,7 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 
 `/api/v1/*`. OpenAPI at `/api/openapi`.
 
-- `GET /api/v1/overview` — company snapshot
+- `GET /api/v1/overview` — company snapshot (includes connector `syncHealth`)
 - `GET /api/v1/users` — query users (cluster, platform, dates, limit, offset)
 - `GET /api/v1/cohorts` — retention with smile detection; optional `split` by platform, country, or cluster (max 3 series)
 - `GET /api/v1/wbr` — Weekly Business Review
@@ -62,6 +62,7 @@ Read responses include a view_url that opens `/dashboard` in the workspace and v
 ## Layout
 
 - `src/app/api` — HTTP routes (REST, MCP, views, OpenAPI, `/llms.txt`)
+- `src/instrumentation.ts` — process-lifetime scheduled refresh (`SYNC_INTERVAL_MINUTES`, default 15; `0` + `POST /api/v1/sync` for external cron, see `docs/cron.md`)
 - `src/core` — auth, Zod contracts, view-state, read-model loaders, export, `anykpi.config.json` loader (WBR exception thresholds beside the database)
 - `src/mcp/server.ts` — stdio MCP server
 - `src/connectors` — PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub

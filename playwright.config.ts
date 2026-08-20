@@ -30,6 +30,9 @@ export default defineConfig({
       ...process.env,
       ANYKPI_API_KEY: process.env.ANYKPI_API_KEY || 'anykpi-e2e-admin',
       ANYKPI_SECRET: process.env.ANYKPI_SECRET || 'anykpi-e2e-secret',
+      // Dedicated Playwright freshness coverage uses a short interval in
+      // unit tests. Keep the shared e2e server from pulling env fallbacks.
+      SYNC_INTERVAL_MINUTES: process.env.SYNC_INTERVAL_MINUTES || '0',
     },
   },
 });

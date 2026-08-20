@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
         get: {
           tags: ['Overview'],
           summary: 'Get company overview',
-          description: 'Returns key metrics: users, activity, retention, PMF signal, exceptions',
+          description: 'Returns key metrics: users, activity, retention, PMF signal, exceptions, connector sync health',
           parameters: [
             {
               name: 'workspace',
