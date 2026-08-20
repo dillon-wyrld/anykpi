@@ -29,6 +29,7 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 - `GET /api/v1/calendar` — multi-source timeline
 - `GET /api/v1/sync` — connector status
 - `GET /api/v1/freshness` — last ingest + per-source last-sync stamps
+- `GET /api/v1/audit` — action audit log (actor, action, subject, timestamp)
 - `POST /api/v1/connect` — store per-source credentials (encrypted at rest; source `csv` stores import mapping)
 - `POST /api/v1/import` — CSV import for users and events (uses the sources store; column-mapping preview)
 - `GET /api/v1/export` — users, events, and read models as JSON or CSV files

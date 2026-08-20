@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
+import { AUDIT_ACTIONS, recordWriteAudit } from "@/core/audit";
 import { authorize, authResponse, resolveWorkspace } from "@/core/auth";
 import {
   badRequest,
@@ -91,6 +92,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    await recordWriteAudit(auth, workspaceId, AUDIT_ACTIONS.ingestEvent, personId);
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof PayloadTooLargeError) return payloadTooLarge();

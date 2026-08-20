@@ -3,6 +3,7 @@ import {
   ConnectSourceRequestSchema,
   ConnectSourceResponseSchema,
 } from "@/core/contracts";
+import { AUDIT_ACTIONS, recordWriteAudit } from "@/core/audit";
 import { gate } from "@/core/session-auth";
 import {
   badRequest,
@@ -57,6 +58,13 @@ export async function POST(request: NextRequest) {
       workspaceId,
       parsed.data.source,
       credentials
+    );
+
+    await recordWriteAudit(
+      gated.auth,
+      workspaceId,
+      AUDIT_ACTIONS.connectSave,
+      parsed.data.source
     );
 
     const response = ConnectSourceResponseSchema.parse({

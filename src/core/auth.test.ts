@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  actorFromAuth,
+  AUDIT_ACTOR_ENV,
+  AUDIT_ACTOR_SESSION,
   authorize,
   extractApiKey,
   hashedKeyMatches,
@@ -212,5 +215,36 @@ describe("authorize", () => {
 
     const demo = await authorize(requestWith(), { workspace: "demo" });
     expect(demo.ok).toBe(true);
+  });
+});
+
+describe("actorFromAuth", () => {
+  it("maps env, session, and hashed key id", () => {
+    expect(
+      actorFromAuth({
+        ok: true,
+        actor: "env",
+        canChooseWorkspace: true,
+        scope: "admin",
+      })
+    ).toBe(AUDIT_ACTOR_ENV);
+    expect(
+      actorFromAuth({
+        ok: true,
+        actor: "session",
+        canChooseWorkspace: true,
+        scope: "admin",
+      })
+    ).toBe(AUDIT_ACTOR_SESSION);
+    expect(
+      actorFromAuth({
+        ok: true,
+        actor: "hashed",
+        canChooseWorkspace: false,
+        scope: "write",
+        keyId: "ak_agent",
+        keyWorkspace: "live",
+      })
+    ).toBe("ak_agent");
   });
 });

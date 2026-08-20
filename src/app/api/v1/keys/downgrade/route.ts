@@ -6,6 +6,7 @@ import {
   APIKeyDowngradeRequestSchema,
   APIKeyDowngradeResponseSchema,
 } from "@/core/contracts";
+import { AUDIT_ACTIONS, recordWriteAudit } from "@/core/audit";
 import { authorize, authResponse, LIVE_WORKSPACE } from "@/core/auth";
 import { badRequest, internalError, logServerError } from "@/core/errors";
 
@@ -49,6 +50,15 @@ export async function POST(request: NextRequest) {
             eq(schema.apiKeys.legacy, true)
           )
         );
+    }
+
+    if (ids.length > 0) {
+      await recordWriteAudit(
+        auth,
+        targets[0]?.workspaceId || auth.keyWorkspace || LIVE_WORKSPACE,
+        AUDIT_ACTIONS.keysDowngrade,
+        ids.join(",")
+      );
     }
 
     return NextResponse.json(

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { AUDIT_ACTIONS, recordWriteAudit } from "@/core/audit";
 import { authorize, authResponse, resolveWorkspace } from "@/core/auth";
 import {
   IngestBatchRequestSchema,
@@ -70,6 +71,12 @@ export async function POST(request: NextRequest) {
     }
 
     const result = runIngestBatch(workspaceId, events);
+    await recordWriteAudit(
+      auth,
+      workspaceId,
+      AUDIT_ACTIONS.ingestBatch,
+      String(result.accepted)
+    );
     return NextResponse.json({ success: true, ...result });
   } catch (error) {
     if (error instanceof PayloadTooLargeError) return payloadTooLarge();

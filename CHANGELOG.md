@@ -37,6 +37,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Action audit log (ANY-30): every write (ingest, connect, import, keys,
+  sync, MCP mutation) records actor (key id, `env`, or `session`), action,
+  subject, and timestamp. Query `GET /api/v1/audit` (filter by actor and
+  since/until). A thin readout lives on `/connect`.
 - Full workspace export and a documented SQLite backup (ANY-37).
   `anykpi export` writes JSON or CSV of users, events, and read models
   (`GET /api/v1/export`). Users and events reload through ANY-12 import.

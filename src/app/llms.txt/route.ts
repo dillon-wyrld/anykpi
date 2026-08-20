@@ -37,6 +37,7 @@ OpenAPI spec: /api/openapi
 - GET /api/v1/calendar — multi-source event timeline
 - GET /api/v1/sync — connector sync status
 - GET /api/v1/freshness — last ingest + per-source last-sync stamps (views poll this)
+- GET /api/v1/audit — action log (actor, action, subject, timestamp). Filter by actor and since to ask what an agent did yesterday
 - POST /api/v1/connect — store per-source credentials (encrypted at rest; never returned; csv stores import mapping)
 - POST /api/v1/import — CSV import for users and events (sources store + column-mapping preview; writes keyed)
 - GET /api/v1/export — users, events, and read models as JSON or CSV files (connector read models restore by re-sync)

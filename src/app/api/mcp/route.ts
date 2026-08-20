@@ -3,7 +3,8 @@ import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { and, eq } from "drizzle-orm";
 import { buildViewUrl, publicBaseUrl, queryUsersPayload } from "@/core/view-state";
-import { isReadOnlyMcpTool } from "@/core/auth";
+import { recordMcpWriteAudit } from "@/core/audit";
+import { isReadOnlyMcpTool, type AuthOk } from "@/core/auth";
 import { gate } from "@/core/session-auth";
 import { logServerError } from "@/core/errors";
 import {
@@ -282,6 +283,7 @@ export async function POST(request: NextRequest) {
     }
 
     let workspace: string | undefined;
+    let auth: AuthOk;
     if (method === "tools/call") {
       const requested = params?.arguments?.workspace || "demo";
       const toolName = params?.name as string | undefined;
@@ -291,15 +293,26 @@ export async function POST(request: NextRequest) {
         return gated.response;
       }
       workspace = gated.workspace;
+      auth = gated.auth;
     } else {
       const gated = await gate(request, { write: true });
       if (!gated.ok) {
         return gated.response;
       }
       workspace = gated.workspace;
+      auth = gated.auth;
     }
 
     const result = await handleMCPRequest(body, workspace, request);
+
+    if (method === "tools/call" && workspace) {
+      await recordMcpWriteAudit({
+        auth,
+        workspaceId: workspace,
+        toolName: params?.name as string | undefined,
+        result,
+      });
+    }
 
     return NextResponse.json({
       jsonrpc: "2.0",

@@ -4,7 +4,9 @@ import * as schema from "@/core/schema";
 import { nanoid } from "nanoid";
 import { APIKeyCreateRequestSchema, APIKeyResponseSchema } from "@/core/contracts";
 import { createHash } from "crypto";
+import { AUDIT_ACTIONS, recordAudit, recordWriteAudit } from "@/core/audit";
 import {
+  AUDIT_ACTOR_ENV,
   authorize,
   authResponse,
   canBootstrapFirstKey,
@@ -83,6 +85,17 @@ export async function POST(request: NextRequest) {
       scope,
       legacy: false,
     });
+
+    if (auth.ok) {
+      await recordWriteAudit(auth, workspaceId, AUDIT_ACTIONS.keysCreate, keyId);
+    } else {
+      await recordAudit({
+        workspaceId,
+        actor: AUDIT_ACTOR_ENV,
+        action: AUDIT_ACTIONS.keysCreate,
+        subject: keyId,
+      });
+    }
 
     return NextResponse.json(
       keyMetadata(

@@ -11,6 +11,7 @@ import {
   suggestMapping,
   type ImportKind,
 } from "@/core/csv-parse";
+import { AuditReadout } from "./AuditReadout";
 
 export default function ConnectPage() {
   const [selectedPath, setSelectedPath] = useState<"existing" | "sdk" | "csv" | null>(null);
@@ -1045,6 +1046,7 @@ export default function ConnectPage() {
         )}
 
         <div className="mt-12 space-y-8">
+          <AuditReadout apiKey={adminKey} />
 
           <section>
             <h2 className="font-display text-xl font-semibold mb-4">Agents</h2>
