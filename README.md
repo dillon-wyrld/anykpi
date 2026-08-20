@@ -161,7 +161,7 @@ Data lives in the SQLite file at `DATABASE_PATH` (default `./data/anykpi.db`, or
 
 ## Why It Wins
 
-- **People, not averages** — The flagship view is named humans on a grid
+- **Users, not averages** — Focused on the real users using your product
 - **Agent-native from day zero** — Agents aren't bolted on; they're first-class
 - **Your data stays yours** — Self-hosted, no telemetry, ever. `anykpi export` writes your users, events, and read models. [Backup guide](docs/backup.md).
 - **It teaches the method** — Choose "opened the app" as your value event and it warns you that's vanity
@@ -191,4 +191,4 @@ Self-hosted is free forever.
 
 ---
 
-Built with ❤️ for founders who want to see their people.
+Built with ❤️ for builders who want to better understand their users and product.
