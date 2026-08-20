@@ -31,6 +31,7 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 - `GET /api/v1/freshness` — last ingest + per-source last-sync stamps
 - `POST /api/v1/connect` — store per-source credentials (encrypted at rest; source `csv` stores import mapping)
 - `POST /api/v1/import` — CSV import for users and events (uses the sources store; column-mapping preview)
+- `GET /api/v1/export` — users, events, and read models as JSON or CSV files
 - `GET /api/v1/keys` / `POST /api/v1/keys` — list metadata (scope, last used, legacy) / mint a key (default read)
 - `POST /api/v1/keys/downgrade` — convert legacy write keys to read
 - `POST /api/v1/ingest/identify` / `POST /api/v1/ingest/event` — identify and track
@@ -47,7 +48,7 @@ HTTP `POST /api/mcp`. stdio: `src/mcp/server.ts`. `tools/list` is open. `tools/c
 
 ## CLI
 
-`npx @anykpi/cli` (`packages/cli`): `login` (alias `key`), `keys`, `workspaces`, `connect`, `import`, `identify`, `track`, `overview`, `users`, `cohorts`, `wbr`, `calendar`, `sync`. `login` requires an operator key and mints read by default (`--scope write` for ingest). `anykpi keys downgrade` converts legacy write keys to read. `connect` stores source config only (`anykpi connect csv` saves import mapping). `import` loads a users or events CSV.
+`npx @anykpi/cli` (`packages/cli`): `login` (alias `key`), `keys`, `workspaces`, `connect`, `import`, `export`, `identify`, `track`, `overview`, `users`, `cohorts`, `wbr`, `calendar`, `sync`. `login` requires an operator key and mints read by default (`--scope write` for ingest). `anykpi keys downgrade` converts legacy write keys to read. `connect` stores source config only (`anykpi connect csv` saves import mapping). `import` loads a users or events CSV. `export` writes JSON or CSV of users, events, and read models (`docs/backup.md`).
 
 ## Connectors
 
@@ -60,13 +61,14 @@ Read responses include a view_url that opens `/dashboard` in the workspace and v
 ## Layout
 
 - `src/app/api` — HTTP routes (REST, MCP, views, OpenAPI, `/llms.txt`)
-- `src/core` — auth, Zod contracts, view-state, read-model loaders, `anykpi.config.json` loader (WBR exception thresholds beside the database)
+- `src/core` — auth, Zod contracts, view-state, read-model loaders, export, `anykpi.config.json` loader (WBR exception thresholds beside the database)
 - `src/mcp/server.ts` — stdio MCP server
 - `src/connectors` — PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub
 - `src/demo` — canonical demo dataset
 - `packages/cli` — CLI
 - `docs/introduction.md` — human docs
 - `docs/webhooks.md` — webhook-in recipes
+- `docs/backup.md` — `anykpi export` and SQLite snapshot
 
 Do not invent routes or tools. The OpenAPI spec and MCP tools list are the source of truth. `spec/` is design history, not the shipped surface.
 

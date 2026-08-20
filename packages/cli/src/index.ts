@@ -10,6 +10,8 @@
  * - keys            List keys or downgrade legacy write keys
  * - workspaces      List workspaces
  * - connect         Store connector credentials
+ * - import          Import users or events from CSV
+ * - export          Export users, events, and read models
  * - identify        Identify a user
  * - track           Track an event
  * - overview        Get company snapshot

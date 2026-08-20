@@ -37,6 +37,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Full workspace export and a documented SQLite backup (ANY-37).
+  `anykpi export` writes JSON or CSV of users, events, and read models
+  (`GET /api/v1/export`). Users and events reload through ANY-12 import.
+  Connector-backed read models restore by re-syncing the source — stated
+  in `docs/backup.md`, not expected of import. SQLite snapshot uses
+  `sqlite3 .backup` so WAL pages are included.
 - Playwright coverage for the `/connect` mint flow and live workspace
   auth gate (ANY-43). Demo stays public-read; live views load only after
   a minted key starts a browser session.

@@ -146,7 +146,7 @@ Stays awake (`sleepApplication = false`) with a persistent volume at `/data`. Se
 
 In production, if `ANYKPI_API_KEY` is unset, writes and non-demo reads are refused (503). Copy `.env.example` and see [SECURITY.md](SECURITY.md).
 
-Data lives in the SQLite file at `DATABASE_PATH` (default `./data/anykpi.db`, or `/data/anykpi.db` in Docker). Back it up. It's yours. WBR exception thresholds live in `anykpi.config.json` beside that file (defaults in `anykpi.config.example.json`).
+Data lives in the SQLite file at `DATABASE_PATH` (default `./data/anykpi.db`, or `/data/anykpi.db` in Docker). Back it up with `anykpi export` or a SQLite snapshot — [backup guide](docs/backup.md). It's yours. WBR exception thresholds live in `anykpi.config.json` beside that file (defaults in `anykpi.config.example.json`).
 
 ## Design Principles (binding)
 
@@ -161,7 +161,7 @@ Data lives in the SQLite file at `DATABASE_PATH` (default `./data/anykpi.db`, or
 
 - **People, not averages** — The flagship view is named humans on a grid
 - **Agent-native from day zero** — Agents aren't bolted on; they're first-class
-- **Your data stays yours** — Self-hosted, no telemetry, ever
+- **Your data stays yours** — Self-hosted, no telemetry, ever. `anykpi export` writes your users, events, and read models. [Backup guide](docs/backup.md).
 - **It teaches the method** — Choose "opened the app" as your value event and it warns you that's vanity
 - **Your agent sets it up** — You don't instrument by hand
 - **It's genuinely fun** — Stickers, emoji, confetti, without costing legibility

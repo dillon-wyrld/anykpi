@@ -493,6 +493,68 @@ export const ImportResponseSchema = z.object({
   errors: z.array(ImportRowErrorSchema),
 });
 
+export const ExportFormatSchema = z.enum(['json', 'csv']);
+
+export const ExportRestoreSchema = z.object({
+  usersAndEvents: z.string(),
+  connectorReadModels: z.string(),
+});
+
+export const ExportCountsSchema = z.object({
+  users: z.number().int().nonnegative(),
+  events: z.number().int().nonnegative(),
+  readModelRows: z.number().int().nonnegative(),
+});
+
+export const ExportUserRowSchema = z.object({
+  personId: z.string(),
+  name: z.string(),
+  email: z.string().nullable(),
+  platform: z.string().nullable(),
+  country: z.string().nullable(),
+  emoji: z.string().nullable(),
+  signupDate: z.string().datetime().nullable(),
+  cluster: z.string().nullable(),
+  accountId: z.string().nullable(),
+  workspaceId: z.string(),
+});
+
+export const ExportEventRowSchema = z.object({
+  id: z.number().int(),
+  personId: z.string(),
+  timestamp: z.string().datetime(),
+  eventName: z.string(),
+  eventClass: z.enum(['core', 'search', 'share', 'pay']),
+  platform: z.string().nullable(),
+  externalId: z.string().nullable(),
+  workspaceId: z.string(),
+});
+
+export const ExportReadModelsSchema = z.object({
+  accounts: z.array(z.record(z.union([z.string(), z.number(), z.null()]))),
+  seats: z.array(z.record(z.union([z.string(), z.number(), z.null()]))),
+  mrrSnapshots: z.array(z.record(z.union([z.string(), z.number(), z.null()]))),
+  subscriptionEvents: z.array(z.record(z.union([z.string(), z.number(), z.null()]))),
+  personRevenue: z.array(z.record(z.union([z.string(), z.number(), z.null()]))),
+  balanceSnapshots: z.array(z.record(z.union([z.string(), z.number(), z.null()]))),
+  calendarEvents: z.array(z.record(z.union([z.string(), z.number(), z.null()]))),
+  metricDefs: z.array(z.record(z.union([z.string(), z.number(), z.null()]))),
+  metricPoints: z.array(z.record(z.union([z.string(), z.number(), z.null()]))),
+});
+
+export const ExportResponseSchema = z.object({
+  format: ExportFormatSchema,
+  workspaceId: z.string(),
+  exportedAt: z.string().datetime(),
+  counts: ExportCountsSchema,
+  restore: ExportRestoreSchema,
+  users: z.array(ExportUserRowSchema).optional(),
+  events: z.array(ExportEventRowSchema).optional(),
+  readModels: ExportReadModelsSchema.optional(),
+  files: z.record(z.string()).optional(),
+  view_url: z.string().optional(),
+});
+
 export const ApiKeyScopeSchema = z.enum(['read', 'write', 'admin']);
 
 export const SessionCreateRequestSchema = z.object({
@@ -584,6 +646,13 @@ export type ImportRowError = z.infer<typeof ImportRowErrorSchema>;
 export type ImportRequest = z.infer<typeof ImportRequestSchema>;
 export type ImportPreviewResponse = z.infer<typeof ImportPreviewResponseSchema>;
 export type ImportResponse = z.infer<typeof ImportResponseSchema>;
+export type ExportFormat = z.infer<typeof ExportFormatSchema>;
+export type ExportRestore = z.infer<typeof ExportRestoreSchema>;
+export type ExportCounts = z.infer<typeof ExportCountsSchema>;
+export type ExportUserRow = z.infer<typeof ExportUserRowSchema>;
+export type ExportEventRow = z.infer<typeof ExportEventRowSchema>;
+export type ExportReadModels = z.infer<typeof ExportReadModelsSchema>;
+export type ExportResponse = z.infer<typeof ExportResponseSchema>;
 export type ApiKeyScope = z.infer<typeof ApiKeyScopeSchema>;
 export type SessionCreateRequest = z.infer<typeof SessionCreateRequestSchema>;
 export type SessionStatusResponse = z.infer<typeof SessionStatusResponseSchema>;

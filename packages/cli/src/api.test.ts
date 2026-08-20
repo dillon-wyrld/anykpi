@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -294,6 +294,47 @@ describe("CLI ingest client", () => {
         event: "eventName",
       },
     });
+  });
+
+  it("export GETs /api/v1/export and writes CSV files", async () => {
+    const dir = isolatedHome();
+    process.env.ANYKPI_API_KEY = "test-key";
+    process.env.ANYKPI_API_URL = "http://instance.test";
+
+    const out = join(dir, "backup");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        format: "csv",
+        workspaceId: "live",
+        exportedAt: "2026-08-20T00:00:00.000Z",
+        counts: { users: 1, events: 1, readModelRows: 0 },
+        restore: {
+          usersAndEvents: "Re-import users.csv then events.csv with anykpi import.",
+          connectorReadModels:
+            "Connector-backed read models restore by re-syncing the source.",
+        },
+        files: {
+          "users.csv": "personId,name\nu1,Ada\n",
+          "events.csv": "personId,timestamp,eventName\nu1,2026-01-01T00:00:00.000Z,played\n",
+        },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const program = createProgram();
+    program.exitOverride();
+
+    await program.parseAsync(
+      ["export", "--format", "csv", "--out", out, "--workspace", "live", "--json"],
+      { from: "user" }
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("http://instance.test/api/v1/export?workspace=live&format=csv");
+    expect(readFileSync(join(out, "users.csv"), "utf8")).toBe("personId,name\nu1,Ada\n");
+    expect(readFileSync(join(out, "events.csv"), "utf8")).toMatch(/song_played|played/);
   });
 
   it("keys lists metadata and keys downgrade POSTs /api/v1/keys/downgrade", async () => {

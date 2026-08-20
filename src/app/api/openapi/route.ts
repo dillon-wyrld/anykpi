@@ -17,6 +17,7 @@ import {
   ImportRequestSchema,
   ImportPreviewResponseSchema,
   ImportResponseSchema,
+  ExportResponseSchema,
   APIKeyCreateRequestSchema,
   APIKeyResponseSchema,
   APIKeyDowngradeRequestSchema,
@@ -69,6 +70,7 @@ export async function GET(request: NextRequest) {
       { name: 'Freshness', description: 'Last ingest and per-source last-sync stamps' },
       { name: 'Connect', description: 'Store per-source credentials' },
       { name: 'Import', description: 'CSV import for users and events' },
+      { name: 'Export', description: 'Full export of users, events, and read models' },
       { name: 'Ingest', description: 'Direct event collection' },
       { name: 'Keys', description: 'API key management' },
       { name: 'Session', description: 'Browser session cookie for live dashboard reads' }
@@ -460,6 +462,54 @@ export async function GET(request: NextRequest) {
             },
             503: {
               description: 'ANYKPI_SECRET is not set',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/v1/export': {
+        get: {
+          tags: ['Export'],
+          summary: 'Export users, events, and read models',
+          description:
+            'Read-gated dump of users, events, and connector read models as JSON or CSV files. Users and events re-import via POST /api/v1/import. Connector-backed read models restore by re-syncing the source — CSV import does not write those tables.',
+          parameters: [
+            {
+              name: 'workspace',
+              in: 'query',
+              schema: { type: 'string', default: 'demo' },
+              description: 'Workspace ID'
+            },
+            {
+              name: 'format',
+              in: 'query',
+              schema: { type: 'string', enum: ['json', 'csv'], default: 'json' },
+              description: 'json rows or csv file map'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Workspace export with restore notes',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ExportResponseSchema)
+                }
+              }
+            },
+            400: {
+              description: 'Invalid format',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Live workspace requires an API key',
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(ErrorResponseSchema)

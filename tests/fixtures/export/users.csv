@@ -1,0 +1,4 @@
+personId,name,email,platform,country,emoji,signupDate,cluster,accountId
+export_ada,Ada Lovelace,ada@example.com,web,UK,🧠,2026-01-05T00:00:00.000Z,🔥 Power daily,acct_export
+export_grace,Grace Hopper,grace@example.com,ios,US,⚓,2026-01-05T00:00:00.000Z,💤 Silent,acct_export
+export_alan,Alan Turing,alan@example.com,web,UK,🔢,2026-01-12T00:00:00.000Z,🔥 Power daily,

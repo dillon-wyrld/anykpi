@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
@@ -11,6 +12,7 @@ export const PUBLISHED_COMMANDS = [
   "workspaces",
   "connect",
   "import",
+  "export",
   "identify",
   "track",
   "overview",
@@ -301,6 +303,99 @@ export function createProgram(): Command {
           (data.skipped ?? 0) > 0 ? chalk.dim(`(${data.skipped} already present)`) : ""
         );
         console.log();
+      } catch (error) {
+        spinner.fail((error as Error).message);
+        throw error;
+      }
+    });
+
+  program
+    .command("export")
+    .description("Export users, events, and read models")
+    .option("--format <format>", "json or csv", "json")
+    .option("--out <path>", "Write a JSON file or a CSV directory")
+    .option("--workspace <workspace>", "Workspace")
+    .option("--json", "Output as JSON")
+    .action(async (options) => {
+      const spinner = ora("Exporting workspace...").start();
+
+      try {
+        const format = String(options.format || "json").toLowerCase();
+        if (format !== "json" && format !== "csv") {
+          throw new Error("format must be json or csv");
+        }
+        if (format === "csv" && !options.out) {
+          throw new Error("csv format requires --out <directory>");
+        }
+
+        const workspace = workspaceOf(options);
+        const params = new URLSearchParams({ workspace, format });
+        const data = (await apiRequest(`/api/v1/export?${params}`)) as {
+          format: string;
+          workspaceId: string;
+          exportedAt: string;
+          counts?: { users: number; events: number; readModelRows: number };
+          restore?: { usersAndEvents: string; connectorReadModels: string };
+          files?: Record<string, string>;
+          users?: unknown[];
+          events?: unknown[];
+          readModels?: unknown;
+          view_url?: string;
+        };
+
+        const written: string[] = [];
+        if (options.out) {
+          if (format === "csv") {
+            mkdirSync(options.out, { recursive: true });
+            for (const [name, body] of Object.entries(data.files ?? {})) {
+              const path = join(options.out, name);
+              writeFileSync(path, body);
+              written.push(path);
+            }
+          } else {
+            mkdirSync(dirname(options.out), { recursive: true });
+            writeFileSync(options.out, `${JSON.stringify(data, null, 2)}\n`);
+            written.push(options.out);
+          }
+        }
+
+        spinner.stop();
+
+        if (options.json) {
+          console.log(JSON.stringify({ ...data, written }, null, 2));
+          return;
+        }
+
+        if (format === "json" && !options.out) {
+          console.log(JSON.stringify(data, null, 2));
+          return;
+        }
+
+        console.log();
+        console.log(chalk.green("✓"), "Exported", chalk.bold(data.workspaceId));
+        console.log();
+        console.log("  Users:", chalk.bold(String(data.counts?.users ?? 0)));
+        console.log("  Events:", chalk.bold(String(data.counts?.events ?? 0)));
+        console.log(
+          "  Read models:",
+          chalk.bold(String(data.counts?.readModelRows ?? 0)),
+          chalk.dim("rows")
+        );
+        console.log();
+        if (data.restore?.connectorReadModels) {
+          console.log(chalk.dim(data.restore.connectorReadModels));
+          console.log();
+        }
+        if (written.length > 0) {
+          console.log(chalk.bold("Wrote"));
+          for (const path of written) {
+            console.log("  ", path);
+          }
+          console.log();
+        }
+        if (data.view_url) {
+          console.log(chalk.dim("View:"), chalk.cyan(data.view_url));
+        }
       } catch (error) {
         spinner.fail((error as Error).message);
         throw error;
