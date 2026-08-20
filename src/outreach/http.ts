@@ -4,7 +4,7 @@ import {
   type OutreachDraft,
 } from "@/core/contracts";
 import { actorFromAuth, type AuthOk } from "@/core/auth";
-import { buildViewUrl, publicBaseUrl } from "@/core/view-state";
+import { publicBaseUrl } from "@/core/view-state";
 import type { NextRequest } from "next/server";
 import { outreachApprover, type OutreachRecord } from "./index";
 import type { DeliveryLogRow } from "./deliver";
@@ -36,7 +36,7 @@ export function serializeDelivery(row: DeliveryLogRow) {
 
 export function outreachViewUrl(request: NextRequest | undefined, workspace: string) {
   const base = publicBaseUrl(request);
-  return buildViewUrl(`${base}/dashboard`, { workspace, view: "pmf" });
+  return `${base}/dashboard?workspace=${encodeURIComponent(workspace)}&view=pmf`;
 }
 
 export function queueActor(auth: AuthOk): string {

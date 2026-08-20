@@ -70,9 +70,6 @@ export const WRITE_ROUTE_MODULES = [
   "src/app/api/v1/keys/downgrade/route.ts",
   "src/app/api/webhooks/stripe/route.ts",
   "src/app/api/mcp/route.ts",
-  "src/app/api/v1/outreach/route.ts",
-  "src/app/api/v1/outreach/approve/route.ts",
-  "src/app/api/v1/outreach/send/route.ts",
 ] as const;
 
 export type AuditEntry = {
