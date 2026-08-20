@@ -37,6 +37,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Postgres scaffold via `DATABASE_URL` (ANY-33): sqlite-core remains the
+  v0.x source of truth. A Postgres schema mirror, `drizzle/sqlite` +
+  `drizzle/pg` journals, and a Docker entrypoint that selects by
+  `DATABASE_URL` ship with a drift test that both schemas declare the
+  same tables and columns. SQLite via `DATABASE_PATH` stays the
+  zero-config default.
 - Multi-workspace isolation and switcher (ANY-39): `users`, `accounts`,
   `metric_defs`, and `config` now use composite `(workspace_id, id)`
   primary keys so the same distinct_id can exist in two products.

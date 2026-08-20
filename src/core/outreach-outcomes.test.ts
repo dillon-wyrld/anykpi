@@ -65,7 +65,7 @@ describe("ANY-27 does not take a drizzle migration", () => {
   it("keeps outcomes in config, not a dedicated table", () => {
     const root = resolve(__dirname, "../..");
     const journal = JSON.parse(
-      readFileSync(resolve(root, "drizzle/meta/_journal.json"), "utf8")
+      readFileSync(resolve(root, "drizzle/sqlite/meta/_journal.json"), "utf8")
     ) as { entries: Array<{ tag: string }> };
     expect(journal.entries.some((entry) => entry.tag === "0007_outreach")).toBe(true);
     expect(journal.entries.some((entry) => /outcome/i.test(entry.tag))).toBe(false);

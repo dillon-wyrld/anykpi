@@ -64,11 +64,11 @@ describe("out-of-the-box docs tell the truth", () => {
     expect(readme).toContain("src/connectors/");
   });
 
-  it("describes SQLite via DATABASE_PATH and agrees with .env.example", () => {
+  it("describes SQLite via DATABASE_PATH and Postgres via DATABASE_URL", () => {
     expect(readme).toContain("DATABASE_PATH");
-    expect(readme).not.toMatch(/Postgres via DATABASE_URL/);
+    expect(readme).toMatch(/DATABASE_URL/);
     expect(envExample).toContain("DATABASE_PATH");
-    expect(envExample).not.toMatch(/^\s*DATABASE_URL=/m);
-    expect(envExample).toContain("docs/introduction.md#postgres-later");
+    expect(envExample).toMatch(/# DATABASE_URL=/);
+    expect(envExample).toContain("drizzle/pg");
   });
 });
