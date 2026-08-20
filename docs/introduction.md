@@ -79,7 +79,7 @@ Returns:
 ```
 
 **All endpoints:**
-- `GET /api/v1/overview` — Company snapshot
+- `GET /api/v1/overview` — Company snapshot, including connector `syncHealth`
 - `GET /api/v1/users` — Query users (filter by cluster, platform, dates)
 - `GET /api/v1/cohorts` — Retention with PMF signal; optional split by platform, country, or cluster (max 3 series)
 - `GET /api/v1/wbr` — Weekly Business Review metrics
@@ -174,6 +174,12 @@ pnpm install
 pnpm db:init      # Creates DB, seeds demo
 pnpm dev          # http://localhost:3000
 ```
+
+Connected sources refresh on their own. The in-process scheduler starts
+from `instrumentation.ts` when the Node server boots (not from a route
+module — those duplicate per worker and leak on reload). Default interval
+is 15 minutes (`SYNC_INTERVAL_MINUTES`). Set `0` to disable and trigger
+`POST /api/v1/sync` from cron — recipe: [External cron](cron.md).
 
 **Demo workspace** loads automatically with canonical dataset:
 - 627 users across 24 cohorts

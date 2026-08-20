@@ -6,6 +6,7 @@ import { OverviewResponseSchema } from '@/core/contracts';
 import { gate } from '@/core/session-auth';
 import { publicBaseUrl } from '@/core/view-state';
 import { internalError, logServerError } from '@/core/errors';
+import { loadSyncHealth } from '@/core/sync-health';
 import { loadCohortsView } from '@/core/views/cohorts';
 import { loadWbrView } from '@/core/views/wbr';
 import { loadCalendarView } from '@/core/views/calendar';
@@ -67,6 +68,7 @@ export async function GET(request: NextRequest) {
       smileDetected,
       exceptionsCount,
       upcomingEvents,
+      syncHealth: await loadSyncHealth(workspace),
       view_url: `${publicBaseUrl(request)}/dashboard?workspace=${workspace}&view=dotplot`
     });
 

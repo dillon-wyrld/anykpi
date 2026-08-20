@@ -87,6 +87,15 @@ export const SyncStateSchema = z.object({
   error: z.string().optional(),
 });
 
+/** Connector health on get_overview / GET /api/v1/overview. */
+export const SyncHealthSchema = z.object({
+  source: z.string(),
+  sourceName: z.string(),
+  status: z.enum(['success', 'error', 'pending']),
+  lastSynced: z.string().datetime().optional(),
+  error: z.string().optional(),
+});
+
 /**
  * One connector sync attempt. Cursor and health rules are documented on
  * `Connector` in `src/connectors/index.ts` (incremental / scheduled sync).
@@ -230,6 +239,7 @@ export const OverviewResponseSchema = z.object({
   smileDetected: z.boolean(),
   exceptionsCount: z.number(),
   upcomingEvents: z.number(),
+  syncHealth: z.array(SyncHealthSchema),
   view_url: z.string().optional(),
 });
 
@@ -631,6 +641,7 @@ export type CohortCompareSeries = z.infer<typeof CohortCompareSeriesSchema>;
 export type WBRMetric = z.infer<typeof WBRMetricSchema>;
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>;
 export type SyncState = z.infer<typeof SyncStateSchema>;
+export type SyncHealth = z.infer<typeof SyncHealthSchema>;
 export type ConnectorHealth = z.infer<typeof ConnectorHealthSchema>;
 export type SyncResult = z.infer<typeof SyncResultSchema>;
 export type Account = z.infer<typeof AccountSchema>;

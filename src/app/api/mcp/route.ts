@@ -13,6 +13,7 @@ import {
   loadCohortsView,
   parseCohortCompareOptions,
 } from "@/core/views/cohorts";
+import { loadSyncHealth } from "@/core/sync-health";
 import { loadWbrView } from "@/core/views/wbr";
 import { loadCalendarView } from "@/core/views/calendar";
 
@@ -140,6 +141,7 @@ async function handleMCPRequest(
               type: "text",
               text: JSON.stringify({
                 totalUsers: users.length,
+                syncHealth: await loadSyncHealth(workspace),
                 viewUrl: buildViewUrl(`${baseUrl}/dashboard`, { view: "dotplot" }),
               }),
             },
