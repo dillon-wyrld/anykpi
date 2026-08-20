@@ -19,6 +19,7 @@ import { POST as postMcp } from "@/app/api/mcp/route";
 import { POST as postOutreach } from "@/app/api/v1/outreach/route";
 import { POST as postOutreachApprove } from "@/app/api/v1/outreach/approve/route";
 import { POST as postOutreachSend } from "@/app/api/v1/outreach/send/route";
+import { POST as postOutreachOutcome } from "@/app/api/v1/outreach/outcome/route";
 import {
   AUDIT_ACTIONS,
   WRITE_HTTP_ROUTES,
@@ -60,6 +61,7 @@ afterEach(async () => {
   await db.delete(schema.apiKeys).where(eq(schema.apiKeys.workspaceId, WS));
   await db.delete(schema.outreachDelivery).where(eq(schema.outreachDelivery.workspaceId, WS));
   await db.delete(schema.outreach).where(eq(schema.outreach.workspaceId, WS));
+  await db.delete(schema.config).where(eq(schema.config.workspaceId, WS));
   await db.delete(schema.personRevenue).where(eq(schema.personRevenue.workspaceId, WS));
   await db.delete(schema.mrrSnapshots).where(eq(schema.mrrSnapshots.workspaceId, WS));
   await db.delete(schema.subscriptionEvents).where(eq(schema.subscriptionEvents.workspaceId, WS));
@@ -358,6 +360,26 @@ const drivers: Record<(typeof WRITE_HTTP_ROUTES)[number]["action"], Driver> = {
     } finally {
       globalThis.fetch = previousFetch;
     }
+    return { actor: AUDIT_ACTOR_ENV, subject: draft.id };
+  },
+  [AUDIT_ACTIONS.outreachOutcome]: async () => {
+    const queued = await postOutreach(
+      asAdmin("http://localhost:3000/api/v1/outreach", "POST", {
+        workspaceId: WS,
+        personId: "audit-outcome",
+        body: "hey — 15 minutes?",
+      })
+    );
+    expect(queued.status).toBe(201);
+    const { draft } = (await queued.json()) as { draft: { id: string } };
+    const res = await postOutreachOutcome(
+      asAdmin("http://localhost:3000/api/v1/outreach/outcome", "POST", {
+        workspaceId: WS,
+        id: draft.id,
+        outcome: "converted",
+      })
+    );
+    expect(res.status).toBe(200);
     return { actor: AUDIT_ACTOR_ENV, subject: draft.id };
   },
 };

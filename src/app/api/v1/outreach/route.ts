@@ -13,6 +13,10 @@ import {
   payloadTooLarge,
   readJsonBounded,
 } from "@/core/errors";
+import {
+  listOutreachOutcomes,
+  loadOutreachConversion,
+} from "@/core/outreach-outcomes";
 import { gateOutreach, listOutreach, queueOutreach } from "@/outreach";
 import { outreachViewUrl, queueActor, serializeDraft } from "@/outreach/http";
 
@@ -26,10 +30,17 @@ export async function GET(request: NextRequest) {
   if (!gated.ok) return gated.response;
 
   try {
-    const drafts = await listOutreach(gated.workspace);
+    const [drafts, outcomes, conversion] = await Promise.all([
+      listOutreach(gated.workspace),
+      listOutreachOutcomes(gated.workspace),
+      loadOutreachConversion(gated.workspace),
+    ]);
     return NextResponse.json(
       OutreachListResponseSchema.parse({
-        drafts: drafts.map(serializeDraft),
+        drafts: drafts.map((draft) =>
+          serializeDraft(draft, outcomes.get(draft.id) ?? null)
+        ),
+        conversion,
         view_url: outreachViewUrl(request, gated.workspace),
       })
     );

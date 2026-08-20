@@ -21,6 +21,7 @@ export const PUBLISHED_COMMANDS = [
   "wbr",
   "calendar",
   "sync",
+  "outreach",
   "keys",
 ] as const;
 
@@ -838,6 +839,134 @@ export function createProgram(): Command {
         }
 
         console.log();
+      } catch (error) {
+        spinner.fail((error as Error).message);
+        throw error;
+      }
+    });
+
+  program
+    .command("outreach")
+    .description("List outreach drafts or tag an outcome")
+    .option("--id <id>", "Outreach draft id (required with --outcome)")
+    .option("--outcome <outcome>", "replied, interviewed, or converted")
+    .option("--workspace <workspace>", "Workspace")
+    .option("--json", "Output as JSON")
+    .action(async (options) => {
+      const spinner = ora(
+        options.outcome ? "Tagging outreach outcome..." : "Fetching outreach..."
+      ).start();
+
+      try {
+        const workspace = workspaceOf(options);
+        const outcome = options.outcome ? String(options.outcome).toLowerCase() : undefined;
+        if (outcome && outcome !== "replied" && outcome !== "interviewed" && outcome !== "converted") {
+          throw new Error("outcome must be replied, interviewed, or converted");
+        }
+        if (outcome && !options.id) {
+          throw new Error("Pass --id with --outcome");
+        }
+
+        if (outcome && options.id) {
+          const data = (await apiRequest("/api/v1/outreach/outcome", {
+            method: "POST",
+            body: JSON.stringify({
+              workspaceId: workspace,
+              id: options.id,
+              outcome,
+            }),
+          })) as {
+            draft?: { id: string; personId: string; state: string; outcome?: string | null };
+            conversion?: Array<{
+              cluster: string;
+              sent: number;
+              converted: number;
+              conversionRate: number;
+            }>;
+            view_url?: string;
+          };
+
+          spinner.stop();
+
+          if (options.json) {
+            console.log(JSON.stringify(data, null, 2));
+            return;
+          }
+
+          console.log();
+          console.log(
+            chalk.green("✓"),
+            "Tagged",
+            chalk.bold(data.draft?.id || options.id),
+            chalk.dim(outcome)
+          );
+          console.log();
+          if (data.view_url) {
+            console.log(chalk.dim("View:"), chalk.cyan(data.view_url));
+          }
+          return;
+        }
+
+        const data = (await apiRequest(
+          `/api/v1/outreach?workspace=${encodeURIComponent(workspace)}`
+        )) as {
+          drafts: Array<{
+            id: string;
+            personId: string;
+            state: string;
+            outcome?: string | null;
+          }>;
+          conversion?: Array<{
+            cluster: string;
+            outreach: number;
+            sent: number;
+            replied: number;
+            interviewed: number;
+            converted: number;
+            conversionRate: number;
+          }>;
+          view_url?: string;
+        };
+
+        spinner.stop();
+
+        if (options.json) {
+          console.log(JSON.stringify(data, null, 2));
+          return;
+        }
+
+        console.log();
+        console.log(chalk.bold(String(data.drafts.length)), "outreach drafts");
+        console.log();
+
+        for (const draft of data.drafts) {
+          console.log("  ", chalk.bold(draft.id), chalk.dim(draft.personId));
+          console.log(
+            "      ",
+            "state:",
+            chalk.bold(draft.state),
+            draft.outcome ? `· ${draft.outcome}` : chalk.dim("· no outcome")
+          );
+        }
+
+        if ((data.conversion ?? []).length > 0) {
+          console.log();
+          console.log(chalk.bold("Conversion by cluster"));
+          for (const row of data.conversion ?? []) {
+            console.log(
+              "  ",
+              chalk.bold(row.cluster),
+              chalk.dim(
+                `${row.sent} sent · ${row.replied} replied · ${row.interviewed} interviewed · ${row.converted} converted (${Math.round(row.conversionRate * 100)}%)`
+              )
+            );
+          }
+        }
+
+        console.log();
+        if (data.view_url) {
+          console.log(chalk.dim("View:"), chalk.cyan(data.view_url));
+        }
       } catch (error) {
         spinner.fail((error as Error).message);
         throw error;

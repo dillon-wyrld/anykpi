@@ -228,7 +228,7 @@ export async function approveOutreach(input: {
   return approved;
 }
 
-export type OutreachGateAction = "queue" | "approve" | "send";
+export type OutreachGateAction = "queue" | "approve" | "send" | "outcome";
 
 export type OutreachGateOk = {
   ok: true;
@@ -237,9 +237,9 @@ export type OutreachGateOk = {
 };
 
 /**
- * Queue and send accept a write (or admin) key, or a browser session.
- * Approve accepts only a browser session or an admin-scoped key —
- * a write key that queued the draft cannot approve it.
+ * Queue, send, and outcome accept a write (or admin) key, or a browser
+ * session. Approve accepts only a browser session or an admin-scoped
+ * key — a write key that queued the draft cannot approve it.
  */
 export async function gateOutreach(
   request: RequestLike,
@@ -261,7 +261,8 @@ export async function gateOutreach(
 
   const asked = options.workspace ?? undefined;
   const isDemoQueue =
-    options.action === "queue" && (asked === DEMO_WORKSPACE || !asked);
+    (options.action === "queue" || options.action === "outcome") &&
+    (asked === DEMO_WORKSPACE || !asked);
 
   if (isDemoQueue) {
     const result = await authorize(request, {

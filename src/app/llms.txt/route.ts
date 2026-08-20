@@ -42,6 +42,7 @@ OpenAPI spec: /api/openapi
 - POST /api/v1/outreach — queue a waiting draft (write scope)
 - POST /api/v1/outreach/approve — approve a draft (browser session or admin key only; a write key cannot approve)
 - POST /api/v1/outreach/send — deliver an approved draft (unapproved drafts are refused)
+- POST /api/v1/outreach/outcome — tag replied / interviewed / converted (PMF+ conversion by cluster)
 - POST /api/v1/connect — store per-source credentials (encrypted at rest; never returned; csv stores import mapping)
 - POST /api/v1/import — CSV import for users and events (sources store + column-mapping preview; writes keyed)
 - GET /api/v1/export — users, events, and read models as JSON or CSV files (connector read models restore by re-sync)
@@ -82,9 +83,9 @@ stdio server: src/mcp/server.ts. HTTP tools/list advertises the five read tools,
 
 npx @anykpi/cli
 
-Commands: login (alias: key), keys, workspaces, connect, import, export, identify, track, overview, users, cohorts, wbr, calendar, sync.
+Commands: login (alias: key), keys, workspaces, connect, import, export, identify, track, overview, users, cohorts, wbr, calendar, sync, outreach.
 
-login mints a key via POST /api/v1/keys (default scope read; pass --scope write for ingest) and requires ANYKPI_API_KEY or --key. keys lists metadata (scope, last used, legacy). \`anykpi keys downgrade\` converts migrated write keys to read. connect stores source credentials via POST /api/v1/connect (including \`anykpi connect csv\`). import uploads a users or events CSV via POST /api/v1/import. export writes users, events, and read models via GET /api/v1/export (docs/backup.md). Query commands take --workspace and --json.
+login mints a key via POST /api/v1/keys (default scope read; pass --scope write for ingest) and requires ANYKPI_API_KEY or --key. keys lists metadata (scope, last used, legacy). \`anykpi keys downgrade\` converts migrated write keys to read. connect stores source credentials via POST /api/v1/connect (including \`anykpi connect csv\`). import uploads a users or events CSV via POST /api/v1/import. export writes users, events, and read models via GET /api/v1/export (docs/backup.md). outreach lists drafts or tags \`--outcome replied|interviewed|converted\`. Query commands take --workspace and --json.
 
 ## Connectors
 

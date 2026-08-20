@@ -94,6 +94,7 @@ Returns:
 - `POST /api/v1/outreach` — Queue a waiting draft (write scope)
 - `POST /api/v1/outreach/approve` — Approve a draft (browser session or admin key; a write key cannot approve)
 - `POST /api/v1/outreach/send` — Deliver an approved draft (unapproved drafts are refused)
+- `POST /api/v1/outreach/outcome` — Tag replied / interviewed / converted (PMF+ conversion by cluster)
 - `POST /api/v1/sync` — Trigger a sync (one source or all; requires an API key)
 - `POST /api/v1/import` — Import users or events from CSV (requires an API key)
 - `GET /api/v1/export` — Users, events, and read models as JSON or CSV (requires a key on live)
@@ -131,6 +132,8 @@ anykpi sync --source=posthog
 anykpi connect csv --kind=events --map user_id=personId
 anykpi import events.csv --kind=events
 anykpi export --format csv --out ./backup
+anykpi outreach --json
+anykpi outreach --id ou_xxx --outcome converted
 
 # Ingest
 anykpi identify user123 --name="Jane Doe" --email="jane@example.com"

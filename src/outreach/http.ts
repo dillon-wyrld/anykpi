@@ -2,6 +2,7 @@ import {
   OutreachDraftSchema,
   OutreachDeliverySchema,
   type OutreachDraft,
+  type OutreachOutcome,
 } from "@/core/contracts";
 import { actorFromAuth, type AuthOk } from "@/core/auth";
 import { publicBaseUrl } from "@/core/view-state";
@@ -9,7 +10,10 @@ import type { NextRequest } from "next/server";
 import { outreachApprover, type OutreachRecord } from "./index";
 import type { DeliveryLogRow } from "./deliver";
 
-export function serializeDraft(record: OutreachRecord): OutreachDraft {
+export function serializeDraft(
+  record: OutreachRecord,
+  outcome: OutreachOutcome | null = null
+): OutreachDraft {
   return OutreachDraftSchema.parse({
     id: record.id,
     personId: record.personId,
@@ -20,6 +24,7 @@ export function serializeDraft(record: OutreachRecord): OutreachDraft {
     approvedAt: record.approvedAt ? record.approvedAt.toISOString() : null,
     sentAt: record.sentAt ? record.sentAt.toISOString() : null,
     workspaceId: record.workspaceId,
+    outcome,
   });
 }
 
