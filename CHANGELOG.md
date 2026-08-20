@@ -33,6 +33,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Incremental connector sync (ANY-18): PostHog, Mixpanel, and Amplitude
+  paginate to completion, persist a per-source cursor in the ANY-44
+  sync_state slot, and dedup on `(workspaceId, externalId)` so a re-run
+  fetches and writes nothing when the source is unchanged.
 - Mercury connector (ANY-15): read-only account balances and trailing
   posted transactions into `balance_snapshots`. Monthly burn and runway
   months are computed from the last 90 days; the token is stored via

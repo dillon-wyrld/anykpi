@@ -12,6 +12,8 @@
  *   `nextCursor: null` after a full snapshot.
  * - Advance the stored cursor **only** when `health === "ok"`. On
  *   `degraded` or `error`, retry with the same `opts.cursor`.
+ * - Incremental sources persist that watermark in the per-(workspaceId,
+ *   source) sync_state slot (`loadSyncCursor` / `saveSyncCursor`).
  *
  * Health contract (consumed later by incremental / scheduled sync):
  * - `ok` — writes finished; safe to persist `nextCursor` and treat the
@@ -38,6 +40,7 @@ import * as schema from "@/core/schema";
 import { loadSourceConfig } from "@/core/sources";
 import { upsertSyncState } from "@/core/upsert";
 import { syncAmplitude } from "./amplitude";
+import { loadSyncCursor, saveSyncCursor } from "./cursor";
 import { ICS_SOURCE, ICS_SOURCE_NAME, syncIcs } from "./ics";
 import { withSourceLock } from "./lock";
 import { syncMercury } from "./mercury";
@@ -48,6 +51,7 @@ import { syncStripe } from "./stripe";
 import type { SyncOpts } from "./types";
 
 export type { SyncOpts } from "./types";
+export { loadSyncCursor, saveSyncCursor } from "./cursor";
 
 export type { SyncResult, ConnectorHealth } from "@/core/contracts";
 export { SyncResultSchema, ConnectorHealthSchema } from "@/core/contracts";
@@ -167,6 +171,8 @@ async function markError(connector: Connector, workspaceId: string): Promise<voi
   });
 }
 
+const INCREMENTAL_SOURCES = new Set(["posthog", "mixpanel", "amplitude"]);
+
 async function runSource(
   connector: Connector,
   workspaceId: string,
@@ -175,13 +181,22 @@ async function runSource(
   await markPending(connector, workspaceId);
   try {
     const stored = await loadSourceConfig(workspaceId, connector.source);
+    const cursor =
+      opts?.cursor ??
+      (INCREMENTAL_SOURCES.has(connector.source)
+        ? await loadSyncCursor(workspaceId, connector.source)
+        : undefined);
     const result = SyncResultSchema.parse(
       await connector.sync(workspaceId, {
         ...opts,
+        cursor,
         config: stored ?? opts?.config,
       })
     );
     if (result.health === "ok") {
+      if (INCREMENTAL_SOURCES.has(connector.source)) {
+        await saveSyncCursor(workspaceId, connector.source, result.nextCursor);
+      }
       await refreshWorkspaceClusters(workspaceId);
       await persistWorkspaceMilestones(workspaceId);
     }

@@ -30,6 +30,7 @@ export async function clearWorkspace(workspaceId: string) {
   await db
     .delete(schema.balanceSnapshots)
     .where(eq(schema.balanceSnapshots.workspaceId, workspaceId));
+  await db.delete(schema.config).where(eq(schema.config.workspaceId, workspaceId));
 }
 
 export async function withOfflineSuite(
