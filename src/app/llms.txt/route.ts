@@ -47,6 +47,8 @@ OpenAPI spec: /api/openapi
 - POST /api/v1/connect — store per-source credentials (encrypted at rest; never returned; csv stores import mapping)
 - POST /api/v1/import — CSV import for users and events (sources store + column-mapping preview; writes keyed)
 - GET /api/v1/export — users, events, and read models as JSON or CSV files (connector read models restore by re-sync)
+- GET /api/v1/config — company profile (name, founded date, home city; dayLabel is Day of <name>)
+- PATCH /api/v1/config — update the company profile (write scope; founded date cannot be in the future)
 - GET /api/v1/workspaces — catalog of named workspaces (id, name, archivedAt)
 - POST /api/v1/workspaces — create a live workspace (admin / env key)
 - PATCH /api/v1/workspaces — archive a live workspace (admin / env key; demo cannot be archived)
@@ -87,9 +89,9 @@ stdio server: src/mcp/server.ts. HTTP tools/list advertises the five read tools,
 
 npx @anykpi/cli
 
-Commands: login (alias: key), keys, workspaces, connect, import, export, identify, track, overview, users, cohorts, wbr, calendar, sync, outreach.
+Commands: login (alias: key), keys, workspaces, config, connect, import, export, identify, track, overview, users, cohorts, wbr, calendar, sync, outreach.
 
-login mints a key via POST /api/v1/keys (default scope read; pass --scope write for ingest) and requires ANYKPI_API_KEY or --key. keys lists metadata (scope, last used, legacy). \`anykpi keys downgrade\` converts migrated write keys to read. connect stores source credentials via POST /api/v1/connect (including \`anykpi connect csv\`). import uploads a users or events CSV via POST /api/v1/import. export writes users, events, and read models via GET /api/v1/export (docs/backup.md). outreach lists drafts or tags \`--outcome replied|interviewed|converted\`. Query commands take --workspace and --json.
+login mints a key via POST /api/v1/keys (default scope read; pass --scope write for ingest) and requires ANYKPI_API_KEY or --key. keys lists metadata (scope, last used, legacy). \`anykpi keys downgrade\` converts migrated write keys to read. config reads or sets the company profile via GET/PATCH /api/v1/config (\`--name\`, \`--founded\`, \`--city\`, \`--timezone\`). connect stores source credentials via POST /api/v1/connect (including \`anykpi connect csv\`). import uploads a users or events CSV via POST /api/v1/import. export writes users, events, and read models via GET /api/v1/export (docs/backup.md). outreach lists drafts or tags \`--outcome replied|interviewed|converted\`. Query commands take --workspace and --json.
 
 ## Connectors
 

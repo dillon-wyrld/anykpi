@@ -25,6 +25,7 @@ import {
   PATCH as archiveWorkspaceRoute,
   POST as createWorkspaceRoute,
 } from "@/app/api/v1/workspaces/route";
+import { PATCH as patchConfig } from "@/app/api/v1/config/route";
 import {
   AUDIT_ACTIONS,
   WRITE_HTTP_ROUTES,
@@ -431,6 +432,16 @@ const drivers: Record<(typeof WRITE_HTTP_ROUTES)[number]["action"], Driver> = {
     );
     expect(res.status).toBe(200);
     return { actor: AUDIT_ACTOR_ENV, subject: WS };
+  },
+  [AUDIT_ACTIONS.configSave]: async () => {
+    const res = await patchConfig(
+      asAdmin("http://localhost:3000/api/v1/config", "PATCH", {
+        workspaceId: WS,
+        companyName: "AuditCo",
+      })
+    );
+    expect(res.status).toBe(200);
+    return { actor: AUDIT_ACTOR_ENV, subject: "company_profile" };
   },
 };
 

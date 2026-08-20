@@ -741,6 +741,27 @@ export const AuditQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+export const HomeCitySchema = z.object({
+  timezone: z.string().min(1),
+  label: z.string().min(1).max(80),
+});
+
+export const CompanyProfileSchema = z.object({
+  workspaceId: z.string(),
+  companyName: z.string(),
+  foundedAt: z.string().datetime().nullable(),
+  homeCity: HomeCitySchema.nullable(),
+  dayLabel: z.string(),
+});
+
+export const CompanyProfileUpdateSchema = z.object({
+  workspaceId: z.string().optional(),
+  workspace: z.string().optional(),
+  companyName: z.string().optional(),
+  foundedAt: z.string().nullable().optional(),
+  homeCity: HomeCitySchema.nullable().optional(),
+});
+
 // ========== Error Response ==========
 
 export const ErrorResponseSchema = z.object({
@@ -838,4 +859,7 @@ export type ResearchCandidate = z.infer<typeof ResearchCandidateSchema>;
 export type ResearchClaim = z.infer<typeof ResearchClaimSchema>;
 export type ResearchResult = z.infer<typeof ResearchResultSchema>;
 export type ResearchRunRequest = z.infer<typeof ResearchRunRequestSchema>;
+export type HomeCity = z.infer<typeof HomeCitySchema>;
+export type CompanyProfile = z.infer<typeof CompanyProfileSchema>;
+export type CompanyProfileUpdate = z.infer<typeof CompanyProfileUpdateSchema>;
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;

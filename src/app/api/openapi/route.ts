@@ -29,6 +29,8 @@ import {
   WorkspaceCreateRequestSchema,
   WorkspaceArchiveRequestSchema,
   WorkspaceRecordSchema,
+  CompanyProfileSchema,
+  CompanyProfileUpdateSchema,
   AuditListResponseSchema,
   OutreachQueueRequestSchema,
   OutreachIdRequestSchema,
@@ -88,6 +90,7 @@ export async function GET(request: NextRequest) {
       { name: 'Keys', description: 'API key management' },
       { name: 'Session', description: 'Browser session cookie for live dashboard reads' },
       { name: 'Workspaces', description: 'Named workspaces with isolated users, accounts, metrics, and config' },
+      { name: 'Config', description: 'Per-workspace company profile (name, founded date, home city)' },
       { name: 'Audit', description: 'Action audit log' },
       { name: 'Outreach', description: 'Persisted PMF+ outreach drafts with per-send approval and outcome tags' }
     ],
@@ -1044,6 +1047,72 @@ export async function GET(request: NextRequest) {
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(SessionStatusResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/v1/config': {
+        get: {
+          tags: ['Config'],
+          summary: 'Get company profile',
+          description:
+            'Name, founded date, and home city (IANA timezone + label) for a workspace. Demo stays public-read. `dayLabel` is the "Day of <name>" copy.',
+          parameters: [
+            {
+              name: 'workspace',
+              in: 'query',
+              schema: { type: 'string', default: 'demo' },
+              description: 'Workspace ID'
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Company profile',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(CompanyProfileSchema)
+                }
+              }
+            }
+          }
+        },
+        patch: {
+          tags: ['Config'],
+          summary: 'Update company profile',
+          description:
+            'Write-gated. A founded date in the future is refused. Keys live in the existing config table per workspace.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(CompanyProfileUpdateSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Updated company profile',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(CompanyProfileSchema)
+                }
+              }
+            },
+            400: {
+              description: 'Invalid profile (including a future founded date)',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Unauthorized',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
                 }
               }
             }

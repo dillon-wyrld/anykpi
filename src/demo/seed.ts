@@ -29,11 +29,9 @@ import {
   NAMED
 } from "./generators";
 import { buildDemoRevenue, preferPayerIds } from "./revenue";
-import {
-  foundedAtConfigKey,
-  persistWorkspaceMilestones,
-} from "../core/milestones";
-import { upsertConfig } from "../core/upsert";
+import { persistWorkspaceMilestones } from "../core/milestones";
+import { DEFAULT_COMPANY_NAME, DEMO_HOME_CITY } from "../core/company-day";
+import { saveCompanyProfile } from "../core/company-profile";
 import { ensureDefaultWorkspaces } from "../core/workspaces";
 
 const WORKSPACE = "demo";
@@ -314,10 +312,10 @@ export async function seedDemo() {
   console.log(`Seeded ${calEvents.length} calendar events from ${Object.keys(CALENDAR_SOURCES).length} sources`);
 
   const founded = new Date(today.getTime() - 365 * DAY_MS);
-  await upsertConfig({
-    key: foundedAtConfigKey(WORKSPACE),
-    value: founded.toISOString(),
-    workspaceId: WORKSPACE,
+  await saveCompanyProfile(WORKSPACE, {
+    companyName: DEFAULT_COMPANY_NAME,
+    foundedAt: founded.toISOString(),
+    homeCity: DEMO_HOME_CITY,
   });
   const { detected: milestones } = await persistWorkspaceMilestones(WORKSPACE, today);
   if (milestones.length === 0) {

@@ -10,6 +10,7 @@ import { configFile, loadConfig, saveConfig } from "./config";
 export const PUBLISHED_COMMANDS = [
   "login",
   "workspaces",
+  "config",
   "connect",
   "import",
   "export",
@@ -139,6 +140,108 @@ export function createProgram(): Command {
       console.log("  live", config.workspace === "live" ? chalk.green("(current)") : "");
       console.log();
       console.log(chalk.dim("Use --workspace flag to switch"));
+    });
+
+  program
+    .command("config")
+    .description("Get or set the company profile (name, founded date, home city)")
+    .option("--name <name>", "Company display name")
+    .option("--founded <date>", "Founded date (YYYY-MM-DD)")
+    .option("--city <label>", "Home city label")
+    .option("--timezone <iana>", "Home city IANA time zone")
+    .option("--workspace <workspace>", "Workspace")
+    .option("--json", "Output as JSON")
+    .action(async (options) => {
+      const spinner = ora(
+        options.name || options.founded || options.city || options.timezone
+          ? "Saving company profile..."
+          : "Fetching company profile..."
+      ).start();
+
+      try {
+        const workspace = workspaceOf(options);
+        const hasPatch =
+          options.name !== undefined ||
+          options.founded !== undefined ||
+          options.city !== undefined ||
+          options.timezone !== undefined;
+
+        type Profile = {
+          workspaceId: string;
+          companyName: string;
+          foundedAt: string | null;
+          homeCity: { timezone: string; label: string } | null;
+          dayLabel: string;
+        };
+
+        let data: Profile;
+
+        if (hasPatch) {
+          const body: {
+            workspaceId: string;
+            companyName?: string;
+            foundedAt?: string | null;
+            homeCity?: { timezone: string; label: string };
+          } = { workspaceId: workspace };
+          if (options.name !== undefined) body.companyName = String(options.name);
+          if (options.founded !== undefined) body.foundedAt = String(options.founded);
+
+          if (options.city !== undefined || options.timezone !== undefined) {
+            let label = options.city ? String(options.city) : "";
+            let timezone = options.timezone ? String(options.timezone) : "";
+            if (!label || !timezone) {
+              const current = (await apiRequest(
+                `/api/v1/config?workspace=${encodeURIComponent(workspace)}`
+              )) as Profile;
+              label = label || current.homeCity?.label || "";
+              timezone = timezone || current.homeCity?.timezone || "";
+            }
+            if (!label || !timezone) {
+              throw new Error("Home city needs both --city and --timezone");
+            }
+            body.homeCity = { timezone, label };
+          }
+
+          data = (await apiRequest("/api/v1/config", {
+            method: "PATCH",
+            body: JSON.stringify(body),
+          })) as Profile;
+        } else {
+          data = (await apiRequest(
+            `/api/v1/config?workspace=${encodeURIComponent(workspace)}`
+          )) as Profile;
+        }
+
+        spinner.stop();
+
+        if (options.json) {
+          console.log(JSON.stringify(data, null, 2));
+          return;
+        }
+
+        console.log();
+        console.log(chalk.bold(data.dayLabel), chalk.dim(data.workspaceId));
+        console.log();
+        console.log("  ", "name:", chalk.bold(data.companyName));
+        console.log(
+          "  ",
+          "founded:",
+          chalk.bold(data.foundedAt ? data.foundedAt.slice(0, 10) : "not set")
+        );
+        console.log(
+          "  ",
+          "home city:",
+          chalk.bold(
+            data.homeCity
+              ? `${data.homeCity.label} (${data.homeCity.timezone})`
+              : "not set"
+          )
+        );
+        console.log();
+      } catch (error) {
+        spinner.fail((error as Error).message);
+        throw error;
+      }
     });
 
   program

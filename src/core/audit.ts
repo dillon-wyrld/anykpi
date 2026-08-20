@@ -35,6 +35,7 @@ export const AUDIT_ACTIONS = {
   usersDelete: "users.delete",
   workspaceCreate: "workspace.create",
   workspaceArchive: "workspace.archive",
+  configSave: "config.save",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
@@ -62,6 +63,7 @@ export const WRITE_HTTP_ROUTES = [
   { method: "DELETE", path: "/api/v1/users/:id", action: AUDIT_ACTIONS.usersDelete },
   { method: "POST", path: "/api/v1/workspaces", action: AUDIT_ACTIONS.workspaceCreate },
   { method: "PATCH", path: "/api/v1/workspaces", action: AUDIT_ACTIONS.workspaceArchive },
+  { method: "PATCH", path: "/api/v1/config", action: AUDIT_ACTIONS.configSave },
 ] as const;
 
 /** Route modules that perform writes (including the MCP mutation hook). */
@@ -80,6 +82,7 @@ export const WRITE_ROUTE_MODULES = [
   "src/app/api/mcp/route.ts",
   "src/app/api/v1/users/[id]/route.ts",
   "src/app/api/v1/workspaces/route.ts",
+  "src/app/api/v1/config/route.ts",
 ] as const;
 
 export type AuditEntry = {
