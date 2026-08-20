@@ -35,6 +35,11 @@ describe("out-of-the-box docs tell the truth", () => {
     expect(script).toContain("icon-dark.png");
     expect(assetsReadme).toContain("wordmark-nav.png");
     expect(assetsReadme).toContain("icon-dark.png");
+    expect(existsSync(resolve(root, "docs/assets/wordmark-nav.png"))).toBe(true);
+    expect(existsSync(resolve(root, "docs/assets/wordmark-light.png"))).toBe(true);
+    expect(existsSync(resolve(root, "docs/assets/wordmark-dark.png"))).toBe(true);
+    expect(existsSync(resolve(root, "docs/assets/icon-light.png"))).toBe(true);
+    expect(existsSync(resolve(root, "docs/assets/icon-dark.png"))).toBe(true);
   });
 
   it("README documents the prebuilt GHCR image", () => {
