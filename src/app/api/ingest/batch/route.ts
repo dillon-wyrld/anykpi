@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       events.push(normalized);
     }
 
-    const result = runIngestBatch(workspaceId, events);
+    const result = await runIngestBatch(workspaceId, events);
     await recordWriteAudit(
       auth,
       workspaceId,

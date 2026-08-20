@@ -92,7 +92,7 @@ describe("POST /api/ingest/batch", () => {
       inserted: 5,
       duplicates: 0,
     });
-    expect(countWorkspaceActivity(WS)).toBe(5);
+    expect(await countWorkspaceActivity(WS)).toBe(5);
 
     const second = await postBatch(asAdmin({ workspaceId: WS, events }));
     expect(second.status).toBe(200);
@@ -102,7 +102,7 @@ describe("POST /api/ingest/batch", () => {
       inserted: 0,
       duplicates: 5,
     });
-    expect(countWorkspaceActivity(WS)).toBe(5);
+    expect(await countWorkspaceActivity(WS)).toBe(5);
   });
 
   it("commits a 1k-event batch as one transaction", async () => {
@@ -115,7 +115,7 @@ describe("POST /api/ingest/batch", () => {
     expect(body.inserted).toBe(1000);
     expect(body.duplicates).toBe(0);
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(countWorkspaceActivity(WS)).toBe(1000);
+    expect(await countWorkspaceActivity(WS)).toBe(1000);
   });
 
   it("rolls back every row when the transaction throws", async () => {
@@ -124,7 +124,12 @@ describe("POST /api/ingest/batch", () => {
       fn: Parameters<typeof db.transaction>[0]
     ) => {
       return original((tx) => {
-        fn(tx);
+        const result = fn(tx) as unknown;
+        if (result && typeof (result as Promise<void>).then === "function") {
+          return (result as Promise<void>).then(() => {
+            throw new Error("forced rollback");
+          });
+        }
         throw new Error("forced rollback");
       });
     }) as typeof db.transaction);
@@ -133,7 +138,7 @@ describe("POST /api/ingest/batch", () => {
       asAdmin({ workspaceId: WS, events: sampleEvents(25, "rollback") })
     );
     expect(res.status).toBe(500);
-    expect(countWorkspaceActivity(WS)).toBe(0);
+    expect(await countWorkspaceActivity(WS)).toBe(0);
   });
 
   it("rejects more than 1k events and an oversized body", async () => {
@@ -141,7 +146,7 @@ describe("POST /api/ingest/batch", () => {
       asAdmin({ workspaceId: WS, events: sampleEvents(1001, "too-many") })
     );
     expect(tooMany.status).toBe(400);
-    expect(countWorkspaceActivity(WS)).toBe(0);
+    expect(await countWorkspaceActivity(WS)).toBe(0);
 
     process.env.ANYKPI_API_KEY = ADMIN;
     vi.stubEnv("NODE_ENV", "test");
@@ -220,10 +225,10 @@ describe("SDK batch flush under a flaky network", () => {
       ]);
 
       expect(batchAttempts).toBe(3);
-      expect(countWorkspaceActivity(WS)).toBe(3);
+      expect(await countWorkspaceActivity(WS)).toBe(3);
 
       await client.flush();
-      expect(countWorkspaceActivity(WS)).toBe(3);
+      expect(await countWorkspaceActivity(WS)).toBe(3);
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -231,8 +236,8 @@ describe("SDK batch flush under a flaky network", () => {
 });
 
 describe("runIngestBatch", () => {
-  it("no-ops intra-batch duplicate keys", () => {
-    const result = runIngestBatch(WS, [
+  it("no-ops intra-batch duplicate keys", async () => {
+    const result = await runIngestBatch(WS, [
       {
         userId: "dup",
         eventName: "song_played",
@@ -247,6 +252,6 @@ describe("runIngestBatch", () => {
       },
     ]);
     expect(result).toEqual({ accepted: 2, inserted: 1, duplicates: 1 });
-    expect(countWorkspaceActivity(WS)).toBe(1);
+    expect(await countWorkspaceActivity(WS)).toBe(1);
   });
 });

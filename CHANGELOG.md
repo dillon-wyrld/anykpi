@@ -37,6 +37,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Postgres query-compat and CI matrix (ANY-47): view builders and
+  read-model writers share one query shape on SQLite and Postgres.
+  Timestamps stay Date objects, upserts use `excluded`, and writes that
+  need a transaction run sync on SQLite and async on Postgres. Unit
+  tests use a SQLite file or in-process PGlite (`ANYKPI_DB_ENGINE`);
+  CI runs the full suite on both engines every push.
 - Postgres scaffold via `DATABASE_URL` (ANY-33): sqlite-core remains the
   v0.x source of truth. A Postgres schema mirror, `drizzle/sqlite` +
   `drizzle/pg` journals, and a Docker entrypoint that selects by

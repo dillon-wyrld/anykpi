@@ -118,7 +118,7 @@ The agent can do this unattended via MCP tools.
 ## Stack
 
 - **Next.js 15** — App Router, TypeScript strict mode
-- **SQLite + Drizzle** — Fast local read models via `DATABASE_PATH`. Postgres schema and migrations apply when `DATABASE_URL` is set ([storage](docs/introduction.md#postgres-later))
+- **SQLite + Drizzle** — Fast local read models via `DATABASE_PATH`. The same queries run on Postgres when `DATABASE_URL` is set ([storage](docs/introduction.md#postgres-later))
 - **Tailwind + shadcn** — Linear-light aesthetic
 - **Hand-rolled SVG charts** — Seven rounds of prototype learnings baked in
 - **MCP** — Streamable HTTP at `/api/mcp`

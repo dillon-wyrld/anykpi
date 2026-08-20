@@ -120,5 +120,11 @@ describe("edge middleware + instrumentation", () => {
     expect(config).toMatch(/nextRuntime === "edge"/);
     expect(config).toMatch(/fs:\s*false/);
     expect(config).toMatch(/path:\s*false/);
+    expect(config).toMatch(/crypto:\s*false/);
+    expect(config).toMatch(/net:\s*false/);
+    expect(config).toMatch(/tls:\s*false/);
+    expect(config).toMatch(/stream:\s*false/);
+    expect(config).toMatch(/os:\s*false/);
+    expect(config).toMatch(/perf_hooks:\s*false/);
   });
 });

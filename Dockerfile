@@ -31,8 +31,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # volume (the standalone server does not run migrations itself).
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-entrypoint.mjs ./scripts/docker-entrypoint.mjs
-# postgres.js is not imported by the Next graph; the entrypoint needs it
-# when DATABASE_URL points at Postgres.
+# postgres.js is also imported by db.ts when DATABASE_URL is set. The
+# entrypoint still copies it so schema init works before the server starts.
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/postgres ./node_modules/postgres
 
 RUN mkdir -p /data && chmod 700 /data && chown nextjs:nodejs /data

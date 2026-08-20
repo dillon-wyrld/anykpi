@@ -9,7 +9,26 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [sqlite, postgres]
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: anykpi
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
       
@@ -38,11 +57,10 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Initialize database
-        run: pnpm db:init
-
       - name: Run unit tests
         run: pnpm test:unit
+        env:
+          ANYKPI_DB_ENGINE: ${{ matrix.engine }}
 
       - name: Schema drift
         run: pnpm exec vitest run src/core/schema-drift.test.ts
@@ -56,6 +74,11 @@ jobs:
       - name: Typecheck SDK consumer
         run: pnpm sdk:consumer-types
 
+      - name: Initialize database
+        run: pnpm db:init
+        env:
+          DATABASE_URL: ${{ matrix.engine == 'postgres' && 'postgres://postgres:postgres@localhost:5432/anykpi' || '' }}
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
       
@@ -63,11 +86,12 @@ jobs:
         run: pnpm test:e2e
         env:
           ANYKPI_API_KEY: anykpi-e2e-admin
+          DATABASE_URL: ${{ matrix.engine == 'postgres' && 'postgres://postgres:postgres@localhost:5432/anykpi' || '' }}
       
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: test-results-${{ matrix.engine }}
           path: test-results/
           retention-days: 7

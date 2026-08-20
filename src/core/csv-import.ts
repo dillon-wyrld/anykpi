@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
-import { count, eq, sql } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { db } from "./db";
+import { excluded, writeInTransaction } from "./query-compat";
 import * as schema from "./schema";
 import type { SourceConfig } from "./sources";
 import { loadTombstoneSet, matchesTombstone } from "./tombstones";
@@ -380,26 +381,35 @@ export async function runCsvImport(input: CsvImportInput): Promise<CsvImportOutc
       (row) => !matchesTombstone(tombstoned, row)
     );
     const before = await countWorkspaceUsers(input.workspaceId);
-    db.transaction((tx) => {
-      for (const batch of chunk(liveRows, BATCH)) {
-        tx.insert(schema.users)
-          .values(batch)
-          .onConflictDoUpdate({
-            target: [schema.users.workspaceId, schema.users.personId],
-            set: {
-              name: sql`excluded.name`,
-              email: sql`excluded.email`,
-              emoji: sql`excluded.emoji`,
-              platform: sql`excluded.platform`,
-              country: sql`excluded.country`,
-              signupDate: sql`excluded.signup_date`,
-              cluster: sql`excluded.cluster`,
-              accountId: sql`excluded.account_id`,
-            },
-          })
-          .run();
+    const userConflict = {
+      target: [schema.users.workspaceId, schema.users.personId],
+      set: {
+        name: excluded("name"),
+        email: excluded("email"),
+        emoji: excluded("emoji"),
+        platform: excluded("platform"),
+        country: excluded("country"),
+        signupDate: excluded("signup_date"),
+        cluster: excluded("cluster"),
+        accountId: excluded("account_id"),
+      },
+    };
+    await writeInTransaction(
+      db,
+      (tx) => {
+        for (const batch of chunk(liveRows, BATCH)) {
+          tx.insert(schema.users)
+            .values(batch)
+            .onConflictDoUpdate(userConflict)
+            .run();
+        }
+      },
+      async (tx) => {
+        for (const batch of chunk(liveRows, BATCH)) {
+          await tx.insert(schema.users).values(batch).onConflictDoUpdate(userConflict);
+        }
       }
-    });
+    );
     const after = await countWorkspaceUsers(input.workspaceId);
     const imported = after - before;
     return {
@@ -447,24 +457,39 @@ export async function runCsvImport(input: CsvImportInput): Promise<CsvImportOutc
   }
 
   const before = await countWorkspaceActivity(input.workspaceId);
-  db.transaction((tx) => {
-    for (const batch of chunk([...stubs.values()], BATCH)) {
-      tx.insert(schema.users)
-        .values(batch)
-        .onConflictDoNothing({
+  await writeInTransaction(
+    db,
+    (tx) => {
+      for (const batch of chunk([...stubs.values()], BATCH)) {
+        tx.insert(schema.users)
+          .values(batch)
+          .onConflictDoNothing({
+            target: [schema.users.workspaceId, schema.users.personId],
+          })
+          .run();
+      }
+      for (const batch of chunk(liveRows, BATCH)) {
+        tx.insert(schema.activity)
+          .values(batch)
+          .onConflictDoNothing({
+            target: [schema.activity.workspaceId, schema.activity.externalId],
+          })
+          .run();
+      }
+    },
+    async (tx) => {
+      for (const batch of chunk([...stubs.values()], BATCH)) {
+        await tx.insert(schema.users).values(batch).onConflictDoNothing({
           target: [schema.users.workspaceId, schema.users.personId],
-        })
-        .run();
-    }
-    for (const batch of chunk(liveRows, BATCH)) {
-      tx.insert(schema.activity)
-        .values(batch)
-        .onConflictDoNothing({
+        });
+      }
+      for (const batch of chunk(liveRows, BATCH)) {
+        await tx.insert(schema.activity).values(batch).onConflictDoNothing({
           target: [schema.activity.workspaceId, schema.activity.externalId],
-        })
-        .run();
+        });
+      }
     }
-  });
+  );
   const after = await countWorkspaceActivity(input.workspaceId);
   const imported = after - before;
   return {
