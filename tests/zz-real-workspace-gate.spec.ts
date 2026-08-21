@@ -280,8 +280,6 @@ test.describe("ANY-67 real-workspace gate", () => {
     test.setTimeout(180_000);
     expect(ctx.workspace, "snippet setup must run first").toBeTruthy();
 
-    await unlockWorkspace(page, ctx.workspace, ctx.writeKey);
-
     const advertised = (await listMcpTools(request)).map((tool) => tool.name);
     const walkers = new Set([
       "get_overview",
@@ -583,6 +581,7 @@ test.describe("ANY-67 real-workspace gate", () => {
             | { title?: string }[]
             | undefined) ?? []
         ).map((event) => event.title);
+        await unlockWorkspace(page, ctx.workspace, ctx.writeKey);
         await page.goto(`/dashboard?workspace=${ctx.workspace}&view=calendar`);
         await expect(page.getByRole("heading", { name: "Calendar" })).toBeVisible({
           timeout: 20_000,

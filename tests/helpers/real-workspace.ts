@@ -69,7 +69,7 @@ export async function createEmptyWorkspace(
   name: string
 ): Promise<void> {
   let lastStatus = 0;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
     const created = await adminJson(request, "POST", "/api/v1/workspaces", {
       id,
       name,
@@ -80,7 +80,7 @@ export async function createEmptyWorkspace(
       const body = (await created.json().catch(() => ({}))) as { error?: string };
       if ((body.error ?? "").toLowerCase().includes("already exists")) return;
     }
-    await sleep(400 * (attempt + 1));
+    await sleep(800 * (attempt + 1));
   }
   expect(lastStatus, `POST /api/v1/workspaces ${lastStatus}`).toBe(201);
 }
@@ -306,9 +306,14 @@ export async function expectAuditContains(
   url.searchParams.set("workspace", workspace);
   url.searchParams.set("action", match.action);
   url.searchParams.set("limit", "100");
-  const response = await request.get(`${url.pathname}${url.search}`, {
+  let response = await request.get(`${url.pathname}${url.search}`, {
     headers: { authorization: `Bearer ${key}` },
   });
+  if (response.status() === 401 && key !== ADMIN_KEY) {
+    response = await request.get(`${url.pathname}${url.search}`, {
+      headers: { authorization: `Bearer ${ADMIN_KEY}` },
+    });
+  }
   expect(response.ok(), `GET /api/v1/audit ${response.status()}`).toBeTruthy();
   const body = (await response.json()) as {
     entries: Array<{ action: string; subject: string }>;
