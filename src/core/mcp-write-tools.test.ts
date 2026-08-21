@@ -37,6 +37,7 @@ afterEach(async () => {
   await db.delete(schema.metricPoints).where(eq(schema.metricPoints.workspaceId, WS));
   await db.delete(schema.config).where(eq(schema.config.workspaceId, WS));
   await db.delete(schema.calEvents).where(eq(schema.calEvents.workspaceId, WS));
+  await db.delete(schema.annotations).where(eq(schema.annotations.workspaceId, WS));
 });
 
 function asBearer(
@@ -138,6 +139,13 @@ const CALLS: Record<
   disconnect_source: {
     workspace: WS,
     source: "ics",
+  },
+  annotate: {
+    workspace: WS,
+    type: "sticker",
+    targetType: "person",
+    targetId: "person_mcp_write_ada",
+    content: "📌",
   },
 };
 
@@ -368,6 +376,47 @@ describe("MCP write tools return view_url and land in the audit log", () => {
           actor: id,
           action: AUDIT_ACTIONS.mcpCall,
           subject: "disconnect_source",
+        }),
+      ])
+    );
+  });
+
+  it("annotate writes a sticker row, points at the proving view, and audits", async () => {
+    const { id, key } = await mintKey("write");
+    const response = await postMcp(mcpCall("annotate", CALLS.annotate, key));
+    expect(response.status).toBe(200);
+    const { isError, payload } = await parseTool(response);
+    expect(isError).toBe(false);
+    expect(payload).toEqual(
+      expect.objectContaining({
+        workspace: WS,
+        annotation: expect.objectContaining({
+          type: "sticker",
+          targetType: "person",
+          targetId: "person_mcp_write_ada",
+          content: "📌",
+          workspaceId: WS,
+        }),
+      })
+    );
+    expect(String(payload.viewUrl)).toContain("view=dotplot");
+    expect(String(payload.view_url)).toContain(`workspace=${WS}`);
+
+    const rows = await db
+      .select()
+      .from(schema.annotations)
+      .where(eq(schema.annotations.workspaceId, WS))
+      .all();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.content).toBe("📌");
+
+    const listed = await queryAudit();
+    expect(listed.entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          actor: id,
+          action: AUDIT_ACTIONS.mcpCall,
+          subject: "annotate",
         }),
       ])
     );

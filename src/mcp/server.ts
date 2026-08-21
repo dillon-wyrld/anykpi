@@ -563,7 +563,8 @@ export async function handleStdioToolCall(
         case "trigger_sync":
         case "import_csv":
         case "define_metric":
-        case "disconnect_source": {
+        case "disconnect_source":
+        case "annotate": {
           const presented = process.env.ANYKPI_API_KEY;
           const writeAuth = await authorize(
             {

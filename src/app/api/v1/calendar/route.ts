@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
     const response = CalendarResponseSchema.parse({
       events,
       sources,
+      annotations: calendarData.annotations ?? [],
       workspace,
       view_url: `${publicBaseUrl(request)}/dashboard?workspace=${workspace}&view=calendar`
     });

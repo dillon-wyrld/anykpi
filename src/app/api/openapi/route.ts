@@ -11,6 +11,9 @@ import {
   DefineMetricResponseSchema,
   MetricPatchRequestSchema,
   MetricMutationResponseSchema,
+  AnnotateRequestSchema,
+  AnnotateResponseSchema,
+  AnnotationsListResponseSchema,
   CalendarResponseSchema,
   SyncResponseSchema,
   SyncTriggerRequestSchema,
@@ -377,6 +380,65 @@ export async function GET(request: NextRequest) {
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(CalendarResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/v1/annotations': {
+        get: {
+          tags: ['Annotations'],
+          summary: 'List annotations',
+          description:
+            'Pinned stickers and notes on a person, date, metric, or cohort. Demo is public-read.',
+          parameters: [
+            {
+              name: 'workspace',
+              in: 'query',
+              schema: { type: 'string', default: 'demo' }
+            },
+            {
+              name: 'targetType',
+              in: 'query',
+              schema: { type: 'string', enum: ['person', 'user', 'date', 'metric', 'cohort'] }
+            },
+            {
+              name: 'targetId',
+              in: 'query',
+              schema: { type: 'string' }
+            }
+          ],
+          responses: {
+            200: {
+              description: 'Pinned annotations',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(AnnotationsListResponseSchema)
+                }
+              }
+            }
+          }
+        },
+        post: {
+          tags: ['Annotations'],
+          summary: 'Pin a sticker or note',
+          description:
+            'Same body as MCP annotate. Write-scoped. A signed browser session may pin from the dashboard.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(AnnotateRequestSchema)
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Annotation pinned',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(AnnotateResponseSchema)
                 }
               }
             }

@@ -92,6 +92,8 @@ Returns:
 - `GET /api/v1/cohorts` — Retention with PMF signal; optional split by platform, country, or cluster (max 3 series)
 - `GET /api/v1/wbr` — Weekly Business Review metrics
 - `GET /api/v1/calendar` — Multi-source events
+- `GET /api/v1/annotations` — Pinned stickers and notes
+- `POST /api/v1/annotations` — Pin a sticker or note (write scope or browser session)
 - `GET /api/v1/sync` — Connector status (`syncIntervalMinutes` is `SYNC_INTERVAL_MINUTES`)
 - `GET /api/v1/freshness` — Last ingest + per-source last-sync stamps
 - `GET /api/v1/audit` — Action audit log (filter by actor and since/until)
@@ -171,6 +173,7 @@ Machine Context Protocol server at `/api/mcp`:
 - `trigger_sync` → run a connector sync (write scope)
 - `import_csv` → import users or events from CSV (write scope)
 - `define_metric` → create or update a WBR metric (write scope; status is computed)
+- `annotate` → pin a sticker or note to a person, date, metric, or cohort (write scope)
 - `install_sdk` → generate SDK snippet
 - `configure_value_events` → map events to activity classes
 

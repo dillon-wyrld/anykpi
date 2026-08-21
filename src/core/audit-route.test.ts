@@ -32,6 +32,7 @@ import {
 } from "@/app/api/v1/workspaces/route";
 import { PATCH as patchConfig } from "@/app/api/v1/config/route";
 import { POST as postMetric } from "@/app/api/v1/metrics/route";
+import { POST as postAnnotation } from "@/app/api/v1/annotations/route";
 import {
   AUDIT_ACTIONS,
   WRITE_HTTP_ROUTES,
@@ -82,6 +83,7 @@ afterEach(async () => {
   await db.delete(schema.workspaces).where(eq(schema.workspaces.id, WS));
   await db.delete(schema.metricDefs).where(eq(schema.metricDefs.workspaceId, WS));
   await db.delete(schema.metricPoints).where(eq(schema.metricPoints.workspaceId, WS));
+  await db.delete(schema.annotations).where(eq(schema.annotations.workspaceId, WS));
 });
 
 function asAdmin(url: string, method: string, body?: unknown) {
@@ -574,6 +576,19 @@ const drivers: Record<(typeof WRITE_HTTP_ROUTES)[number]["action"], Driver> = {
     );
     expect(res.status).toBe(201);
     return { actor: AUDIT_ACTOR_ENV, subject: "weekly_actives" };
+  },
+  [AUDIT_ACTIONS.annotationCreate]: async () => {
+    const res = await postAnnotation(
+      asAdmin("http://localhost:3000/api/v1/annotations", "POST", {
+        workspace: WS,
+        type: "note",
+        targetType: "date",
+        targetId: "2026-08-21",
+        content: "Ship day",
+      })
+    );
+    expect(res.status).toBe(201);
+    return { actor: AUDIT_ACTOR_ENV, subject: "note:date:2026-08-21" };
   },
 };
 

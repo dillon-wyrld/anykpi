@@ -41,6 +41,8 @@ const WRITE_TOOLS = new Set([
   "trigger_sync",
   "import_csv",
   "define_metric",
+  "disconnect_source",
+  "annotate",
   "queue_outreach",
   "approve_outreach",
   "send_outreach",
@@ -423,6 +425,82 @@ test.describe("ANY-67 real-workspace gate", () => {
           await expectAuditContains(request, ctx.workspace, ctx.writeKey, {
             action: "mcp.call",
             subject: "define_metric",
+          });
+          continue;
+        }
+
+        if (name === "disconnect_source") {
+          const disposable = `e2edc${Date.now().toString(36)}`;
+          await createEmptyWorkspace(request, disposable, "Disconnect walker");
+          createdWorkspaces.push(disposable);
+          const key = await mintWriteKey(request, disposable);
+          const connected = await callMcpTool(
+            request,
+            "connect_source",
+            {
+              workspace: disposable,
+              source: "ics",
+              credentials: { icsUrl: "https://example.com/calendar.ics" },
+            },
+            { Authorization: `Bearer ${key}` }
+          );
+          expect(connected.response.ok(), "disposable ics connect").toBeTruthy();
+          const payload = await callTool(
+            request,
+            name,
+            { workspace: disposable, source: "ics" },
+            key
+          );
+          expect(payload.disconnected).toBe(true);
+          expect(payload.source).toBe("ics");
+          expect(payload.workspaceId).toBe(disposable);
+          await expectAuditContains(request, disposable, key, {
+            action: "mcp.call",
+            subject: "disconnect_source",
+          });
+          continue;
+        }
+
+        if (name === "annotate") {
+          const payload = await callTool(
+            request,
+            name,
+            {
+              workspace: ctx.workspace,
+              type: "sticker",
+              targetType: "person",
+              targetId: ctx.personId,
+              content: "📌",
+            },
+            ctx.writeKey
+          );
+          const annotation = payload.annotation as {
+            type?: string;
+            targetType?: string;
+            targetId?: string;
+            content?: string;
+          };
+          expect(annotation.type).toBe("sticker");
+          expect(annotation.targetType).toBe("person");
+          expect(annotation.targetId).toBe(ctx.personId);
+          expect(annotation.content).toBe("📌");
+          expect(String(payload.view_url ?? payload.viewUrl)).toContain("view=dotplot");
+          const listed = await request.get(
+            `/api/v1/annotations?workspace=${ctx.workspace}`,
+            { headers: { authorization: `Bearer ${ctx.writeKey}` } }
+          );
+          expect(listed.ok(), `GET annotations ${listed.status()}`).toBeTruthy();
+          const page = (await listed.json()) as {
+            annotations: { content?: string; targetId?: string }[];
+          };
+          expect(
+            page.annotations.some(
+              (row) => row.content === "📌" && row.targetId === ctx.personId
+            )
+          ).toBeTruthy();
+          await expectAuditContains(request, ctx.workspace, ctx.writeKey, {
+            action: "mcp.call",
+            subject: "annotate",
           });
           continue;
         }

@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Annotations (ANY-63): pin a sticker or note to a user, date, metric,
+  or cohort from the dot plot and calendar. The same write is
+  `POST /api/v1/annotations` and the write-scoped, audited `annotate`
+  MCP tool. Person pins drop with that person; tombstones stay honest.
 - Source lifecycle (ANY-68): disconnect deletes stored credentials and
   sync state while keeping synced rows tagged with that source. Pause
   skips the scheduler and keeps config; resume restores it. Clear-error

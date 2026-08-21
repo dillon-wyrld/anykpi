@@ -6,6 +6,7 @@ import { gate } from "@/core/session-auth";
 import { ensureWorkspaceClusters } from "@/core/clustering";
 import { internalError, logServerError } from "@/core/errors";
 import { activityWindow, buildDotPlotUsers } from "@/core/views/dotplot";
+import { listAnnotations, serializeAnnotation } from "@/core/annotations";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -36,8 +37,14 @@ export async function GET(request: NextRequest) {
   ]);
 
   const result = buildDotPlotUsers(users, allActivities);
+  const annotations = (await listAnnotations(workspace)).map(serializeAnnotation);
 
-  return NextResponse.json({ users: result, days: 28, baseDate: baseDate.toISOString() });
+  return NextResponse.json({
+    users: result,
+    days: 28,
+    baseDate: baseDate.toISOString(),
+    annotations,
+  });
   } catch {
     logServerError("Dotplot view failed");
     return internalError();
