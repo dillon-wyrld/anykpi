@@ -6,7 +6,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Shared operator-fetch URL check used by ICS and PostHog. Cloud-metadata
+  and link-local destinations are refused, including redirect hops.
+  Residual: operator-chosen RFC1918, localhost, and other private hosts
+  stay allowed (self-hosted analytics and internal calendar feeds).
+  Hostnames are not DNS-resolved at fetch time.
+
 ### Security
+- CLI `login` defaults minted keys to `live`. Identify, track, import,
+  connect, and sync refuse the public `demo` workspace unless
+  `--workspace demo` is passed on that command. Demo seed and explicit
+  `--workspace demo` workflows still work.
+- Connector egress (ICS, PostHog) blocks cloud-metadata and link-local
+  URLs so a stolen write key cannot SSRF instance metadata.
+- `~/.anykpi/config.json` is written mode 0600; an existing world-readable
+  file is chmod'd on the next write.
 - Browser session for the live workspace (ANY-36): `POST /api/session` verifies
   the API key once and sets a signed `httpOnly` + `SameSite=Lax` cookie so
   dashboard views load without putting the key in a URL. Demo stays public-read.
@@ -21,6 +36,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Rate-limited and size-bounded the ingest endpoints.
 
 ### Fixed
+- Stdio MCP `get_cohorts` / `get_wbr` / `get_calendar` load live
+  workspaces in-process (same trust model as the other stdio tools)
+  instead of an unauthenticated localhost views fetch that returned 401.
+  HTTP `POST /api/mcp` gating is unchanged.
 - One shared day clock (ANY-53): MCP `get_overview` no longer computes
   Day N from a private `2024-01-01` instant. REST overview, MCP
   overview, and the calendar birthday all read `src/core/day.ts`,

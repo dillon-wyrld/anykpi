@@ -14,12 +14,13 @@ import {
   expandCalendar,
   expandOccurrences,
   ICS_SOURCE,
+  normalizeIcsUrl,
   parseIcsCalendar,
   zonedLocalToUtc,
 } from "./ics";
 import { registry, sync } from "./index";
 import { clearWorkspace, withOfflineSuite } from "./testing/offline";
-import { fixtureDir } from "./testing";
+import { fixtureDir, installFixtureFetch } from "./testing";
 
 const WS = "contract-ics";
 const ICS_URL = "https://cal.example.test/private/calendar.ics";
@@ -239,5 +240,38 @@ describe("ICS connector contract", () => {
     const result = await sync("ics", WS);
     expect(result.health).toBe("error");
     expect(result.nextCursor).toBeNull();
+  });
+
+  it("refuses cloud-metadata and link-local ICS URLs", () => {
+    expect(normalizeIcsUrl("http://169.254.169.254/latest/meta-data")).toBeNull();
+    expect(normalizeIcsUrl("http://metadata.google.internal/cal.ics")).toBeNull();
+    expect(normalizeIcsUrl("http://[fd00:ec2::254]/cal.ics")).toBeNull();
+    expect(normalizeIcsUrl("https://cal.example.test/private/calendar.ics")).toBe(
+      ICS_URL
+    );
+    expect(normalizeIcsUrl("http://10.0.0.5/team.ics")).toBe(
+      "http://10.0.0.5/team.ics"
+    );
+  });
+
+  it("does not follow an ICS redirect onto cloud metadata", async () => {
+    await saveSourceConfig(WS, ICS_SOURCE, { icsUrl: ICS_URL });
+    const harness = installFixtureFetch([
+      {
+        request: { method: "GET", url: ICS_URL },
+        response: {
+          status: 302,
+          headers: { location: "http://169.254.169.254/latest/meta-data" },
+          body: "",
+        },
+      },
+    ]);
+    try {
+      const result = await sync("ics", WS);
+      expect(result.health).toBe("error");
+      expect(harness.calls.map((call) => call.url)).toEqual([ICS_URL]);
+    } finally {
+      harness.restore();
+    }
   });
 });

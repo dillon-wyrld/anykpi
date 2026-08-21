@@ -92,6 +92,13 @@ describe("published CLI surface", () => {
     expect(login?.aliases()).toContain("key");
   });
 
+  it("defaults login --workspace to live, not the public demo", () => {
+    const login = createProgram().commands.find((command) => command.name() === "login");
+    const workspace = login?.options.find((option) => option.attributeName() === "workspace");
+    expect(workspace?.defaultValue).toBe("live");
+    expect(workspace?.defaultValue).not.toBe("demo");
+  });
+
   it("advertises keys downgrade as one command", () => {
     const keys = createProgram().commands.find((command) => command.name() === "keys");
     expect(keys).toBeDefined();

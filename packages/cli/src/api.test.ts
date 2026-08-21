@@ -8,7 +8,8 @@ import {
   INGEST_EVENT_PATH,
   INGEST_IDENTIFY_PATH,
 } from "./api";
-import { createProgram } from "./program";
+import { saveConfig } from "./config";
+import { createProgram, DEMO_WRITE_REFUSAL } from "./program";
 
 const originalEnv = {
   HOME: process.env.HOME,
@@ -71,6 +72,99 @@ describe("CLI ingest client", () => {
     const headers = new Headers(init.headers);
     expect(headers.get("Authorization")).toBe("Bearer test-key");
     expect(headers.get("x-api-key")).toBe("test-key");
+  });
+
+  it("login defaults the minted key to live when --workspace is omitted", async () => {
+    isolatedHome();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: "ak_new",
+        key: "ak_new.secret",
+        scope: "read",
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const program = createProgram();
+    program.exitOverride();
+
+    await program.parseAsync(
+      ["login", "--url", "http://instance.test", "--key", "admin-key", "--name", "agent"],
+      { from: "user" }
+    );
+
+    expect(JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body))).toEqual({
+      name: "agent",
+      workspace: "live",
+      scope: "read",
+    });
+  });
+
+  it("identify and track default to live when no workspace was chosen", async () => {
+    isolatedHome();
+    process.env.ANYKPI_API_KEY = "test-key";
+    process.env.ANYKPI_API_URL = "http://instance.test";
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const program = createProgram();
+    program.exitOverride();
+
+    await program.parseAsync(["identify", "u1", "--name", "Ada", "--json"], {
+      from: "user",
+    });
+    await program.parseAsync(["track", "u1", "song_played", "--json"], {
+      from: "user",
+    });
+
+    const bodies = fetchMock.mock.calls.map((call) =>
+      JSON.parse(String((call[1] as RequestInit).body))
+    );
+    expect(bodies[0]).toMatchObject({ userId: "u1", workspaceId: "live" });
+    expect(bodies[1]).toMatchObject({ userId: "u1", workspaceId: "live" });
+  });
+
+  it("refuses identify/track into demo unless --workspace demo is explicit", async () => {
+    isolatedHome();
+    process.env.ANYKPI_API_KEY = "test-key";
+    process.env.ANYKPI_API_URL = "http://instance.test";
+    saveConfig({
+      apiUrl: "http://instance.test",
+      apiKey: "test-key",
+      workspace: "demo",
+    });
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ success: true }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const program = createProgram();
+    program.exitOverride();
+
+    await expect(
+      program.parseAsync(["identify", "u1", "--name", "Ada", "--json"], {
+        from: "user",
+      })
+    ).rejects.toThrow(DEMO_WRITE_REFUSAL);
+    await expect(
+      program.parseAsync(["track", "u1", "song_played", "--json"], { from: "user" })
+    ).rejects.toThrow(DEMO_WRITE_REFUSAL);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await program.parseAsync(
+      ["identify", "u1", "--name", "Ada", "--workspace", "demo", "--json"],
+      { from: "user" }
+    );
+    expect(JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body))).toMatchObject({
+      workspaceId: "demo",
+    });
   });
 
   it("track and identify POST to the live ingest routes", async () => {

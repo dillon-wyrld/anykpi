@@ -14,6 +14,7 @@ import { upsertSyncState } from "@/core/upsert";
 import { classifyCalendarDate, startOfLocalDay } from "@/core/views/calendar-math";
 import { resolveCredentials } from "./credentials";
 import { failedSync } from "./http-status";
+import { operatorFetch, operatorFetchUrlAllowed } from "./operator-fetch";
 import type { SyncOpts } from "./types";
 
 export const ICS_SOURCE = "ics";
@@ -125,6 +126,7 @@ export function normalizeIcsUrl(raw: string): string | null {
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
       return null;
     }
+    if (!operatorFetchUrlAllowed(parsed)) return null;
     return parsed.toString();
   } catch {
     return null;
@@ -576,7 +578,7 @@ export async function syncIcs(
 
   let rowsSynced = 0;
   try {
-    const response = await fetch(icsUrl, {
+    const response = await operatorFetch(icsUrl, {
       method: "GET",
       credentials: "omit",
       headers: {

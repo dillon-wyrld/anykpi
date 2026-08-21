@@ -91,7 +91,7 @@ npx @anykpi/cli
 
 Commands: login (alias: key), keys, workspaces, config, connect, import, export, identify, track, overview, users, cohorts, wbr, calendar, sync, outreach.
 
-login mints a key via POST /api/v1/keys (default scope read; pass --scope write for ingest) and requires ANYKPI_API_KEY or --key. keys lists metadata (scope, last used, legacy). \`anykpi keys downgrade\` converts migrated write keys to read. config reads or sets the company profile via GET/PATCH /api/v1/config (\`--name\`, \`--founded\`, \`--city\`, \`--timezone\`). connect stores source credentials via POST /api/v1/connect (including \`anykpi connect csv\`). import uploads a users or events CSV via POST /api/v1/import. export writes users, events, and read models via GET /api/v1/export (docs/backup.md). outreach lists drafts or tags \`--outcome replied|interviewed|converted\`. Query commands take --workspace and --json.
+login mints a key via POST /api/v1/keys (default scope read and workspace live; pass --scope write for ingest, --workspace demo only when you mean the public demo) and requires ANYKPI_API_KEY or --key. keys lists metadata (scope, last used, legacy). \`anykpi keys downgrade\` converts migrated write keys to read. config reads or sets the company profile via GET/PATCH /api/v1/config (\`--name\`, \`--founded\`, \`--city\`, \`--timezone\`). connect stores source credentials via POST /api/v1/connect (including \`anykpi connect csv\`). import uploads a users or events CSV via POST /api/v1/import. export writes users, events, and read models via GET /api/v1/export (docs/backup.md). outreach lists drafts or tags \`--outcome replied|interviewed|converted\`. Query commands take --workspace and --json.
 
 ## Connectors
 

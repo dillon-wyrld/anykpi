@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -24,12 +24,21 @@ export function loadConfig(): Config {
   return JSON.parse(readFileSync(file, "utf-8")) as Config;
 }
 
+const PRIVATE_FILE_MODE = 0o600;
+const PRIVATE_DIR_MODE = 0o700;
+
 export function saveConfig(config: Config): void {
   const dir = configDir();
   if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
+    mkdirSync(dir, { recursive: true, mode: PRIVATE_DIR_MODE });
   }
-  writeFileSync(configFile(), JSON.stringify(config, null, 2));
+  const file = configFile();
+  writeFileSync(file, JSON.stringify(config, null, 2), { mode: PRIVATE_FILE_MODE });
+  try {
+    chmodSync(file, PRIVATE_FILE_MODE);
+  } catch {
+    // Best-effort; some filesystems ignore chmod
+  }
 }
 
 export function resolveApiUrl(config: Config = loadConfig()): string {

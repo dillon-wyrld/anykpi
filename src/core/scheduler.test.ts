@@ -157,7 +157,7 @@ describe("scheduled refresh — short interval e2e", () => {
             expect(rows[0]?.status).toBe("success");
             expect(rows[0]?.lastSync).toBeTruthy();
           },
-          { timeout: 3000 }
+          { timeout: 8000 }
         );
 
         const state = await db

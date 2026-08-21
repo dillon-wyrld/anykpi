@@ -26,8 +26,24 @@ export const PUBLISHED_COMMANDS = [
   "keys",
 ] as const;
 
+export const DEMO_WRITE_REFUSAL =
+  "Refusing to write people or events into the public demo workspace. Pass --workspace demo to do this on purpose, or use --workspace live.";
+
 function workspaceOf(options: { workspace?: string }): string {
   return options.workspace || loadConfig().workspace || "demo";
+}
+
+/** Writes default to live. Demo ingest requires an explicit --workspace demo. */
+export function writeWorkspaceOf(options: { workspace?: string }): string {
+  const explicit =
+    typeof options.workspace === "string" && options.workspace.length > 0
+      ? options.workspace
+      : undefined;
+  const workspace = explicit || loadConfig().workspace || "live";
+  if (workspace === "demo" && !explicit) {
+    throw new Error(DEMO_WRITE_REFUSAL);
+  }
+  return workspace;
 }
 
 export function createProgram(): Command {
@@ -45,7 +61,7 @@ export function createProgram(): Command {
     .option("--url <url>", "ANYKPI instance URL", "http://localhost:3000")
     .option("--key <key>", "Existing ANYKPI_API_KEY (or set the env var)")
     .option("--name <name>", "API key name (skip the prompt)")
-    .option("--workspace <workspace>", "Workspace to bind the minted key to", "demo")
+    .option("--workspace <workspace>", "Workspace to bind the minted key to", "live")
     .option("--scope <scope>", "Key scope: read (default), write, or admin", "read")
     .action(async (options) => {
       const spinner = ora("Connecting to ANYKPI...").start();
@@ -289,7 +305,7 @@ export function createProgram(): Command {
           throw new Error("Pass at least one source credential flag");
         }
 
-        const workspace = workspaceOf(options);
+        const workspace = writeWorkspaceOf(options);
         const data = (await apiRequest("/api/v1/connect", {
           method: "POST",
           body: JSON.stringify({
@@ -360,7 +376,7 @@ export function createProgram(): Command {
           method: "POST",
           body: JSON.stringify({
             csv,
-            workspaceId: workspaceOf(options),
+            workspaceId: writeWorkspaceOf(options),
             preview: Boolean(options.preview),
             ...(options.kind ? { kind: options.kind } : {}),
             ...(Object.keys(mapping).length > 0 ? { mapping } : {}),
@@ -541,7 +557,7 @@ export function createProgram(): Command {
               email: options.email,
               platform: options.platform,
             },
-            workspaceId: workspaceOf(options),
+            workspaceId: writeWorkspaceOf(options),
           }),
         });
 
@@ -576,7 +592,7 @@ export function createProgram(): Command {
               platform: options.platform,
               name: options.name,
             },
-            workspaceId: workspaceOf(options),
+            workspaceId: writeWorkspaceOf(options),
           }),
         });
 
@@ -912,7 +928,7 @@ export function createProgram(): Command {
       const spinner = ora("Triggering sync...").start();
 
       try {
-        const workspace = workspaceOf(options);
+        const workspace = writeWorkspaceOf(options);
         const data = (await apiRequest("/api/v1/sync", {
           method: "POST",
           body: JSON.stringify({

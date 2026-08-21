@@ -18,6 +18,7 @@ import {
 } from "./cursor";
 import { geographyFromProperties } from "@/core/geography";
 import { failedSync } from "./http-status";
+import { operatorFetch } from "./operator-fetch";
 import type { SyncOpts } from "./types";
 
 export const POSTHOG_SOURCE = "posthog";
@@ -106,7 +107,7 @@ export async function syncPostHog(
     if (cursor.phase === "persons") {
       let pageUrl = cursor.page || personsUrl(baseUrl, projectId ?? "");
       for (let pages = 0; pages < MAX_PAGES && pageUrl; pages++) {
-        const personsResponse = await fetch(pageUrl, { headers });
+        const personsResponse = await operatorFetch(pageUrl, { headers });
         if (!personsResponse.ok) {
           return failedSync({
             source: POSTHOG_SOURCE,
@@ -154,7 +155,7 @@ export async function syncPostHog(
           ? cursor.page
           : eventsUrl(baseUrl, projectId ?? "", since);
       for (let pages = 0; pages < MAX_PAGES && pageUrl; pages++) {
-        const eventsResponse = await fetch(pageUrl, { headers });
+        const eventsResponse = await operatorFetch(pageUrl, { headers });
         if (!eventsResponse.ok) {
           return failedSync({
             source: POSTHOG_SOURCE,
