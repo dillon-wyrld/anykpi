@@ -82,7 +82,8 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
       
-      - name: Run E2E tests (includes CLI smoke)
+      # ANY-67: tests/real-workspace-gate.spec.ts is the "fully functional" definition.
+      - name: Run E2E tests (real-workspace gate + existing suite)
         run: pnpm test:e2e
         env:
           ANYKPI_API_KEY: anykpi-e2e-admin

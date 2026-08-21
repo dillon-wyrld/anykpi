@@ -15,6 +15,21 @@ pnpm dev       # http://localhost:3000
 
 Requires Node 20+ and pnpm 10+.
 
+## Fully functional
+
+A change is fully functional when the real-workspace gate is green — not when
+the seeded demo still looks right.
+
+```bash
+pnpm exec playwright test tests/real-workspace-gate.spec.ts
+```
+
+That suite (ANY-67) boots a fresh empty non-demo workspace, pushes events
+through the public snippet, and walks every dashboard view and every HTTP MCP
+tool enumerated from the contract (`ViewStateSchema` and `tools/list`). Write
+tools must write and land in the audit log. A new view or tool without a walker
+fails the gate. Demo-only checks are not enough.
+
 ## Before you open a pull request
 
 Run the same checks CI runs — all must pass:
@@ -24,7 +39,7 @@ pnpm tsc --noEmit   # typecheck
 pnpm lint           # eslint
 pnpm test:unit      # vitest
 pnpm build          # production build
-pnpm test:e2e       # Playwright (starts its own dev server)
+pnpm test:e2e       # Playwright, including the real-workspace gate
 ```
 
 Please add or update tests for behavior you change.
