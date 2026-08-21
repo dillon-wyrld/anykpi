@@ -31,6 +31,11 @@ export const WEB_SEARCH_SOURCE = "web search";
 
 export type ResearchProviderId = "encyclopedia" | "web_search";
 
+export type ResearchEnv = {
+  ANYKPI_RESEARCH_SEARCH_KEY?: string;
+  ANYKPI_RESEARCH_SEARCH_URL?: string;
+};
+
 const CLAIM_CONFIDENCE = new Set<ResearchClaim["confidence"]>([
   "high",
   "medium",
@@ -72,7 +77,7 @@ export type RunResearchOptions = {
   refresh?: boolean;
   cachePath?: string;
   /** Test seam. Production reads `process.env`. */
-  env?: NodeJS.ProcessEnv;
+  env?: ResearchEnv;
 };
 
 type CacheFile = {
@@ -145,19 +150,21 @@ export function buildResearchUrl(query: string): string {
   return url.toString();
 }
 
-export function researchSearchKey(env: NodeJS.ProcessEnv = process.env): string | null {
+export function researchSearchKey(
+  env: ResearchEnv | NodeJS.ProcessEnv = process.env
+): string | null {
   const key = env.ANYKPI_RESEARCH_SEARCH_KEY?.trim();
   return key && key.length > 0 ? key : null;
 }
 
 export function resolveResearchProvider(
-  env: NodeJS.ProcessEnv = process.env
+  env: ResearchEnv | NodeJS.ProcessEnv = process.env
 ): ResearchProviderId {
   return researchSearchKey(env) ? "web_search" : "encyclopedia";
 }
 
 export function researchSearchEndpoint(
-  env: NodeJS.ProcessEnv = process.env
+  env: ResearchEnv | NodeJS.ProcessEnv = process.env
 ): string {
   const configured = env.ANYKPI_RESEARCH_SEARCH_URL?.trim();
   return configured && configured.length > 0
@@ -396,7 +403,7 @@ async function searchEncyclopedia(
 async function searchWeb(
   query: string,
   fetchImpl: ResearchFetch,
-  env: NodeJS.ProcessEnv
+  env: ResearchEnv | NodeJS.ProcessEnv
 ): Promise<ResearchClaim[]> {
   const key = researchSearchKey(env);
   if (!key) return [];
@@ -460,7 +467,7 @@ export async function runResearch(options: RunResearchOptions): Promise<Research
   }
 
   const fetchImpl = options.fetch ?? fetch;
-  const env = options.env ?? process.env;
+  const env: ResearchEnv | NodeJS.ProcessEnv = options.env ?? process.env;
   const provider = resolveResearchProvider(env);
   let claims: ResearchClaim[] = [];
   let source = PUBLIC_RESEARCH_SOURCE;
