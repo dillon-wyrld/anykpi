@@ -4,6 +4,8 @@ export type IngestProbe = {
   userId: string;
   platform: string;
   workspace?: string;
+  /** Required for non-demo workspaces. */
+  apiKey?: string;
 };
 
 type McpCallBody = {
@@ -54,19 +56,28 @@ export async function expectUserVisibleViaRestAndMcp(
 ): Promise<void> {
   const workspace = probe.workspace ?? "demo";
   const personId = personIdFor(probe.userId);
+  const headers = probe.apiKey
+    ? { Authorization: `Bearer ${probe.apiKey}` }
+    : undefined;
 
   const users = await request.get(
-    `/api/v1/users?workspace=${workspace}&platform=${encodeURIComponent(probe.platform)}`
+    `/api/v1/users?workspace=${workspace}&platform=${encodeURIComponent(probe.platform)}`,
+    headers ? { headers } : undefined
   );
   expect(users.ok(), `GET /api/v1/users failed: ${users.status()}`).toBeTruthy();
   const restBody = (await users.json()) as { users?: { personId: string }[] };
   expect(restBody.users?.map((user) => user.personId)).toContain(personId);
 
-  const { response, body } = await callMcpTool(request, "query_users", {
-    workspace,
-    platform: probe.platform,
-    limit: 20,
-  });
+  const { response, body } = await callMcpTool(
+    request,
+    "query_users",
+    {
+      workspace,
+      platform: probe.platform,
+      limit: 20,
+    },
+    headers
+  );
   expect(response.ok(), `MCP query_users failed: ${response.status()}`).toBeTruthy();
   const payload = parseMcpPayload(body);
   const mcpUsers = payload.users as { personId?: string }[] | undefined;

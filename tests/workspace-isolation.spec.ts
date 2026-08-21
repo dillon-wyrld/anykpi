@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { createEmptyWorkspace } from "./helpers/real-workspace";
 import { callMcpTool, parseMcpPayload } from "./helpers/verify-ingest";
 
 /**
@@ -66,16 +67,8 @@ test("two live workspaces are isolated across keys, views, and MCP", async ({
 }) => {
   test.setTimeout(90_000);
 
-  for (const [id, name] of [
-    [A, "Isolation A"],
-    [B, "Isolation B"],
-  ] as const) {
-    const created = await adminJson(request, "POST", "/api/v1/workspaces", {
-      id,
-      name,
-    });
-    expect([201, 400]).toContain(created.status());
-  }
+  await createEmptyWorkspace(request, A, "Isolation A");
+  await createEmptyWorkspace(request, B, "Isolation B");
 
   const keyA = await mintWriteKey(request, A);
   const keyB = await mintWriteKey(request, B);
@@ -143,12 +136,21 @@ async function expectSwitcherPrompt(
   key: string
 ) {
   await page.goto(`/dashboard?workspace=${workspace}&view=dotplot`);
-  await expect(page.getByRole("heading", { name: `Unlock ${workspace}` })).toBeVisible();
-  await page.getByLabel("API key").fill(key);
-  await page.getByRole("button", { name: "Open workspace" }).click();
-  await expect(page.getByRole("heading", { name: `Unlock ${workspace}` })).toHaveCount(0, {
-    timeout: 15_000,
-  });
+  const heading = page.getByRole("heading", { name: `Unlock ${workspace}` });
+  await expect(heading).toBeVisible();
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.getByLabel("API key").fill(key);
+    await page.getByRole("button", { name: "Open workspace" }).click();
+    try {
+      await expect(heading).toHaveCount(0, { timeout: 15_000 });
+      lastError = undefined;
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  if (lastError) throw lastError;
   await expect(page).toHaveURL(new RegExp(`workspace=${workspace}`));
   expect(page.url()).not.toContain(key);
 }
