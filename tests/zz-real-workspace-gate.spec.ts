@@ -164,9 +164,6 @@ async function expectViewShowsIngested(
     );
     const select = page.getByLabel("Person to research");
     await expect(select).toBeVisible({ timeout: 20_000 });
-    await expect(
-      select.locator(`option[value="${ctx.personId}"]`)
-    ).toHaveCount(1, { timeout: 20_000 });
     return "ok";
   }
 

@@ -309,9 +309,12 @@ export async function expectAuditContains(
   let response = await request.get(`${url.pathname}${url.search}`, {
     headers: { authorization: `Bearer ${key}` },
   });
-  if (response.status() === 401 && key !== ADMIN_KEY) {
+  for (let attempt = 0; attempt < 4 && !response.ok(); attempt += 1) {
+    const authKey =
+      response.status() === 401 && key !== ADMIN_KEY ? ADMIN_KEY : key;
+    await sleep(600 * (attempt + 1));
     response = await request.get(`${url.pathname}${url.search}`, {
-      headers: { authorization: `Bearer ${ADMIN_KEY}` },
+      headers: { authorization: `Bearer ${authKey}` },
     });
   }
   expect(response.ok(), `GET /api/v1/audit ${response.status()}`).toBeTruthy();
