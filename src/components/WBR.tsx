@@ -120,17 +120,29 @@ export default function WBR({ workspace }: WBRProps) {
   const initialSyncDone = useRef(false);
 
   const loadWbr = useCallback((refresh = false) => {
-    fetch(`/api/views/wbr?workspace=${workspace}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setMetrics(data.metrics || []);
-        setProposals(data.proposals || []);
-        if (data.exceptionRules) setExceptionRules(data.exceptionRules);
-        if (!refresh) setLoading(false);
+    const pull = (attempt: number) => {
+      fetch(`/api/views/wbr?workspace=${encodeURIComponent(workspace)}`, {
+        credentials: "include",
       })
-      .catch(() => {
-        if (!refresh) setLoading(false);
-      });
+        .then(async (res) => {
+          if (!res.ok) throw new Error(`wbr ${res.status}`);
+          return res.json();
+        })
+        .then((data) => {
+          setMetrics(data.metrics || []);
+          setProposals(data.proposals || []);
+          if (data.exceptionRules) setExceptionRules(data.exceptionRules);
+          if (!refresh) setLoading(false);
+        })
+        .catch(() => {
+          if (attempt < 2) {
+            window.setTimeout(() => pull(attempt + 1), 300);
+            return;
+          }
+          if (!refresh) setLoading(false);
+        });
+    };
+    pull(0);
   }, [workspace]);
 
   const mutateDeck = useCallback(

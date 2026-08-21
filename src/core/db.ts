@@ -319,7 +319,10 @@ function openPostgres(): AppDatabase {
       "Postgres requires DATABASE_URL (postgres://). Unit tests inject PGlite via vitest.setup."
     );
   }
-  const client = postgres(url, { max: 8 });
+  // Dashboard fan-out (overview + freshness + day clock + the
+  // active view) needs more than a handful of connections. 8
+  // deadlocked postgres e2e when WBR started loading event rows.
+  const client = postgres(url, { max: 24 });
   const postgresDb = drizzlePostgres(client, { schema }) as unknown as AppDatabase;
   installQueryCompat(postgresDb);
   return postgresDb;
