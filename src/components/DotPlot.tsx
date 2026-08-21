@@ -285,6 +285,23 @@ export default function DotPlot({ workspace }: DotPlotProps) {
   }>({ visible: false, x: 0, y: 0, user: null });
   const [researchQueue, setResearchQueue] = useState<ResearchablePerson[]>([]);
   const [researchTotal, setResearchTotal] = useState(0);
+  const hideCardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showUserCard = (user: User, x: number, y: number) => {
+    if (hideCardTimer.current) {
+      clearTimeout(hideCardTimer.current);
+      hideCardTimer.current = null;
+    }
+    setUserCard({ visible: true, x, y, user });
+  };
+
+  const scheduleHideUserCard = () => {
+    if (hideCardTimer.current) clearTimeout(hideCardTimer.current);
+    hideCardTimer.current = setTimeout(() => {
+      setUserCard({ visible: false, x: 0, y: 0, user: null });
+      hideCardTimer.current = null;
+    }, 250);
+  };
 
   const toResearchable = (user: User): ResearchablePerson => ({
     personId: user.personId,
@@ -796,38 +813,14 @@ export default function DotPlot({ workspace }: DotPlotProps) {
               window.innerWidth,
               window.innerHeight
             );
-            setUserCard({
-              visible: true,
-              x: pos.x,
-              y: pos.y,
-              user,
-            });
+            showUserCard(user, pos.x, pos.y);
           }}
           onMouseLeave={() => {
-            setUserCard({ visible: false, x: 0, y: 0, user: null });
+            scheduleHideUserCard();
           }}
         >
           {user.name}
         </text>
-        <foreignObject
-          x={LBL - 20}
-          y={y + 4}
-          width="18"
-          height="18"
-        >
-          <button
-            type="button"
-            aria-label={`Research ${user.name}`}
-            data-testid={`dotplot-research-${user.personId}`}
-            className="block h-full w-full border-0 bg-transparent p-0 text-[11px] leading-none cursor-pointer"
-            onClick={(event) => {
-              event.stopPropagation();
-              openResearch(user);
-            }}
-          >
-            ✨
-          </button>
-        </foreignObject>
         <text
           x={LBL - 56}
           y={cy + 3.4}
@@ -1276,23 +1269,39 @@ export default function DotPlot({ workspace }: DotPlotProps) {
       {hovered && (
         <div
           data-testid="user-hover-card"
-          className="fixed z-[120] w-[250px] bg-panel border border-border rounded-xl p-3 pointer-events-none"
+          className="fixed z-[120] w-[250px] bg-panel border border-border rounded-xl p-3"
           style={{
             left: `${userCard.x}px`,
             top: `${userCard.y}px`,
             boxShadow: "0 8px 30px rgba(0,0,0,.14)",
           }}
+          onMouseEnter={() => {
+            if (hideCardTimer.current) {
+              clearTimeout(hideCardTimer.current);
+              hideCardTimer.current = null;
+            }
+          }}
+          onMouseLeave={() => scheduleHideUserCard()}
         >
           <div className="flex items-center gap-2.5 mb-2">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-accent-soft text-[20px]">
               {hovered.emoji}
             </span>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="text-[14px] font-bold">{hovered.name}</div>
               {hoveredMeta && (
                 <div className="text-[11px] text-sub">{hoveredMeta}</div>
               )}
             </div>
+            <button
+              type="button"
+              aria-label={`Research ${hovered.name}`}
+              data-testid={`dotplot-research-${hovered.personId}`}
+              onClick={() => openResearch(hovered)}
+              className="shrink-0 px-1.5 py-0.5 text-sm border border-border rounded hover:border-accent"
+            >
+              ✨
+            </button>
           </div>
           {hoveredNote && (
             <div className="my-1.5 text-[11.5px] italic text-sub">

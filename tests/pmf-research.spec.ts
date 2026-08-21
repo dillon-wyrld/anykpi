@@ -5,6 +5,7 @@ test.describe("PMF+ research entry points", () => {
     await page.goto("/dashboard?workspace=demo&view=dotplot");
     await page.waitForSelector('svg[role="img"]', { timeout: 10000 });
 
+    await page.getByRole("button", { name: "Open Dave" }).hover();
     await page.getByTestId("dotplot-research-p1").click();
     const disclosure = page.getByTestId("research-disclosure");
     await expect(disclosure).toBeVisible();
