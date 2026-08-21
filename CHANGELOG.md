@@ -7,6 +7,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- First-run setup (ANY-59): a one-time three-step flow on a workspace
+  with no profile and nothing connected — company profile, a source
+  gallery (logo, one-line value, shipped or roadmap-with-ticket, search
+  and category chips), then sync now / snippet / CSV / explore the demo
+  first. Re-enterable from settings. A dismissible “you’re on demo data”
+  banner stays until the first real sync.
 - WBR builder: a fresh live workspace proposes a starter deck from
   connected data (signups, actives, retention; revenue when money
   lands). Accept, edit, reorder, or retire in the WBR view. Agents
