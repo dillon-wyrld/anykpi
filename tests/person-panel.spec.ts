@@ -1,11 +1,23 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+async function openDemoDotplot(page: Page) {
+  await page.goto("/dashboard?workspace=demo&view=dotplot");
+  await page.waitForSelector('svg[role="img"]', { timeout: 15_000 });
+  const dismiss = page.getByTestId("demo-banner-dismiss");
+  if (await dismiss.isVisible().catch(() => false)) {
+    await dismiss.click();
+    await expect(page.getByTestId("demo-banner")).toHaveCount(0);
+  }
+  await expect(page.getByRole("button", { name: "Open Dave" })).toBeVisible({
+    timeout: 15_000,
+  });
+}
 
 test.describe("Person drill-down", () => {
   test("clicking a name opens the panel and a shareable URL restores it", async ({
     page,
   }) => {
-    await page.goto("/dashboard?workspace=demo&view=dotplot");
-    await page.waitForSelector('svg[role="img"]', { timeout: 10000 });
+    await openDemoDotplot(page);
 
     await page.getByRole("button", { name: "Open Dave" }).click();
 
@@ -32,8 +44,7 @@ test.describe("Person drill-down", () => {
   });
 
   test("the name is keyboard reachable", async ({ page }) => {
-    await page.goto("/dashboard?workspace=demo&view=dotplot");
-    await page.waitForSelector('svg[role="img"]', { timeout: 10000 });
+    await openDemoDotplot(page);
 
     const name = page.getByRole("button", { name: "Open Dave" });
     await name.focus();
