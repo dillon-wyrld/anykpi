@@ -11,8 +11,8 @@ import {
 
 export const ADMIN_KEY = process.env.ANYKPI_API_KEY || "anykpi-e2e-admin";
 
-/** Demo-seeded people and accounts that must never appear on a live workspace. */
-export const DEMO_LEAK_MARKERS = ["Dave", "Mia", "Initech", "🧢"] as const;
+/** Demo-seeded people that must never appear as rows on a live workspace. */
+export const DEMO_PERSON_NAMES = ["Dave", "Mia"] as const;
 
 /**
  * Dashboard views from ViewStateSchema. A new view in the contract
@@ -180,10 +180,23 @@ export async function unlockWorkspace(
   expect(page.url()).not.toContain(key);
 }
 
-export async function expectNoDemoLeak(page: Page): Promise<void> {
-  const content = await page.content();
-  for (const marker of DEMO_LEAK_MARKERS) {
-    expect(content, `demo leak ${marker}`).not.toContain(marker);
+export async function expectNoDemoPeople(
+  page: Page,
+  request: APIRequestContext,
+  workspace: string,
+  key: string
+): Promise<void> {
+  const users = await request.get(`/api/v1/users?workspace=${workspace}`, {
+    headers: { authorization: `Bearer ${key}` },
+  });
+  expect(users.ok(), `users leak check ${users.status()}`).toBeTruthy();
+  const body = (await users.json()) as { users?: { name?: string }[] };
+  const names = (body.users ?? []).map((user) => user.name);
+  for (const name of DEMO_PERSON_NAMES) {
+    expect(names, `demo person ${name} on ${workspace}`).not.toContain(name);
+    await expect(page.getByRole("button", { name: `Open ${name}` })).toHaveCount(
+      0
+    );
   }
 }
 

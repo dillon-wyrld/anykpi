@@ -7,7 +7,7 @@ import {
   dashboardViewsFromContract,
   expectAuditContains,
   expectDashboardViewUrl,
-  expectNoDemoLeak,
+  expectNoDemoPeople,
   expectUserVisibleViaRestAndMcp,
   expectWorkspaceEmpty,
   ingestViaPublicSnippet,
@@ -104,7 +104,7 @@ async function expectViewShowsIngested(
       timeout: 20_000,
     });
   }
-  await expectNoDemoLeak(page);
+  await expectNoDemoPeople(page, page.request, ctx.workspace, ctx.writeKey);
 
   if (view === "dotplot") {
     await expect(
@@ -193,7 +193,7 @@ test.describe("ANY-67 real-workspace gate", () => {
     await expect(
       page.getByRole("button", { name: `Open ${ctx.userName}` })
     ).toBeVisible({ timeout: 20_000 });
-    await expectNoDemoLeak(page);
+    await expectNoDemoPeople(page, request, ctx.workspace, ctx.writeKey);
   });
 
   test("every ViewStateSchema view renders the ingested workspace", async ({
