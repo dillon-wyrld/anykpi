@@ -29,6 +29,12 @@ import {
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { upsertConfig } from "@/core/upsert";
+import {
+  loadCelebratedDays,
+  loadShownCities,
+  saveCelebratedDays,
+  saveShownCities,
+} from "@/core/daytrack-prefs";
 
 export {
   DEFAULT_COMPANY_NAME,
@@ -51,12 +57,16 @@ export type CompanyProfile = {
   foundedAt: string | null;
   homeCity: HomeCity | null;
   dayLabel: string;
+  shownCities: string[] | null;
+  celebratedMilestoneKeys: string[];
 };
 
 export type CompanyProfilePatch = {
   companyName?: string;
   foundedAt?: string | null;
   homeCity?: HomeCity | null;
+  shownCities?: string[] | null;
+  celebratedMilestoneKeys?: string[];
 };
 
 function normalizeCompanyName(value: string): string {
@@ -104,7 +114,9 @@ function toProfile(
   workspaceId: string,
   companyName: string | null,
   foundedAt: string | null,
-  homeCity: HomeCity | null
+  homeCity: HomeCity | null,
+  shownCities: string[] | null,
+  celebratedMilestoneKeys: string[]
 ): CompanyProfile {
   const name = companyName?.trim() || DEFAULT_COMPANY_NAME;
   return {
@@ -113,6 +125,8 @@ function toProfile(
     foundedAt,
     homeCity,
     dayLabel: formatCompanyDayLabel(name),
+    shownCities,
+    celebratedMilestoneKeys,
   };
 }
 
@@ -136,7 +150,9 @@ export async function loadCompanyProfile(
     workspaceId,
     name,
     foundedAt,
-    parseHomeCity(byKey.get(homeCityConfigKey(workspaceId)))
+    parseHomeCity(byKey.get(homeCityConfigKey(workspaceId))),
+    await loadShownCities(workspaceId),
+    await loadCelebratedDays(workspaceId)
   );
 }
 
@@ -188,6 +204,14 @@ export async function saveCompanyProfile(
         workspaceId,
       });
     }
+  }
+
+  if (patch.shownCities !== undefined) {
+    await saveShownCities(workspaceId, patch.shownCities);
+  }
+
+  if (patch.celebratedMilestoneKeys !== undefined) {
+    await saveCelebratedDays(workspaceId, patch.celebratedMilestoneKeys);
   }
 
   return loadCompanyProfile(workspaceId);

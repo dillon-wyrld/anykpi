@@ -11,6 +11,7 @@ import type {
   OverviewResponse,
   Presence,
   PresenceCity,
+  TodayMilestone,
 } from "@/core/contracts";
 
 const HOUR_MS = 3_600_000;
@@ -147,6 +148,8 @@ export type DayTrackerStat = {
   pct: number;
 };
 
+export type DayTrackerMilestoneCite = TodayMilestone;
+
 export type DayTrackerSnapshot = {
   dayLabel: string;
   dayN: number;
@@ -158,6 +161,7 @@ export type DayTrackerSnapshot = {
   availableKeys: string[];
   demo: boolean;
   freshnessLabel: string | null;
+  milestone: DayTrackerMilestoneCite | null;
   signature: string;
 };
 
@@ -421,14 +425,30 @@ export function defaultShownKeys(cities: DayTrackerCity[]): string[] {
   return [home, ...rest].slice(0, DEFAULT_SHOWN).map((row) => row.key);
 }
 
-function clampShownKeys(
+/**
+ * Home stays first and cannot be removed. A missing or empty saved
+ * set falls back to the current ranking so the module never goes empty.
+ */
+export function resolveShownKeys(
   requested: string[] | undefined,
   cities: DayTrackerCity[]
 ): string[] {
+  if (cities.length === 0) return [];
+  const home = cities.find((row) => row.home);
   const available = new Set(cities.map((row) => row.key));
-  const kept = (requested ?? []).filter((key) => available.has(key));
-  if (kept.length > 0) return kept;
-  return defaultShownKeys(cities);
+  if (requested === undefined) return defaultShownKeys(cities);
+  const rest = requested.filter(
+    (key) => available.has(key) && (!home || key !== home.key)
+  );
+  if (home && available.has(home.key)) return [home.key, ...rest];
+  return rest.length > 0 ? rest : defaultShownKeys(cities);
+}
+
+export function citeMilestone(
+  milestone: TodayMilestone | null | undefined
+): DayTrackerMilestoneCite | null {
+  if (!milestone || milestone.kind !== "company_day") return null;
+  return milestone;
 }
 
 export function railPercent(value: number): number {
@@ -515,7 +535,7 @@ export function buildDayTrackerSnapshot(input: {
     : input.overview
       ? presenceCities(input.overview.presence, input.now)
       : [];
-  const shownKeys = clampShownKeys(input.shownKeys, cities);
+  const shownKeys = resolveShownKeys(input.shownKeys, cities);
   const shown = shownKeys
     .map((key) => cities.find((row) => row.key === key))
     .filter((row): row is DayTrackerCity => row != null);
@@ -539,6 +559,7 @@ export function buildDayTrackerSnapshot(input: {
     : null;
   const dayLabel =
     input.profile?.dayLabel ?? formatCompanyDayLabel(input.profile?.companyName);
+  const milestone = citeMilestone(input.overview?.todayMilestone);
 
   const stats: DayTrackerStat[] = [
     {
@@ -574,6 +595,7 @@ export function buildDayTrackerSnapshot(input: {
     availableKeys: cities.map((row) => row.key),
     demo,
     freshnessLabel,
+    milestone,
     signature: dayTrackerSignature({
       dayN,
       timeLeftLabel,

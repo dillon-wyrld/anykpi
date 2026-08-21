@@ -14,8 +14,13 @@ import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import {
   anniversaryOnOrBefore,
+  civilDateOfDayN,
+  dayNumber,
   DEFAULT_HOME_TIMEZONE,
+  earnedDayMilestones,
+  isDayMilestone,
   loadHomeTimezone,
+  utcMidnightFromCivil,
 } from "@/core/day";
 import {
   buildCohortRows,
@@ -35,6 +40,7 @@ export const MILESTONE_RULES = {
   nth_signup: "Nth signup",
   longest_streak: "New longest streak",
   company_birthday: "Company birthday",
+  company_day: "Company day",
   first_smile: "First cohort smile",
 } as const;
 
@@ -44,6 +50,7 @@ export const MILESTONE_EMOJI: Record<MilestoneKind, string> = {
   nth_signup: "🎯",
   longest_streak: "🔥",
   company_birthday: "🎂",
+  company_day: "🎉",
   first_smile: "😊",
 };
 
@@ -137,6 +144,10 @@ export function formatBirthdayTitle(): string {
   return MILESTONE_RULES.company_birthday;
 }
 
+export function formatCompanyDayTitle(dayN: number): string {
+  return `Day ${dayN.toLocaleString("en-US")}`;
+}
+
 export function formatFirstSmileTitle(): string {
   return MILESTONE_RULES.first_smile;
 }
@@ -170,6 +181,14 @@ export function parseMilestoneIdentity(
     return {
       kind: "company_birthday",
       subject: String(when.getUTCFullYear()),
+    };
+  }
+
+  const companyDay = event.title.match(/^Day ([\d,]+)$/);
+  if (companyDay) {
+    return {
+      kind: "company_day",
+      subject: companyDay[1].replace(/,/g, ""),
     };
   }
 
@@ -348,6 +367,80 @@ function detectCompanyBirthday(
   };
 }
 
+function buildCompanyDayMilestone(
+  workspaceId: string,
+  dayN: number,
+  foundedAt: Date,
+  timeZone: string
+): DetectedMilestone {
+  const subject = String(dayN);
+  return {
+    workspaceId,
+    kind: "company_day",
+    subject,
+    key: milestoneKey(workspaceId, "company_day", subject),
+    rule: MILESTONE_RULES.company_day,
+    title: formatCompanyDayTitle(dayN),
+    emoji: MILESTONE_EMOJI.company_day,
+    occurredAt: utcMidnightFromCivil(
+      civilDateOfDayN(foundedAt, dayN, timeZone)
+    ),
+  };
+}
+
+/**
+ * Today's ladder day, if `dayN` is on the shared clock.
+ * Module and calendar both call this so they cite one identity.
+ */
+export function companyDayMilestone(input: {
+  workspaceId: string;
+  dayN: number;
+  foundedAt: Date;
+  timeZone?: string;
+}): DetectedMilestone | null {
+  if (!isDayMilestone(input.dayN)) return null;
+  return buildCompanyDayMilestone(
+    input.workspaceId,
+    input.dayN,
+    input.foundedAt,
+    input.timeZone ?? DEFAULT_HOME_TIMEZONE
+  );
+}
+
+export function serializeTodayMilestone(
+  milestone: DetectedMilestone | null
+): {
+  key: string;
+  kind: "company_day";
+  subject: string;
+  title: string;
+  source: string;
+  occurredAt: string;
+} | null {
+  if (!milestone || milestone.kind !== "company_day") return null;
+  return {
+    key: milestone.key,
+    kind: "company_day",
+    subject: milestone.subject,
+    title: milestone.title,
+    source: MILESTONE_SOURCE,
+    occurredAt: milestone.occurredAt.toISOString(),
+  };
+}
+
+function detectCompanyDays(
+  input: DetectMilestonesInput,
+  asOf: Date
+): DetectedMilestone[] {
+  const foundedAt = input.foundedAt ?? sortSignups(input.users)[0]?.signupDate;
+  if (!foundedAt) return [];
+  const timeZone = input.timeZone ?? DEFAULT_HOME_TIMEZONE;
+  const dayN = dayNumber(foundedAt, asOf, timeZone);
+  return earnedDayMilestones(dayN).map((n) =>
+    buildCompanyDayMilestone(input.workspaceId, n, foundedAt, timeZone)
+  );
+}
+
 function detectFirstSmile(
   input: DetectMilestonesInput,
   asOf: Date
@@ -392,6 +485,7 @@ export function detectMilestones(input: DetectMilestonesInput): DetectedMileston
     ...detectNthSignups(input, asOf),
     detectLongestStreak(input, asOf),
     detectCompanyBirthday(input, asOf),
+    ...detectCompanyDays(input, asOf),
     detectFirstSmile(input, asOf),
   ].filter((row): row is DetectedMilestone => row !== null);
 

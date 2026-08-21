@@ -13,11 +13,20 @@ import {
   buildDayTrackerSnapshot,
   defaultShownKeys,
   railMarkerPercent,
+  resolveShownKeys,
   type DayTrackerCity,
   type DayTrackerSnapshot,
 } from "@/components/day-tracker";
 import { createDayTrackerTicker } from "@/components/day-tracker-tick";
+import {
+  markCelebrated,
+  shouldFireCelebration,
+} from "@/core/daytrack-celebrate";
 import "./daytrack.css";
+
+const SHOWN_STORAGE = "anykpi.shownCities.";
+const CELEBRATED_STORAGE = "anykpi.celebratedDays.";
+const CONFETTI = ["🎉", "✨", "🎉", "✨", "🎉"] as const;
 
 function cityByKey(
   cities: DayTrackerCity[],
@@ -26,12 +35,41 @@ function cityByKey(
   return cities.find((row) => row.key === key);
 }
 
+function readLocalList(prefix: string, workspace: string): string[] | undefined {
+  try {
+    const raw = window.localStorage.getItem(prefix + workspace);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed) || parsed.some((row) => typeof row !== "string")) {
+      return undefined;
+    }
+    return parsed;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeLocalList(prefix: string, workspace: string, keys: string[]): void {
+  try {
+    window.localStorage.setItem(prefix + workspace, JSON.stringify(keys));
+  } catch {
+    // quota / private mode — in-memory + server persist still apply
+  }
+}
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 export default function DayTracker({ workspace }: { workspace: string }) {
   const session = useWorkspaceSession();
   const ready = workspace === "demo" || session?.status === "in";
   const [snap, setSnap] = useState<DayTrackerSnapshot | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
   const shownRef = useRef<string[] | undefined>(undefined);
+  const celebratedRef = useRef<string[]>([]);
+  const claimedRef = useRef<Set<string>>(new Set());
   const sigRef = useRef<string>("");
   const profileRef = useRef<CompanyProfile | null>(null);
   const overviewRef = useRef<OverviewResponse | null>(null);
@@ -55,6 +93,33 @@ export default function DayTracker({ workspace }: { workspace: string }) {
     [workspace]
   );
 
+  const persistShown = useCallback(
+    (keys: string[]) => {
+      writeLocalList(SHOWN_STORAGE, workspace, keys);
+      void fetch("/api/v1/config", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ workspaceId: workspace, shownCities: keys }),
+      });
+    },
+    [workspace]
+  );
+
+  const persistCelebrated = useCallback(
+    (keys: string[]) => {
+      writeLocalList(CELEBRATED_STORAGE, workspace, keys);
+      void fetch("/api/v1/config", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          workspaceId: workspace,
+          celebratedMilestoneKeys: keys,
+        }),
+      });
+    },
+    [workspace]
+  );
+
   const load = useCallback(async () => {
     if (!ready) return;
     const query = `workspace=${encodeURIComponent(workspace)}`;
@@ -68,7 +133,20 @@ export default function DayTracker({ workspace }: { workspace: string }) {
     const overview = overviewRes.ok
       ? OverviewResponseSchema.parse(await overviewRes.json())
       : overviewRef.current;
-    if (profile) profileRef.current = profile;
+    if (profile) {
+      profileRef.current = profile;
+      celebratedRef.current = profile.celebratedMilestoneKeys;
+      const localCelebrated = readLocalList(CELEBRATED_STORAGE, workspace) ?? [];
+      for (const key of localCelebrated) {
+        if (!celebratedRef.current.includes(key)) {
+          celebratedRef.current = markCelebrated(celebratedRef.current, key);
+        }
+      }
+      if (shownRef.current === undefined) {
+        shownRef.current =
+          profile.shownCities ?? readLocalList(SHOWN_STORAGE, workspace);
+      }
+    }
     if (overview) overviewRef.current = overview;
     paint(profile, overview, new Date());
   }, [paint, ready, workspace]);
@@ -76,11 +154,14 @@ export default function DayTracker({ workspace }: { workspace: string }) {
   useEffect(() => {
     if (!ready) return;
     shownRef.current = undefined;
+    celebratedRef.current = [];
+    claimedRef.current = new Set();
     sigRef.current = "";
     profileRef.current = null;
     overviewRef.current = null;
     setSnap(null);
     setPickerOpen(false);
+    setCelebrating(false);
 
     const ticker = createDayTrackerTicker({
       isHidden: () => document.visibilityState === "hidden",
@@ -106,6 +187,27 @@ export default function DayTracker({ workspace }: { workspace: string }) {
     },
   });
 
+  useEffect(() => {
+    const key = snap?.milestone?.key;
+    if (
+      !key ||
+      claimedRef.current.has(key) ||
+      !shouldFireCelebration({
+        milestoneKey: key,
+        celebratedKeys: celebratedRef.current,
+        reducedMotion: prefersReducedMotion(),
+      })
+    ) {
+      return;
+    }
+    claimedRef.current.add(key);
+    celebratedRef.current = markCelebrated(celebratedRef.current, key);
+    persistCelebrated(celebratedRef.current);
+    setCelebrating(true);
+    const timer = window.setTimeout(() => setCelebrating(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [persistCelebrated, snap?.milestone?.key]);
+
   if (!ready || !snap) return null;
   const current = snap;
 
@@ -115,30 +217,60 @@ export default function DayTracker({ workspace }: { workspace: string }) {
   const hidden = current.cities.filter((row) => !current.shownKeys.includes(row.key));
   const removable = shown.filter((row) => !row.home);
 
+  function applyShown(next: string[]) {
+    const resolved = resolveShownKeys(next, current.cities);
+    shownRef.current = resolved;
+    sigRef.current = "";
+    persistShown(resolved);
+    paint(profileRef.current, overviewRef.current, new Date());
+  }
+
   function togglePicker() {
     setPickerOpen((open) => !open);
   }
 
   function addCity(key: string) {
-    const next = [...(shownRef.current ?? current.shownKeys), key];
-    shownRef.current = next;
-    sigRef.current = "";
-    paint(profileRef.current, overviewRef.current, new Date());
+    applyShown([...(shownRef.current ?? current.shownKeys), key]);
   }
 
   function removeCity(key: string) {
     const next = (shownRef.current ?? current.shownKeys).filter((k) => k !== key);
-    shownRef.current = next.length > 0 ? next : defaultShownKeys(current.cities);
-    sigRef.current = "";
-    paint(profileRef.current, overviewRef.current, new Date());
+    applyShown(next.length > 0 ? next : defaultShownKeys(current.cities));
   }
 
   return (
-    <div className="daytrack" id="daytrack" data-testid="daytrack">
+    <div
+      className={`daytrack${celebrating ? " celebrate" : ""}`}
+      id="daytrack"
+      data-testid="daytrack"
+      data-milestone-key={current.milestone?.key ?? ""}
+      data-milestone-source={current.milestone?.source ?? ""}
+      data-milestone-title={current.milestone?.title ?? ""}
+    >
+      {celebrating
+        ? CONFETTI.map((mark, index) => (
+            <span
+              key={`${mark}-${index}`}
+              className="confetti"
+              data-testid="daytrack-celebrate"
+              style={{
+                left: `${18 + index * 14}%`,
+                animationDelay: `${index * 0.08}s`,
+              }}
+            >
+              {mark}
+            </span>
+          ))
+        : null}
       <div className="dthead">
         <span className="dayn-lb" data-testid="daytrack-label">
           {current.dayLabel}
         </span>
+        {current.milestone ? (
+          <span className="dtchip" data-testid="daytrack-milestone">
+            {current.milestone.title}
+          </span>
+        ) : null}
         {current.demo ? (
           <span className="dtchip" data-testid="daytrack-demo">
             demo
@@ -255,6 +387,7 @@ export default function DayTracker({ workspace }: { workspace: string }) {
               key={`add-${city.key}`}
               type="button"
               title={`add ${city.city}`}
+              data-testid={`daytrack-add-${city.short.toLowerCase().replace(/\s+/g, "-")}`}
               onClick={() => addCity(city.key)}
             >
               + {city.short} {city.users}
@@ -266,6 +399,7 @@ export default function DayTracker({ workspace }: { workspace: string }) {
               type="button"
               className="rm"
               title={`hide ${city.city}`}
+              data-testid={`daytrack-hide-${city.short.toLowerCase().replace(/\s+/g, "-")}`}
               onClick={() => removeCity(city.key)}
             >
               {city.short} ×

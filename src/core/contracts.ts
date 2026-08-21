@@ -257,12 +257,22 @@ export const PersonPanelResponseSchema = z.object({
 
 // ========== API Responses ==========
 
+export const TodayMilestoneSchema = z.object({
+  key: z.string(),
+  kind: z.literal("company_day"),
+  subject: z.string(),
+  title: z.string(),
+  source: z.string(),
+  occurredAt: z.string().datetime(),
+});
+
 export const OverviewResponseSchema = z.object({
   workspace: z.string(),
   dayN: z.number().int().nonnegative(),
   weekN: z.number().int().positive(),
   timeLeftToday: z.string(),
   nextMilestone: z.number().int().positive(),
+  todayMilestone: TodayMilestoneSchema.nullable(),
   totalUsers: z.number(),
   activeToday: z.number(),
   weeklyActive: z.number(),
@@ -781,6 +791,8 @@ export const CompanyProfileSchema = z.object({
   foundedAt: z.string().datetime().nullable(),
   homeCity: HomeCitySchema.nullable(),
   dayLabel: z.string(),
+  shownCities: z.array(z.string()).nullable(),
+  celebratedMilestoneKeys: z.array(z.string()),
 });
 
 export const CompanyProfileUpdateSchema = z.object({
@@ -789,6 +801,8 @@ export const CompanyProfileUpdateSchema = z.object({
   companyName: z.string().optional(),
   foundedAt: z.string().nullable().optional(),
   homeCity: HomeCitySchema.nullable().optional(),
+  shownCities: z.array(z.string().min(1).max(200)).max(32).nullable().optional(),
+  celebratedMilestoneKeys: z.array(z.string().min(1).max(200)).max(64).optional(),
 });
 
 // ========== Error Response ==========
@@ -823,6 +837,7 @@ export type PersonTimelineEvent = z.infer<typeof PersonTimelineEventSchema>;
 export type PersonPanelResponse = z.infer<typeof PersonPanelResponseSchema>;
 
 export type OverviewResponse = z.infer<typeof OverviewResponseSchema>;
+export type TodayMilestone = z.infer<typeof TodayMilestoneSchema>;
 export type UsersListResponse = z.infer<typeof UsersListResponseSchema>;
 export type DeleteUserResponse = z.infer<typeof DeleteUserResponseSchema>;
 export type CohortsResponse = z.infer<typeof CohortsResponseSchema>;

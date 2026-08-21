@@ -36,3 +36,29 @@ export async function gate(
 
   return keyGate(request, options);
 }
+
+/**
+ * Display-preference writes (shown cities, celebration claim).
+ * A signed browser session may save them; anonymous demo may not.
+ * Company-profile fields still go through the key-only write gate.
+ */
+export async function gateDisplayPrefs(
+  request: RequestLike,
+  options: AuthorizeOptions = {}
+): Promise<Awaited<ReturnType<typeof keyGate>>> {
+  const session = readBrowserSession(request);
+  if (session) {
+    const auth = authFromSession(session, options.workspace ?? undefined);
+    const resolved = resolveWorkspace(auth, options.workspace, false);
+    if ("ok" in resolved && resolved.ok === false) {
+      return { ok: false, response: authResponse(resolved) };
+    }
+    return {
+      ok: true,
+      auth,
+      workspace: (resolved as { workspace: string }).workspace,
+    };
+  }
+
+  return keyGate(request, { ...options, write: true });
+}

@@ -39,8 +39,8 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 - `POST /api/v1/connect` — store per-source credentials (encrypted at rest; source `csv` stores import mapping)
 - `POST /api/v1/import` — CSV import for users and events (uses the sources store; column-mapping preview)
 - `GET /api/v1/export` — users, events, and read models as JSON or CSV files
-- `GET /api/v1/config` — company profile (name, founded date, home city; `dayLabel` is `Day of <name>`)
-- `PATCH /api/v1/config` — update the company profile (write scope; founded date cannot be in the future)
+- `GET /api/v1/config` — company profile (name, founded date, home city, shown-city set; `dayLabel` is `Day of <name>`)
+- `PATCH /api/v1/config` — update the company profile (write scope; founded date cannot be in the future). Shown-city and celebration-claim fields are display prefs a browser session may save.
 - `GET /api/v1/workspaces` — catalog (id, name, archivedAt) for the switcher
 - `POST /api/v1/workspaces` — create a live workspace (admin / env key)
 - `PATCH /api/v1/workspaces` — archive a live workspace (admin / env key; demo cannot be archived)

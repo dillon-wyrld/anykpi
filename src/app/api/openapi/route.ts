@@ -1058,7 +1058,7 @@ export async function GET(request: NextRequest) {
           tags: ['Config'],
           summary: 'Get company profile',
           description:
-            'Name, founded date, and home city (IANA timezone + label) for a workspace. Demo stays public-read. `dayLabel` is the "Day of <name>" copy.',
+            'Name, founded date, home city (IANA timezone + label), and the Day of YourCo shown-city set for a workspace. Demo stays public-read. `dayLabel` is the "Day of <name>" copy.',
           parameters: [
             {
               name: 'workspace',
@@ -1082,7 +1082,7 @@ export async function GET(request: NextRequest) {
           tags: ['Config'],
           summary: 'Update company profile',
           description:
-            'Write-gated. A founded date in the future is refused. Keys live in the existing config table per workspace.',
+            'Company name, founded date, and home city are write-gated. Shown-city and celebration-claim fields are display prefs a browser session may save. A founded date in the future is refused. Keys live in the existing config table per workspace.',
           requestBody: {
             required: true,
             content: {

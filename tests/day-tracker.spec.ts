@@ -227,4 +227,26 @@ test.describe("Day of YourCo sidebar", () => {
       .not.toBe(before);
     await expect(page).toHaveURL(/workspace=e2e-daytrack-snip/);
   });
+
+  test("city picker choices survive a reload and keep home pinned", async ({
+    page,
+  }) => {
+    await page.goto("/dashboard?workspace=demo&view=dotplot");
+    await page.waitForSelector("[data-testid=daytrack]", { timeout: 20_000 });
+
+    await expect(page.getByTestId("daytrack-city-sf")).toBeVisible();
+    await expect(page.getByTestId("daytrack-city-toronto")).toBeVisible();
+    await page.getByTestId("daytrack-gear").click();
+    await expect(page.getByTestId("daytrack-hide-toronto")).toBeVisible();
+    await expect(page.getByTestId("daytrack-hide-sf")).toHaveCount(0);
+    await page.getByTestId("daytrack-hide-toronto").click();
+    await expect(page.getByTestId("daytrack-city-toronto")).toHaveCount(0);
+    await expect(page.getByTestId("daytrack-city-sf")).toBeVisible();
+
+    await page.reload();
+    await page.waitForSelector("[data-testid=daytrack]", { timeout: 20_000 });
+    await expect(page.getByTestId("daytrack-city-sf")).toBeVisible();
+    await expect(page.getByTestId("daytrack-city-toronto")).toHaveCount(0);
+    await expect(page.locator(".tzbar")).toHaveCount(2);
+  });
 });

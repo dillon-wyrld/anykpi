@@ -235,6 +235,36 @@ export function nextMilestoneDay(dayN: number): number {
   return Math.ceil((n + 1) / 100) * 100;
 }
 
+/** True when `dayN` itself is on the ladder (Day 365, Day 1000, …). */
+export function isDayMilestone(dayN: number): boolean {
+  if (dayN <= 0) return false;
+  return nextMilestoneDay(dayN - 1) === dayN;
+}
+
+/** Every earned ladder day up to and including `dayN`. */
+export function earnedDayMilestones(dayN: number): number[] {
+  const n = Math.max(0, dayN);
+  const out: number[] = [];
+  let cursor = 0;
+  while (true) {
+    const next = nextMilestoneDay(cursor);
+    if (next > n) break;
+    out.push(next);
+    cursor = next;
+  }
+  return out;
+}
+
+/** Civil date of Day N in `timeZone`. Founding day is Day 0. */
+export function civilDateOfDayN(
+  foundedAt: Date,
+  dayN: number,
+  timeZone: string = DEFAULT_HOME_TIMEZONE
+): CivilDate {
+  const zone = resolveHomeTimezone(timeZone);
+  return addCivilDays(civilDateInZone(foundedAt, zone), Math.max(0, dayN));
+}
+
 export function fallbackFoundedAt(
   configured: Date | null | undefined,
   signups: Array<Date | null | undefined>,

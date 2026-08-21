@@ -5,13 +5,16 @@ import * as schema from "./schema";
 import { loadCalendarView } from "./views/calendar";
 import {
   dedupeMilestones,
+  companyDayMilestone,
   detectMilestones,
   detectWorkspaceMilestones,
   eventMilestoneKey,
   formatBirthdayTitle,
+  formatCompanyDayTitle,
   formatFirstSmileTitle,
   formatLongestStreakTitle,
   formatNthSignupTitle,
+  MILESTONE_SOURCE,
   foundedAtConfigKey,
   longestRunOfDays,
   mergeMilestones,
@@ -69,12 +72,15 @@ describe("detectMilestones — pinned rules", () => {
     expect(MILESTONE_RULES.longest_streak).toBe("New longest streak");
     expect(MILESTONE_RULES.company_birthday).toBe("Company birthday");
     expect(MILESTONE_RULES.first_smile).toBe("First cohort smile");
+    expect(MILESTONE_RULES.company_day).toBe("Company day");
     expect(formatNthSignupTitle(100)).toBe("100th signup");
     expect(formatNthSignupTitle(1000)).toBe("1,000th signup");
     expect(formatNthSignupTitle(10_000)).toBe("10,000th signup");
     expect(formatLongestStreakTitle(12)).toBe("New longest streak of 12 days");
     expect(formatBirthdayTitle()).toBe("Company birthday");
     expect(formatFirstSmileTitle()).toBe("First cohort smile");
+    expect(formatCompanyDayTitle(365)).toBe("Day 365");
+    expect(formatCompanyDayTitle(1000)).toBe("Day 1,000");
   });
 
   it("emits Nth signup at 100 / 1,000 / 10,000 and skips unearned thresholds", () => {
@@ -320,5 +326,78 @@ describe("detectWorkspaceMilestones", () => {
     const found = await detectWorkspaceMilestones(WS, AS_OF);
     expect(found.filter((m) => m.kind === "nth_signup")).toHaveLength(0);
     expect(found.filter((m) => m.kind === "company_birthday")).toHaveLength(0);
+  });
+});
+
+describe("company day — one clock, module and calendar agree", () => {
+  it("emits Day 365 from the shared ladder on the anniversary civil date", () => {
+    const foundedAt = new Date("2025-03-15T00:00:00.000Z");
+    const asOf = new Date("2026-03-15T12:00:00.000Z");
+    const found = detectMilestones({
+      workspaceId: WS,
+      users: people(2),
+      activity: [],
+      foundedAt,
+      asOf,
+      timeZone: "UTC",
+    });
+    const day = found.find((m) => m.kind === "company_day" && m.subject === "365");
+    expect(day?.title).toBe("Day 365");
+    expect(day?.rule).toBe("Company day");
+    expect(MILESTONE_SOURCE).toBe("anykpi");
+    expect(day?.occurredAt.toISOString()).toBe("2026-03-15T00:00:00.000Z");
+    expect(day?.key).toBe(milestoneKey(WS, "company_day", "365"));
+
+    const today = companyDayMilestone({
+      workspaceId: WS,
+      dayN: 365,
+      foundedAt,
+      timeZone: "UTC",
+    });
+    expect(today?.key).toBe(day?.key);
+    expect(today?.occurredAt).toEqual(day?.occurredAt);
+    expect(today?.title).toBe(day?.title);
+
+    const parsed = parseMilestoneIdentity({
+      source: MILESTONE_SOURCE,
+      type: "milestone",
+      title: day!.title,
+      eventDate: day!.occurredAt,
+    });
+    expect(parsed).toEqual({ kind: "company_day", subject: "365" });
+  });
+
+  it("module cite and calendar row share key, source, title, and day", async () => {
+    const foundedAt = new Date("2025-03-15T00:00:00.000Z");
+    const asOf = new Date("2026-03-15T12:00:00.000Z");
+    await upsertConfig({
+      key: foundedAtConfigKey(WS),
+      value: foundedAt.toISOString(),
+      workspaceId: WS,
+    });
+    await persistWorkspaceMilestones(WS, asOf);
+
+    const cited = companyDayMilestone({
+      workspaceId: WS,
+      dayN: 365,
+      foundedAt,
+      timeZone: "UTC",
+    });
+    const view = await loadCalendarView(WS);
+    const cal = view.events.find(
+      (event) => event.source === MILESTONE_SOURCE && event.title === "Day 365"
+    );
+
+    expect(cited).not.toBeNull();
+    expect(cal).toBeDefined();
+    expect(cal?.source).toBe(MILESTONE_SOURCE);
+    expect(cal?.title).toBe(cited?.title);
+    expect(cal?.date).toBe(cited?.occurredAt.toISOString());
+    expect(eventMilestoneKey({
+      source: cal!.source,
+      type: "milestone",
+      title: cal!.title,
+      date: cal!.date,
+    }, WS)).toBe(cited?.key);
   });
 });

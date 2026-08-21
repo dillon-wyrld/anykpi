@@ -101,7 +101,7 @@ Returns:
 - `POST /api/v1/outreach/outcome` — Tag replied / interviewed / converted (PMF+ conversion by cluster)
 - `POST /api/v1/sync` — Trigger a sync (one source or all; requires an API key)
 - `POST /api/v1/import` — Import users or events from CSV (requires an API key)
-- `GET /api/v1/config` — Company profile (name, founded date, home city)
+- `GET /api/v1/config` — Company profile (name, founded date, home city, shown-city set)
 - `PATCH /api/v1/config` — Update the company profile (write scope; founded date cannot be in the future)
 - `GET /api/v1/export` — Users, events, and read models as JSON or CSV (requires a key on live)
 - `GET /api/v1/keys` — List key metadata (scope, last used, legacy)
