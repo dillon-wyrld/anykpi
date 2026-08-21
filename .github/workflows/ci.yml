@@ -84,8 +84,10 @@ jobs:
       
       # Separate steps so each Playwright webServer is fresh. Sharing one
       # Next process on postgres exhausts the pool once the gate runs.
+      # Do not insert `--` before --grep-invert: Playwright treats `--` as
+      # end of options, invert is ignored, and the gate runs in this process.
       - name: Run E2E tests (existing suite)
-        run: pnpm test:e2e -- --grep-invert "ANY-67 real-workspace gate"
+        run: pnpm test:e2e --grep-invert "ANY-67 real-workspace gate"
         env:
           ANYKPI_API_KEY: anykpi-e2e-admin
           DATABASE_URL: ${{ matrix.engine == 'postgres' && 'postgres://postgres:postgres@localhost:5432/anykpi' || '' }}
