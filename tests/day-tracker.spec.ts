@@ -67,7 +67,7 @@ test.describe("Day of YourCo sidebar", () => {
     await expect(page.getByTestId("daytrack-stat-spread")).toBeVisible();
     await expect(page.getByTestId("daytrack-city-sf")).toBeVisible();
     await expect(module.getByText("12a").first()).toBeVisible();
-    await expect(module.getByText("6p")).toBeVisible();
+    await expect(module.getByText("6p", { exact: true })).toBeVisible();
     await expect(page.getByTestId("daytrack-gear")).toBeVisible();
     await expect(page.locator(".dprail")).toHaveCount(4);
     await expect(page.locator(".tzbar")).toHaveCount(3);
