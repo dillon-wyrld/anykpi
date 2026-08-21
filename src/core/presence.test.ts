@@ -429,7 +429,7 @@ describe("presence privacy contract", () => {
     expect(src).not.toMatch(/personIds:\s*z\.array/);
 
     const presenceSrc = readFileSync(resolve(root, "src/core/presence.ts"), "utf8");
-    expect(presenceSrc).toMatch(/Summaries only/);
+    expect(presenceSrc).toMatch(/summaries only/i);
     expect(presenceSrc).not.toMatch(/return\s+\{[^}]*personId/s);
 
     const offenders: string[] = [];

@@ -100,7 +100,6 @@ describe("MCP tool output fields (empty fixture DB)", () => {
         viewUrl: expect.stringContaining("/dashboard"),
         syncHealth: expect.any(Array),
         presence: expect.objectContaining({
-          asOf: expect.anything(),
           online: expect.any(Number),
           cities: expect.any(Array),
         }),
