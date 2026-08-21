@@ -51,7 +51,7 @@ export function useFreshness(options: {
         if (!freshnessRes.ok) {
           throw new Error("freshness");
         }
-        if (syncRes.ok) {
+        if (syncRes.ok && options.workspace !== "demo") {
           const sync = SyncResponseSchema.parse(await syncRes.json());
           applyHealth(freshnessChipFromStates(sync.states));
         }

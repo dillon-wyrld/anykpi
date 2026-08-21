@@ -143,6 +143,7 @@ describe("dashboard wiring", () => {
 
     expect(hook).toContain("freshnessChipFromStates");
     expect(hook).toContain("/api/v1/sync");
+    expect(hook).toContain('workspace !== "demo"');
     expect(chip).toContain("data-freshness");
     expect(chip).toContain("health.href");
     expect(daytrack).toContain("FreshnessChip");
