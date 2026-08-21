@@ -84,6 +84,29 @@ export function buildViewUrl(baseUrl: string, state: ViewState): string {
   return `${baseUrl}?state=${encoded}`;
 }
 
+/** Section to open from a `view=` query or a decoded `state=` payload. */
+export function viewFromSearchParams(
+  searchParams: { get(name: string): string | null },
+  fallback: ViewState["view"] = "dotplot"
+): ViewState["view"] {
+  const encoded = searchParams.get("state");
+  if (encoded) {
+    const decoded = decodeViewState(encoded);
+    if (decoded) return decoded.view;
+  }
+  const raw = searchParams.get("view");
+  if (
+    raw === "dotplot" ||
+    raw === "cohorts" ||
+    raw === "wbr" ||
+    raw === "calendar" ||
+    raw === "pmf"
+  ) {
+    return raw;
+  }
+  return fallback;
+}
+
 export type RequestLike = { headers: { get(name: string): string | null }; url?: string };
 
 function firstHeaderValue(value: string | null): string | null {
