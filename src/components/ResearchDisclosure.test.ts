@@ -31,7 +31,7 @@ describe("✨ entry points", () => {
     const pmf = readFileSync(resolve(root, "src/components/PMF.tsx"), "utf8");
 
     expect(dotplot).toContain("dotplot-research-");
-    expect(dotplot).toContain("Research ${user.name}");
+    expect(dotplot).toContain("Research ${hovered.name}");
     expect(dotplot).toContain("dotplot-research-view");
     expect(dotplot).toContain("Research this view");
 
