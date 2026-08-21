@@ -9,6 +9,8 @@ import {
   rollupCalendarSources,
   startOfLocalDay,
 } from "@/core/views/calendar-math";
+import { FreshnessChip } from "@/components/FreshnessChip";
+import { ViewEmptyState } from "@/components/ViewEmptyState";
 import { useFreshness } from "@/components/useFreshness";
 import { formatCompanyDayLabel } from "@/core/company-day";
 
@@ -136,7 +138,7 @@ export default function Calendar({ workspace }: CalendarProps) {
       });
   }, [workspace]);
 
-  useFreshness({
+  const freshnessHealth = useFreshness({
     workspace,
     watch: ["sources"],
     onStale: () => loadCalendar(true),
@@ -329,6 +331,15 @@ export default function Calendar({ workspace }: CalendarProps) {
     );
   }
 
+  if (allEvents.length === 0) {
+    return (
+      <div className="space-y-3">
+        <FreshnessChip health={freshnessHealth} />
+        <ViewEmptyState view="calendar" workspace={workspace} />
+      </div>
+    );
+  }
+
   const { from, to } = getDateRange();
   const rangeText =
     viewState.view === "week"
@@ -341,6 +352,7 @@ export default function Calendar({ workspace }: CalendarProps) {
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
         <h2 className="text-lg font-semibold">Calendar</h2>
+        <FreshnessChip health={freshnessHealth} />
 
         <div className="flex gap-1 border border-border rounded-lg overflow-hidden">
           <button

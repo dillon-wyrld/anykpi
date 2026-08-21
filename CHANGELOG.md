@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Designed empty states on the five dashboard views (ANY-70): an
+  unconnected workspace shows what the view will show and one next
+  action into first-run setup (`/connect?setup=1`). The freshness chip
+  learns a failing source and links to the connector health panel
+  (`/connect#health`).
 - First-run setup (ANY-59): a one-time three-step flow on a workspace
   with no profile and nothing connected — company profile, a source
   gallery (logo, one-line value, shipped or roadmap-with-ticket, search

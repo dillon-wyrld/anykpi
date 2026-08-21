@@ -19,6 +19,8 @@ import {
   smileTest,
   type CohortSplitField,
 } from "@/core/views/cohort-math";
+import { FreshnessChip } from "@/components/FreshnessChip";
+import { ViewEmptyState } from "@/components/ViewEmptyState";
 import { useFreshness } from "@/components/useFreshness";
 
 interface User {
@@ -205,7 +207,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
     loadCohorts(false);
   }, [loadCohorts]);
 
-  useFreshness({
+  const freshnessHealth = useFreshness({
     workspace,
     watch: ["ingest"],
     onStale: () => loadCohorts(true),
@@ -546,6 +548,15 @@ export default function Cohorts({ workspace }: CohortsProps) {
     return <div className="text-sub">Loading...</div>;
   }
 
+  if (users.length === 0 && cohortRows.length === 0) {
+    return (
+      <div className="space-y-3">
+        <FreshnessChip health={freshnessHealth} />
+        <ViewEmptyState view="cohorts" workspace={workspace} />
+      </div>
+    );
+  }
+
   const grain = GRAINS[viewState.grain];
   const totalUsers = cohortRows.reduce((sum, r) => sum + r.size, 0);
 
@@ -584,6 +595,7 @@ export default function Cohorts({ workspace }: CohortsProps) {
       
       <div className="flex items-center gap-3 flex-wrap">
         <h2 className="text-lg font-semibold">Cohort retention</h2>
+        <FreshnessChip health={freshnessHealth} />
         <span className="text-sm text-sub">
           {cohortRows.length} {grain.name.toLowerCase()} cohorts · {totalUsers} users
         </span>

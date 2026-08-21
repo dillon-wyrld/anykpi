@@ -7,6 +7,8 @@ import ResearchDisclosure, {
   type ResearchablePerson,
 } from "@/components/ResearchDisclosure";
 import { clampCardPosition, clusterNote, stripDays } from "@/components/user-card";
+import { FreshnessChip } from "@/components/FreshnessChip";
+import { ViewEmptyState } from "@/components/ViewEmptyState";
 import { useFreshness } from "@/components/useFreshness";
 
 interface User {
@@ -355,7 +357,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     loadUsers(false);
   }, [loadUsers]);
 
-  useFreshness({
+  const freshnessHealth = useFreshness({
     workspace,
     watch: ["ingest"],
     onStale: () => loadUsers(true),
@@ -944,6 +946,15 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     return <div className="text-sub">Loading...</div>;
   }
 
+  if (users.length === 0) {
+    return (
+      <div className="space-y-3">
+        <FreshnessChip health={freshnessHealth} />
+        <ViewEmptyState view="dotplot" workspace={workspace} />
+      </div>
+    );
+  }
+
   const groups = getGroups();
   const letters = ["M", "T", "W", "T", "F", "S", "S"];
   
@@ -978,6 +989,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     <div className="space-y-4">
       {/* Controls */}
       <div className="flex items-center gap-3 flex-wrap">
+        <FreshnessChip health={freshnessHealth} />
         <div className="flex gap-1 border border-border rounded-lg overflow-hidden">
           <button
             onClick={() => setZoom("day")}

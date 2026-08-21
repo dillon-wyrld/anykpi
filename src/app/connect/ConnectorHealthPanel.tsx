@@ -236,7 +236,11 @@ export function ConnectorHealthPanel({
   };
 
   return (
-    <section className="bg-panel border border-border rounded-lg p-6 space-y-3">
+    <section
+      id="health"
+      className="bg-panel border border-border rounded-lg p-6 space-y-3"
+      data-testid="connector-health"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-display text-lg font-semibold">Connector health</h2>

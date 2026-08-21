@@ -7,6 +7,7 @@ import {
   type CompanyProfile,
   type OverviewResponse,
 } from "@/core/contracts";
+import { FreshnessChip } from "@/components/FreshnessChip";
 import { useFreshness } from "@/components/useFreshness";
 import { useWorkspaceSession } from "@/components/WorkspaceSession";
 import {
@@ -178,7 +179,7 @@ export default function DayTracker({ workspace }: { workspace: string }) {
     };
   }, [load, ready, workspace]);
 
-  useFreshness({
+  const freshnessHealth = useFreshness({
     workspace,
     watch: ["ingest", "sources"],
     onStale: () => {
@@ -275,11 +276,13 @@ export default function DayTracker({ workspace }: { workspace: string }) {
           <span className="dtchip" data-testid="daytrack-demo">
             demo
           </span>
-        ) : current.freshnessLabel ? (
-          <span className="dtchip" data-testid="daytrack-freshness">
-            {current.freshnessLabel}
-          </span>
         ) : null}
+        <FreshnessChip
+          health={freshnessHealth}
+          fallbackLabel={current.demo ? null : current.freshnessLabel}
+          className={`dtchip${freshnessHealth.kind === "error" ? " dtchip-error" : ""}`}
+          testId="daytrack-freshness"
+        />
       </div>
       <div className="dphero">
         <b>
