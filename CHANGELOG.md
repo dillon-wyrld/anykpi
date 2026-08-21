@@ -48,6 +48,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Presence read model (ANY-54): per-city online counts from real
+  activity in the trailing hour, as of the last data — never a
+  simulated wake/sleep hour. Past-hour deltas ask the same question
+  at T−1h. Cities rank by headcount with the company home city pinned
+  first. Summaries only; no per-person presence. Exposed on
+  `GET /api/v1/overview` and MCP `get_overview`.
 - ANYKPI wordmark and tab icon (ANY-51): dashboard nav and wall-mode
   masthead render the modular-tile mark at 19px with the quiet `beta`
   tag. Light and dark-ground 2×/3× assets live in `public/brand/`. The

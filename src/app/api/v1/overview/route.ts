@@ -8,6 +8,7 @@ import { publicBaseUrl } from '@/core/view-state';
 import { internalError, logServerError } from '@/core/errors';
 import { dayClockFields, workspaceDayClock } from '@/core/day';
 import { loadFoundedAt } from '@/core/milestones';
+import { loadWorkspacePresence } from '@/core/presence';
 import { loadSyncHealth } from '@/core/sync-health';
 import { loadCohortsView } from '@/core/views/cohorts';
 import { loadWbrView } from '@/core/views/wbr';
@@ -16,7 +17,7 @@ import { loadCalendarView } from '@/core/views/calendar';
 /**
  * GET /api/v1/overview
  *
- * Company snapshot: users, activity, retention, exceptions
+ * Company snapshot: users, activity, retention, exceptions, presence
  */
 export async function GET(request: NextRequest) {
   try {
@@ -78,6 +79,7 @@ export async function GET(request: NextRequest) {
       exceptionsCount,
       upcomingEvents,
       syncHealth: await loadSyncHealth(workspace),
+      presence: await loadWorkspacePresence(workspace),
       view_url: `${publicBaseUrl(request)}/dashboard?workspace=${workspace}&view=dotplot`
     });
 

@@ -33,6 +33,12 @@ describe("GET /api/v1/overview syncHealth", () => {
     const body = await response.json();
     expect(body.workspace).toBe("demo");
     expect(Array.isArray(body.syncHealth)).toBe(true);
+    expect(body.presence).toEqual(
+      expect.objectContaining({
+        online: expect.any(Number),
+        cities: expect.any(Array),
+      })
+    );
   });
 
   it("shows a failing source as error", async () => {

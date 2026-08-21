@@ -99,6 +99,10 @@ describe("MCP tool output fields (empty fixture DB)", () => {
         totalUsers: expect.any(Number),
         viewUrl: expect.stringContaining("/dashboard"),
         syncHealth: expect.any(Array),
+        presence: expect.objectContaining({
+          online: expect.any(Number),
+          cities: expect.any(Array),
+        }),
       })
     );
   });

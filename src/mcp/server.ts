@@ -17,6 +17,7 @@ import {
 } from "@/core/mcp-write-tools";
 import { dayClockFields, workspaceDayClock } from "@/core/day";
 import { loadFoundedAt } from "@/core/milestones";
+import { loadWorkspacePresence } from "@/core/presence";
 import { buildViewUrl, queryUsersPayload } from "@/core/view-state";
 import {
   CohortCompareError,
@@ -226,6 +227,7 @@ export function createMCPServer() {
                       status: s.status,
                       lastSynced: s.lastSync,
                     })),
+                    presence: await loadWorkspacePresence(workspace),
                     viewUrl: buildViewUrl(`${BASE_URL}/dashboard`, {
                       view: "dotplot",
                     }),
