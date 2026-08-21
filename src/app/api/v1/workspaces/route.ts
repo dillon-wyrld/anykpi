@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   WorkspaceArchiveRequestSchema,
   WorkspaceCreateRequestSchema,
+  WorkspaceDeleteRequestSchema,
+  WorkspaceDeleteResponseSchema,
   WorkspaceListResponseSchema,
 } from "@/core/contracts";
-import { authorize, authResponse } from "@/core/auth";
+import {
+  authorize,
+  authResponse,
+  extractApiKey,
+  type AuthOk,
+} from "@/core/auth";
 import {
   badRequest,
   internalError,
@@ -12,10 +19,66 @@ import {
 } from "@/core/errors";
 import { AUDIT_ACTIONS, recordWriteAudit } from "@/core/audit";
 import {
+  authFromSession,
+  readBrowserSession,
+  sessionAuthorizes,
+} from "@/core/session";
+import {
   archiveWorkspace,
   createWorkspace,
+  deleteWorkspace,
   listWorkspaces,
 } from "@/core/workspaces";
+
+async function authorizeWorkspaceDelete(
+  request: NextRequest,
+  workspaceId: string
+): Promise<
+  | { ok: true; auth: AuthOk }
+  | { ok: false; response: NextResponse }
+> {
+  const presentedKey = extractApiKey(request);
+  if (!presentedKey) {
+    const session = readBrowserSession(request);
+    if (!session) {
+      return {
+        ok: false,
+        response: authResponse({
+          ok: false,
+          status: 401,
+          error: "Unauthorized",
+        }),
+      };
+    }
+    if (!sessionAuthorizes(session, workspaceId)) {
+      return {
+        ok: false,
+        response: authResponse({
+          ok: false,
+          status: 401,
+          error: "Unauthorized",
+        }),
+      };
+    }
+    return { ok: true, auth: authFromSession(session, workspaceId) };
+  }
+
+  const auth = await authorize(request, { write: true });
+  if (!auth.ok) return { ok: false, response: authResponse(auth) };
+
+  if (!auth.canChooseWorkspace && auth.keyWorkspace !== workspaceId) {
+    return {
+      ok: false,
+      response: authResponse({
+        ok: false,
+        status: 401,
+        error: "Unauthorized",
+      }),
+    };
+  }
+
+  return { ok: true, auth };
+}
 
 function toRecord(row: {
   id: string;
@@ -117,6 +180,48 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ workspace: toRecord(archived.workspace) });
   } catch {
     logServerError("Archive workspace failed");
+    return internalError();
+  }
+}
+
+/**
+ * DELETE /api/v1/workspaces
+ *
+ * Typed-name-confirmed delete. Cascades that workspace only.
+ * Write/admin key or a signed browser session. No MCP tool.
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const parsed = WorkspaceDeleteRequestSchema.safeParse(body);
+    if (!parsed.success) return badRequest(parsed.error.issues[0]?.message);
+
+    const gated = await authorizeWorkspaceDelete(request, parsed.data.id);
+    if (!gated.ok) return gated.response;
+
+    const deleted = await deleteWorkspace(parsed.data.id, parsed.data.name);
+    if (!deleted.ok) {
+      if (deleted.notFound) {
+        return NextResponse.json({ error: deleted.error }, { status: 404 });
+      }
+      return badRequest(deleted.error);
+    }
+
+    await recordWriteAudit(
+      gated.auth,
+      deleted.workspace.id,
+      AUDIT_ACTIONS.workspaceDelete,
+      deleted.workspace.id
+    );
+
+    return NextResponse.json(
+      WorkspaceDeleteResponseSchema.parse({
+        deleted: true,
+        workspace: toRecord(deleted.workspace),
+      })
+    );
+  } catch {
+    logServerError("Delete workspace failed");
     return internalError();
   }
 }

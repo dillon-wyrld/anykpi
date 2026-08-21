@@ -4,7 +4,10 @@ import { and, eq } from "drizzle-orm";
 import { POST as postIdentify } from "@/app/api/ingest/identify/route";
 import { GET as getUsers } from "@/app/api/v1/users/route";
 import { POST as createKey } from "@/app/api/v1/keys/route";
-import { POST as createWorkspace } from "@/app/api/v1/workspaces/route";
+import {
+  DELETE as deleteWorkspaceRoute,
+  POST as createWorkspace,
+} from "@/app/api/v1/workspaces/route";
 import { GET as getDotplot } from "@/app/api/views/dotplot/route";
 import { db } from "./db";
 import * as schema from "./schema";
@@ -22,8 +25,16 @@ afterEach(async () => {
   vi.unstubAllEnvs();
   await db.delete(schema.users).where(eq(schema.users.workspaceId, A));
   await db.delete(schema.users).where(eq(schema.users.workspaceId, B));
+  await db.delete(schema.activity).where(eq(schema.activity.workspaceId, A));
+  await db.delete(schema.activity).where(eq(schema.activity.workspaceId, B));
   await db.delete(schema.config).where(eq(schema.config.workspaceId, A));
   await db.delete(schema.config).where(eq(schema.config.workspaceId, B));
+  await db.delete(schema.annotations).where(eq(schema.annotations.workspaceId, A));
+  await db.delete(schema.annotations).where(eq(schema.annotations.workspaceId, B));
+  await db.delete(schema.syncState).where(eq(schema.syncState.workspaceId, A));
+  await db.delete(schema.syncState).where(eq(schema.syncState.workspaceId, B));
+  await db.delete(schema.sources).where(eq(schema.sources.workspaceId, A));
+  await db.delete(schema.sources).where(eq(schema.sources.workspaceId, B));
   await db.delete(schema.apiKeys).where(eq(schema.apiKeys.workspaceId, A));
   await db.delete(schema.apiKeys).where(eq(schema.apiKeys.workspaceId, B));
   await db.delete(schema.workspaces).where(eq(schema.workspaces.id, A));
@@ -43,9 +54,14 @@ function asAdmin(url: string, method: string, body?: unknown) {
   });
 }
 
-function asKey(url: string, key: string) {
+function asKey(url: string, key: string, body?: unknown) {
   return new NextRequest(url, {
-    headers: { authorization: `Bearer ${key}` },
+    method: body === undefined ? "GET" : "DELETE",
+    headers: {
+      authorization: `Bearer ${key}`,
+      ...(body === undefined ? {} : { "content-type": "application/json" }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
 }
 
@@ -192,5 +208,170 @@ describe("ANY-39 workspace isolation", () => {
     );
     expect(viewA.status).toBe(200);
     expect(viewCross.status).toBe(401);
+  });
+
+  it("deleting workspace A never touches workspace B", async () => {
+    process.env.ANYKPI_API_KEY = ADMIN;
+    vi.stubEnv("NODE_ENV", "test");
+
+    await createWorkspace(
+      asAdmin("http://localhost:3000/api/v1/workspaces", "POST", {
+        id: A,
+        name: "Isolation A",
+      })
+    );
+    await createWorkspace(
+      asAdmin("http://localhost:3000/api/v1/workspaces", "POST", {
+        id: B,
+        name: "Isolation B",
+      })
+    );
+
+    for (const ws of [A, B]) {
+      await db.insert(schema.users).values({
+        personId: `person_${ws}`,
+        name: `User ${ws}`,
+        email: `${ws}@example.com`,
+        workspaceId: ws,
+      });
+      await db.insert(schema.activity).values({
+        personId: `person_${ws}`,
+        timestamp: new Date("2026-03-01T00:00:00.000Z"),
+        eventName: "song_played",
+        eventClass: "core",
+        externalId: `evt-${ws}`,
+        workspaceId: ws,
+      });
+      await db.insert(schema.config).values({
+        key: "value_events",
+        value: JSON.stringify({ core: ws }),
+        workspaceId: ws,
+      });
+      await db.insert(schema.annotations).values({
+        type: "note",
+        targetType: "person",
+        targetId: `person_${ws}`,
+        content: `note-${ws}`,
+        createdAt: new Date(),
+        workspaceId: ws,
+      });
+      await db.insert(schema.syncState).values({
+        source: "ics",
+        sourceName: "ICS",
+        status: "success",
+        workspaceId: ws,
+      });
+      await db.insert(schema.sources).values({
+        workspaceId: ws,
+        source: "ics",
+        config: `cipher-${ws}`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
+
+    const keyA = await mintWriteKey(A, "iso-a-delete");
+    const leak = await deleteWorkspaceRoute(
+      asKey("http://localhost:3000/api/v1/workspaces", keyA, {
+        id: B,
+        name: "Isolation B",
+      })
+    );
+    expect(leak.status).toBe(401);
+
+    const deleted = await deleteWorkspaceRoute(
+      asAdmin("http://localhost:3000/api/v1/workspaces", "DELETE", {
+        id: A,
+        name: "Isolation A",
+      })
+    );
+    expect(deleted.status).toBe(200);
+
+    expect(
+      await db.select().from(schema.users).where(eq(schema.users.workspaceId, A)).all()
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(schema.activity)
+        .where(eq(schema.activity.workspaceId, A))
+        .all()
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(schema.config).where(eq(schema.config.workspaceId, A)).all()
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(schema.annotations)
+        .where(eq(schema.annotations.workspaceId, A))
+        .all()
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(schema.syncState)
+        .where(eq(schema.syncState.workspaceId, A))
+        .all()
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(schema.sources)
+        .where(eq(schema.sources.workspaceId, A))
+        .all()
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(schema.apiKeys)
+        .where(eq(schema.apiKeys.workspaceId, A))
+        .all()
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(schema.workspaces).where(eq(schema.workspaces.id, A)).get()
+    ).toBeUndefined();
+
+    const userB = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.workspaceId, B))
+      .get();
+    expect(userB?.name).toBe("User iso-b");
+    const activityB = await db
+      .select()
+      .from(schema.activity)
+      .where(eq(schema.activity.workspaceId, B))
+      .all();
+    expect(activityB).toHaveLength(1);
+    const configB = await db
+      .select()
+      .from(schema.config)
+      .where(and(eq(schema.config.workspaceId, B), eq(schema.config.key, "value_events")))
+      .get();
+    expect(configB?.value).toBe(JSON.stringify({ core: B }));
+    const noteB = await db
+      .select()
+      .from(schema.annotations)
+      .where(eq(schema.annotations.workspaceId, B))
+      .get();
+    expect(noteB?.content).toBe("note-iso-b");
+    expect(
+      await db
+        .select()
+        .from(schema.syncState)
+        .where(eq(schema.syncState.workspaceId, B))
+        .get()
+    ).toBeTruthy();
+    expect(
+      await db
+        .select()
+        .from(schema.sources)
+        .where(eq(schema.sources.workspaceId, B))
+        .get()
+    ).toBeTruthy();
+    expect(
+      await db.select().from(schema.workspaces).where(eq(schema.workspaces.id, B)).get()
+    ).toBeTruthy();
   });
 });

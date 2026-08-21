@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Workspace delete (ANY-69): `DELETE /api/v1/workspaces` with typed-name
+  confirmation. Cascades users, activity, read models, credentials, sync
+  state, annotations, keys, and config for that workspace only. A write
+  or admin key, or a signed browser session, may delete. There is no MCP
+  tool. Demo can be re-seeded after wipe.
 - Shared operator-fetch URL check used by ICS and PostHog. Cloud-metadata
   and link-local destinations are refused, including redirect hops.
   Residual: operator-chosen RFC1918, localhost, and other private hosts

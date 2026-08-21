@@ -67,6 +67,7 @@ curl http://localhost:3000/api/v1/overview?workspace=live \
 
 # Two live workspaces stay isolated — the same distinct_id is two rows.
 # GET /api/v1/workspaces lists the catalog the dashboard switcher uses.
+# DELETE /api/v1/workspaces is typed-name-confirmed and cascades that workspace only.
 ```
 
 Returns:
@@ -103,6 +104,10 @@ Returns:
 - `POST /api/v1/import` — Import users or events from CSV (requires an API key)
 - `GET /api/v1/config` — Company profile (name, founded date, home city, shown-city set)
 - `PATCH /api/v1/config` — Update the company profile (write scope; founded date cannot be in the future)
+- `GET /api/v1/workspaces` — Catalog of named workspaces
+- `POST /api/v1/workspaces` — Create a live workspace (admin / env key)
+- `PATCH /api/v1/workspaces` — Archive a live workspace (admin / env key; demo cannot be archived)
+- `DELETE /api/v1/workspaces` — Typed-name-confirmed delete (write/admin key or browser session; that workspace only; no MCP tool)
 - `GET /api/v1/export` — Users, events, and read models as JSON or CSV (requires a key on live)
 - `GET /api/v1/keys` — List key metadata (scope, last used, legacy)
 - `POST /api/v1/keys` — Generate API key (defaults to read)
