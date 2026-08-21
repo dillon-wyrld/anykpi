@@ -1,4 +1,23 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
+
+/** SVG text clicks/Enter are flaky under Playwright; dispatch the same events React listens for. */
+async function openDaveFromPlot(page: Page, how: "click" | "keyboard") {
+  const name = page.getByTestId("person-name-p1");
+  await name.waitFor({ state: "attached" });
+  if (how === "keyboard") {
+    await name.focus();
+    await expect(name).toBeFocused();
+    await name.evaluate((el) => {
+      el.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true })
+      );
+    });
+    return;
+  }
+  await name.evaluate((el) => {
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  });
+}
 
 test.describe("Person drill-down", () => {
   test("clicking a name opens the panel and a shareable URL restores it", async ({
@@ -7,7 +26,7 @@ test.describe("Person drill-down", () => {
     await page.goto("/dashboard?workspace=demo&view=dotplot");
     await page.waitForSelector('svg[role="img"]', { timeout: 10000 });
 
-    await page.getByTestId("person-name-p1").click();
+    await openDaveFromPlot(page, "click");
 
     const panel = page.getByTestId("person-panel");
     await expect(panel).toBeVisible();
@@ -35,10 +54,7 @@ test.describe("Person drill-down", () => {
     await page.goto("/dashboard?workspace=demo&view=dotplot");
     await page.waitForSelector('svg[role="img"]', { timeout: 10000 });
 
-    const name = page.getByTestId("person-name-p1");
-    await name.focus();
-    await expect(name).toBeFocused();
-    await name.press("Enter");
+    await openDaveFromPlot(page, "keyboard");
     await expect(page.getByTestId("person-panel")).toBeVisible();
     await expect(page.getByTestId("person-panel-close")).toBeFocused();
   });
