@@ -7,6 +7,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Source lifecycle (ANY-68): disconnect deletes stored credentials and
+  sync state while keeping synced rows tagged with that source. Pause
+  skips the scheduler and keeps config; resume restores it. Clear-error
+  acknowledges a stored pull error after a fix. Same actions on the
+  `/connect` health panel, `PATCH`/`DELETE /api/v1/connect`, and a
+  write-scoped, audited `disconnect_source` MCP tool.
 - Designed empty states on the five dashboard views (ANY-70): an
   unconnected workspace shows what the view will show and one next
   action into first-run setup (`/connect?setup=1`). The freshness chip

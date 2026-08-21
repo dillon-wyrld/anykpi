@@ -19,6 +19,10 @@ import {
   QueryUsersRequestSchema,
   ConnectSourceRequestSchema,
   ConnectSourceResponseSchema,
+  DisconnectSourceRequestSchema,
+  DisconnectSourceResponseSchema,
+  SourceLifecycleRequestSchema,
+  SourceLifecycleResponseSchema,
   ImportRequestSchema,
   ImportPreviewResponseSchema,
   ImportResponseSchema,
@@ -749,6 +753,102 @@ export async function GET(request: NextRequest) {
             },
             503: {
               description: 'ANYKPI_SECRET is not set',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        },
+        delete: {
+          tags: ['Connect'],
+          summary: 'Disconnect a source',
+          description:
+            'Delete stored credentials and sync state. Synced data stays, still tagged with this source. Write-scoped.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(DisconnectSourceRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Source disconnected',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(DisconnectSourceResponseSchema)
+                }
+              }
+            },
+            400: {
+              description: 'Invalid request',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Missing or invalid API key',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            404: {
+              description: 'Source is not connected',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        },
+        patch: {
+          tags: ['Connect'],
+          summary: 'Pause, resume, or clear a source error',
+          description:
+            'Pause skips scheduling and keeps encrypted config. Resume restores the schedule. Clear-error acknowledges a stored pull error after a fix. Write-scoped.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(SourceLifecycleRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Lifecycle update applied',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(SourceLifecycleResponseSchema)
+                }
+              }
+            },
+            400: {
+              description: 'Invalid request',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Missing or invalid API key',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            404: {
+              description: 'Source is not connected',
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(ErrorResponseSchema)

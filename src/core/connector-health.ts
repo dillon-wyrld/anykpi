@@ -14,6 +14,7 @@ export type ConnectorHealthRow = {
   source: string;
   sourceName: string;
   status: SyncHealth["status"];
+  paused?: boolean;
   lastSynced?: string;
   lastSyncLabel: string;
   rowsSynced?: number;
@@ -98,8 +99,12 @@ export function nextRunIso(
 export function formatNextRunLabel(
   lastSynced: string | undefined,
   intervalMinutes: number,
-  now: Date = new Date()
+  now: Date = new Date(),
+  paused = false
 ): string {
+  if (paused) {
+    return "Paused. Resume to schedule again.";
+  }
   if (intervalMinutes <= 0) {
     return "Scheduler off. Sync now, or POST /api/v1/sync from cron.";
   }
@@ -129,21 +134,28 @@ export function presentConnectorHealth(
   return health.map((item) => {
     const last = item.lastSynced ? new Date(item.lastSynced) : null;
     const rows = opts.rowsSynced?.[item.source];
+    const paused = item.paused === true;
     const human =
-      item.status === "error" ? humanizeSyncError(item.error) : undefined;
+      !paused && item.status === "error"
+        ? humanizeSyncError(item.error)
+        : undefined;
     return {
       source: item.source,
       sourceName: item.sourceName,
       status: item.status,
+      paused,
       lastSynced: item.lastSynced,
       lastSyncLabel: last ? formatSyncAge(last, now) : "Never",
       rowsSynced: rows,
       rowsLabel: rows === undefined ? "—" : String(rows),
-      nextRunAt: nextRunIso(item.lastSynced, opts.intervalMinutes),
+      nextRunAt: paused
+        ? null
+        : nextRunIso(item.lastSynced, opts.intervalMinutes),
       nextRunLabel: formatNextRunLabel(
         item.lastSynced,
         opts.intervalMinutes,
-        now
+        now,
+        paused
       ),
       problem: human?.problem,
       nextStep: human?.nextStep,
@@ -159,6 +171,7 @@ export function syncStatesToHealth(
     status: SyncHealth["status"];
     lastSync?: string;
     error?: string;
+    paused?: boolean;
   }>
 ): SyncHealth[] {
   return states.map((state) => ({
@@ -167,5 +180,6 @@ export function syncStatesToHealth(
     status: state.status,
     lastSynced: state.lastSync,
     error: state.error,
+    paused: state.paused,
   }));
 }

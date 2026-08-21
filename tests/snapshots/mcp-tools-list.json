@@ -219,6 +219,23 @@
       }
     },
     {
+      "name": "disconnect_source",
+      "description": "Disconnect a source: delete stored credentials and sync state. Synced data stays, still tagged with this source. Requires a write-scoped API key. Returns disconnected + view_url.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "description": "Workspace ID (default: live)"
+          },
+          "source": {
+            "type": "string",
+            "description": "Source id (ics, csv, or a connector slug)"
+          }
+        }
+      }
+    },
+    {
       "name": "queue_outreach",
       "description": "Queue a persisted outreach draft (waiting). Write scope can queue; it cannot approve.",
       "inputSchema": {

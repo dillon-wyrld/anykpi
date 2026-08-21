@@ -79,17 +79,28 @@ export async function listScheduledTargets(): Promise<ScheduledTarget[]> {
     .select({
       workspaceId: schema.sources.workspaceId,
       source: schema.sources.source,
+      pausedAt: schema.sources.pausedAt,
     })
     .from(schema.sources)
     .all();
 
+  const paused = new Set<string>();
   for (const row of rows) {
-    add(row.workspaceId, row.source);
+    if (row.pausedAt) paused.add(`${row.workspaceId}::${row.source}`);
+  }
+
+  const addIfScheduled = (workspaceId: string, source: string) => {
+    if (paused.has(`${workspaceId}::${source}`)) return;
+    add(workspaceId, source);
+  };
+
+  for (const row of rows) {
+    addIfScheduled(row.workspaceId, row.source);
   }
 
   for (const connector of listConnectors()) {
     if (Object.keys(envFallback(connector.source)).length > 0) {
-      add("live", connector.source);
+      addIfScheduled("live", connector.source);
     }
   }
 

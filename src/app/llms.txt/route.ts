@@ -40,17 +40,17 @@ OpenAPI spec: /api/openapi
 - GET /api/v1/calendar — multi-source event timeline
 - GET /api/v1/sync — connector sync status (includes syncIntervalMinutes)
 - GET /api/v1/freshness — last ingest + per-source last-sync stamps (views poll this)
-- GET /api/v1/audit — action log (actor, action, subject, timestamp). Filter by actor and since to ask what an agent did yesterday
+- GET /api/v1/audit — action log (actor, action, subject, timestamp)
 - GET /api/v1/outreach — persisted PMF+ outreach drafts
 - POST /api/v1/outreach — queue a waiting draft (write scope)
 - POST /api/v1/outreach/approve — approve a draft (browser session or admin key only; a write key cannot approve)
 - POST /api/v1/outreach/send — deliver an approved draft (unapproved drafts are refused)
 - POST /api/v1/outreach/outcome — tag replied / interviewed / converted (PMF+ conversion by cluster)
-- POST /api/v1/connect — store per-source credentials (encrypted at rest; never returned; csv stores import mapping)
+- POST /api/v1/connect — store per-source credentials (encrypted at rest; never returned; csv stores import mapping). PATCH pause/resume/clear-error. DELETE disconnects (data stays).
 - POST /api/v1/import — CSV import for users and events (sources store + column-mapping preview; writes keyed)
 - GET /api/v1/export — users, events, and read models as JSON or CSV files (connector read models restore by re-sync)
 - GET /api/v1/config — company profile (name, founded date, home city, shown-city set; dayLabel is Day of <name>)
-- PATCH /api/v1/config — update the company profile (write scope; founded date cannot be in the future). Shown-city and celebration-claim fields are display prefs a browser session may save.
+- PATCH /api/v1/config — update the company profile (write scope; founded date cannot be in the future)
 - GET /api/v1/workspaces — catalog of named workspaces (id, name, archivedAt)
 - POST /api/v1/workspaces — create a live workspace (admin / env key)
 - PATCH /api/v1/workspaces — archive a live workspace (admin / env key; demo cannot be archived)
@@ -81,13 +81,14 @@ Tools:
 - \`trigger_sync\` — run a connector sync for one source or all (requires write scope)
 - \`import_csv\` — import users or events from CSV (requires write scope)
 - \`define_metric\` — create or update a WBR metric (write scope; status is computed)
+- \`disconnect_source\` — drop credentials and sync state (write scope; data stays)
 - \`queue_outreach\` — persist a waiting draft (write scope)
 - \`approve_outreach\` — approve a persisted draft (session or admin only)
 - \`send_outreach\` — deliver an approved draft; unapproved drafts are refused
 - \`install_sdk\` — SDK snippet for a web app (stdio MCP)
 - \`configure_value_events\` — map event names to classes core/search/share/pay (stdio MCP; requires write scope)
 
-stdio: src/mcp/server.ts. HTTP tools/list includes define_metric.
+stdio: src/mcp/server.ts.
 
 ## CLI
 
@@ -99,7 +100,7 @@ login mints a key via POST /api/v1/keys (default scope read and workspace live; 
 
 ## Connectors
 
-Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub. Sync is pull-only into local read models; ANYKPI never writes back. Stripe also accepts a signature-verified webhook at POST /api/webhooks/stripe so revenue stays minutes-fresh. Connector setup is the /connect UI or \`anykpi connect\`. /connect shows last sync, rows pulled, next run (SYNC_INTERVAL_MINUTES), a plain-language error with a next step, and Sync now. Config is encrypted at rest with ANYKPI_SECRET. Env vars are a deprecated read-only fallback. Calendar ICS is read-only forever. The Node process pulls connected sources every SYNC_INTERVAL_MINUTES (default 15) from instrumentation.ts. Set 0 and POST /api/v1/sync from cron — see docs/cron.md.
+Shipped: PostHog, Mixpanel, Amplitude, Stripe, RevenueCat, Mercury, ICS, GitHub. Sync is pull-only into local read models; ANYKPI never writes back. Stripe also accepts a signature-verified webhook at POST /api/webhooks/stripe so revenue stays minutes-fresh. Connector setup is the /connect UI or \`anykpi connect\`. /connect shows last sync, rows pulled, next run (SYNC_INTERVAL_MINUTES), a plain-language error with a next step, Sync now, pause, and disconnect. Config is encrypted at rest with ANYKPI_SECRET. Env vars are a deprecated read-only fallback. Calendar ICS is read-only forever. The Node process pulls connected sources every SYNC_INTERVAL_MINUTES (default 15) from instrumentation.ts. Set 0 and POST /api/v1/sync from cron — see docs/cron.md.
 
 ## More
 

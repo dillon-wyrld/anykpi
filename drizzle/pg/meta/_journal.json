@@ -15,6 +15,13 @@
       "when": 1787263717596,
       "tag": "0001_user_timezone",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787298300000,
+      "tag": "0002_source_paused",
+      "breakpoints": true
     }
   ]
 }

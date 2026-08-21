@@ -26,7 +26,7 @@ import {
   serializeTodayMilestone,
 } from "@/core/milestones";
 import { loadWorkspacePresence } from "@/core/presence";
-import { loadSyncHealth } from "@/core/sync-health";
+import { loadSyncHealth, loadWorkspaceSyncStates } from "@/core/sync-health";
 import { loadWbrView } from "@/core/views/wbr";
 import { loadCalendarView } from "@/core/views/calendar";
 import { activityWindow, buildDotPlotUsers } from "@/core/views/dotplot";
@@ -271,11 +271,6 @@ async function handleMCPRequest(
 
       case "get_sync_status": {
         const freshness = await loadFreshness(workspace);
-        const syncStates = await db
-          .select()
-          .from(schema.syncState)
-          .where(eq(schema.syncState.workspaceId, workspace))
-          .all();
         const viewUrl = `${baseUrl}/dashboard?workspace=${encodeURIComponent(workspace)}&view=dotplot`;
 
         return {
@@ -284,13 +279,7 @@ async function handleMCPRequest(
               type: "text",
               text: JSON.stringify({
                 ...freshness,
-                states: syncStates.map((row) => ({
-                  source: row.source,
-                  sourceName: row.sourceName,
-                  lastSync: row.lastSync?.toISOString(),
-                  status: row.status as "success" | "error" | "pending",
-                  error: row.error || undefined,
-                })),
+                states: await loadWorkspaceSyncStates(workspace),
                 syncIntervalMinutes: parseSyncIntervalMinutes(),
                 viewUrl,
                 view_url: viewUrl,

@@ -8,7 +8,11 @@ import { POST as postIdentify } from "@/app/api/ingest/identify/route";
 import { POST as postEvent } from "@/app/api/ingest/event/route";
 import { POST as postBatch } from "@/app/api/ingest/batch/route";
 import { POST as postWebhook } from "@/app/api/ingest/webhook/[source]/route";
-import { POST as postConnect } from "@/app/api/v1/connect/route";
+import {
+  DELETE as deleteConnect,
+  PATCH as patchConnect,
+  POST as postConnect,
+} from "@/app/api/v1/connect/route";
 import { POST as postImport } from "@/app/api/v1/import/route";
 import { POST as postSync } from "@/app/api/v1/sync/route";
 import { POST as createKey } from "@/app/api/v1/keys/route";
@@ -38,6 +42,7 @@ import { AUDIT_ACTOR_ENV, AUDIT_ACTOR_WEBHOOK } from "@/core/auth";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { saveSourceConfig } from "@/core/sources";
+import { upsertSyncState } from "@/core/upsert";
 import { signWebhookBody } from "@/core/webhook";
 import { registry } from "@/connectors";
 import { computeStripeSignature, type StripeEvent } from "@/connectors/stripe";
@@ -193,6 +198,97 @@ const drivers: Record<(typeof WRITE_HTTP_ROUTES)[number]["action"], Driver> = {
       })
     );
     expect([200, 201]).toContain(res.status);
+    return { actor: AUDIT_ACTOR_ENV, subject: "ics" };
+  },
+  [AUDIT_ACTIONS.connectDisconnect]: async () => {
+    const connected = await postConnect(
+      asAdmin("http://localhost:3000/api/v1/connect", "POST", {
+        source: "ics",
+        workspaceId: WS,
+        credentials: { icsUrl: "https://example.test/cal.ics" },
+      })
+    );
+    expect([200, 201]).toContain(connected.status);
+    const res = await deleteConnect(
+      asAdmin("http://localhost:3000/api/v1/connect", "DELETE", {
+        source: "ics",
+        workspaceId: WS,
+      })
+    );
+    expect(res.status).toBe(200);
+    return { actor: AUDIT_ACTOR_ENV, subject: "ics" };
+  },
+  [AUDIT_ACTIONS.connectPause]: async () => {
+    const connected = await postConnect(
+      asAdmin("http://localhost:3000/api/v1/connect", "POST", {
+        source: "ics",
+        workspaceId: WS,
+        credentials: { icsUrl: "https://example.test/cal.ics" },
+      })
+    );
+    expect([200, 201]).toContain(connected.status);
+    const res = await patchConnect(
+      asAdmin("http://localhost:3000/api/v1/connect", "PATCH", {
+        source: "ics",
+        workspaceId: WS,
+        action: "pause",
+      })
+    );
+    expect(res.status).toBe(200);
+    return { actor: AUDIT_ACTOR_ENV, subject: "ics" };
+  },
+  [AUDIT_ACTIONS.connectResume]: async () => {
+    const connected = await postConnect(
+      asAdmin("http://localhost:3000/api/v1/connect", "POST", {
+        source: "ics",
+        workspaceId: WS,
+        credentials: { icsUrl: "https://example.test/cal.ics" },
+      })
+    );
+    expect([200, 201]).toContain(connected.status);
+    const paused = await patchConnect(
+      asAdmin("http://localhost:3000/api/v1/connect", "PATCH", {
+        source: "ics",
+        workspaceId: WS,
+        action: "pause",
+      })
+    );
+    expect(paused.status).toBe(200);
+    const res = await patchConnect(
+      asAdmin("http://localhost:3000/api/v1/connect", "PATCH", {
+        source: "ics",
+        workspaceId: WS,
+        action: "resume",
+      })
+    );
+    expect(res.status).toBe(200);
+    return { actor: AUDIT_ACTOR_ENV, subject: "ics" };
+  },
+  [AUDIT_ACTIONS.connectClearError]: async () => {
+    const connected = await postConnect(
+      asAdmin("http://localhost:3000/api/v1/connect", "POST", {
+        source: "ics",
+        workspaceId: WS,
+        credentials: { icsUrl: "https://example.test/cal.ics" },
+      })
+    );
+    expect([200, 201]).toContain(connected.status);
+    await upsertSyncState({
+      source: "ics",
+      sourceName: "Calendar",
+      lastSync: new Date("2026-08-20T06:00:00.000Z"),
+      status: "error",
+      error: "401",
+      workspaceId: WS,
+    });
+    const res = await patchConnect(
+      asAdmin("http://localhost:3000/api/v1/connect", "PATCH", {
+        source: "ics",
+        workspaceId: WS,
+        action: "clear-error",
+      })
+    );
+    expect(res.status).toBe(200);
     return { actor: AUDIT_ACTOR_ENV, subject: "ics" };
   },
   [AUDIT_ACTIONS.importCsv]: async () => {

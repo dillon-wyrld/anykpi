@@ -35,6 +35,7 @@ import { activityWindow, buildDotPlotUsers } from "@/core/views/dotplot";
 import { ensureWorkspaceClusters } from "@/core/clustering";
 import { loadFreshness } from "@/core/freshness";
 import { parseSyncIntervalMinutes } from "@/core/scheduler-env";
+import { loadWorkspaceSyncStates } from "@/core/sync-health";
 import {
   MCP_GET_ACTIVITY_TOOL,
   MCP_GET_SYNC_STATUS_TOOL,
@@ -80,19 +81,7 @@ async function loadActivityPayload(workspace: string, baseUrl: string) {
 }
 
 async function loadSyncStates(workspace: string) {
-  const syncStates = await db
-    .select()
-    .from(schema.syncState)
-    .where(eq(schema.syncState.workspaceId, workspace))
-    .all();
-
-  return syncStates.map((row) => ({
-    source: row.source,
-    sourceName: row.sourceName,
-    lastSync: row.lastSync?.toISOString(),
-    status: row.status as "success" | "error" | "pending",
-    error: row.error || undefined,
-  }));
+  return loadWorkspaceSyncStates(workspace);
 }
 
 async function loadSyncStatusPayload(workspace: string, baseUrl: string) {
@@ -573,7 +562,8 @@ export async function handleStdioToolCall(
         case "connect_source":
         case "trigger_sync":
         case "import_csv":
-        case "define_metric": {
+        case "define_metric":
+        case "disconnect_source": {
           const presented = process.env.ANYKPI_API_KEY;
           const writeAuth = await authorize(
             {
