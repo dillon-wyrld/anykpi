@@ -97,6 +97,24 @@ describe("operator-fetch — metadata and link-local", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("does not stall fetch when DNS is slow; still blocks a metadata answer", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("ok", { status: 200 }));
+    const slow = new Promise<string[]>((resolve) => {
+      setTimeout(() => resolve(["203.0.113.10"]), 2_000);
+    });
+
+    const response = await operatorFetch(
+      "https://cal.example.test/calendar.ics",
+      { method: "GET" },
+      {
+        fetch: fetchMock as unknown as typeof fetch,
+        lookup: async () => slow,
+      }
+    );
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("follows a redirect that stays on an allowed host", async () => {
     const fetchMock = vi
       .fn()

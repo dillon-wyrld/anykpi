@@ -21,6 +21,8 @@ export const OPERATOR_FETCH_RESIDUAL =
   "Private RFC1918, localhost, and other operator-chosen hosts are allowed. Self-hosted analytics and internal calendar feeds are legitimate. Only cloud-metadata and link-local addresses are blocked.";
 
 const MAX_REDIRECTS = 5;
+/** Cap DNS so an unresolvable operator host cannot stall a sync tick. */
+const DNS_LOOKUP_TIMEOUT_MS = 400;
 
 const METADATA_BLOCKLIST = new BlockList();
 METADATA_BLOCKLIST.addSubnet("169.254.0.0", 16, "ipv4");
@@ -102,6 +104,22 @@ export function operatorFetchUrlAllowed(raw: string | URL): boolean {
   return !hostnameLooksLikeMetadata(parsed.hostname);
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("dns-timeout")), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
 async function defaultLookup(hostname: string): Promise<string[]> {
   const results = await lookup(hostname, { all: true, verbatim: true });
   return results.map((row) => row.address);
@@ -122,7 +140,7 @@ export async function assertOperatorFetchUrl(
   }
 
   try {
-    const addresses = await resolveDns(host);
+    const addresses = await withTimeout(resolveDns(host), DNS_LOOKUP_TIMEOUT_MS);
     for (const address of addresses) {
       if (isLinkLocalOrMetadataAddress(address)) {
         throw new BlockedOperatorUrlError();
