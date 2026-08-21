@@ -1,7 +1,10 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { OutreachConversionByCluster, ResearchCandidate } from "@/core/contracts";
+import { FreshnessChip } from "@/components/FreshnessChip";
+import { ViewEmptyState } from "@/components/ViewEmptyState";
+import { useFreshness } from "@/components/useFreshness";
 import ResearchDisclosure, {
   type ResearchablePerson,
 } from "@/components/ResearchDisclosure";
@@ -45,17 +48,29 @@ export default function PMF({ workspace }: PMFProps) {
   const [researchQueue, setResearchQueue] = useState<ResearchablePerson[]>([]);
   const [researchTotal, setResearchTotal] = useState(0);
 
-  useEffect(() => {
+  const loadPmf = useCallback((refresh = false) => {
     fetch(`/api/views/pmf?workspace=${encodeURIComponent(workspace)}`)
       .then((res) => res.json())
       .then((data) => {
         setRuns(data.runs || []);
         setCandidates(data.candidates || []);
         setConversion(data.conversion || []);
-        setLoading(false);
+        if (!refresh) setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        if (!refresh) setLoading(false);
+      });
   }, [workspace]);
+
+  useEffect(() => {
+    loadPmf(false);
+  }, [loadPmf]);
+
+  const freshnessHealth = useFreshness({
+    workspace,
+    watch: ["ingest"],
+    onStale: () => loadPmf(true),
+  });
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -235,12 +250,22 @@ export default function PMF({ workspace }: PMFProps) {
     return <div className="text-sub">Loading...</div>;
   }
 
+  if (runs.length === 0 && candidates.length === 0) {
+    return (
+      <div className="space-y-3">
+        <FreshnessChip health={freshnessHealth} />
+        <ViewEmptyState view="pmf" workspace={workspace} />
+      </div>
+    );
+  }
+
   const { runCount, peopleResearched, queuedTotal, waitingCount } = pmfRunTotals(runs);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
         <h2 className="text-lg font-semibold">PMF+</h2>
+        <FreshnessChip health={freshnessHealth} />
         <span className="text-sm text-sub">
           {runCount} run{runCount !== 1 ? "s" : ""} ·{" "}
           {peopleResearched} people researched

@@ -318,6 +318,15 @@
   flex-shrink: 0;
 }
 
+.daytrack a.dtchip {
+  text-decoration: none;
+}
+
+.daytrack .dtchip-error {
+  color: var(--red);
+  border-color: var(--red);
+}
+
 .daytrack .dthead {
   display: flex;
   align-items: center;

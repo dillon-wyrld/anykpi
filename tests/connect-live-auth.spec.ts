@@ -81,7 +81,11 @@ test.describe("Connect flow and live auth gate", () => {
     await page.getByLabel("API key").fill(mintedKey);
     await page.getByRole("button", { name: "Open workspace" }).click();
 
-    await expect(page.getByRole("button", { name: "Day" })).toBeVisible({
+    await expect(
+      page
+        .getByRole("button", { name: "Day" })
+        .or(page.getByTestId("view-empty-dotplot"))
+    ).toBeVisible({
       timeout: 15_000,
     });
     await expect(
@@ -134,7 +138,11 @@ test.describe("Connect flow and live auth gate", () => {
     }
 
     await page.goto("/dashboard?workspace=live&view=dotplot");
-    await expect(page.getByRole("button", { name: "Day" })).toBeVisible({
+    await expect(
+      page
+        .getByRole("button", { name: "Day" })
+        .or(page.getByTestId("view-empty-dotplot"))
+    ).toBeVisible({
       timeout: 15_000,
     });
     await page.getByRole("button", { name: "Log out" }).click();

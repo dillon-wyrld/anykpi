@@ -13,6 +13,8 @@ import {
   wsign,
   type WbrExceptionRules,
 } from "@/core/views/wbr-math";
+import { FreshnessChip } from "@/components/FreshnessChip";
+import { ViewEmptyState } from "@/components/ViewEmptyState";
 import { useFreshness } from "@/components/useFreshness";
 
 interface Metric {
@@ -230,7 +232,7 @@ export default function WBR({ workspace }: WBRProps) {
     loadWbr(false);
   }, [loadWbr]);
 
-  useFreshness({
+  const freshnessHealth = useFreshness({
     workspace,
     watch: ["ingest", "sources"],
     onStale: () => loadWbr(true),
@@ -1031,12 +1033,22 @@ export default function WBR({ workspace }: WBRProps) {
     return <div className="text-sub">Loading...</div>;
   }
 
+  if (metrics.length === 0 && proposals.length === 0) {
+    return (
+      <div className="space-y-3">
+        <FreshnessChip health={freshnessHealth} />
+        <ViewEmptyState view="wbr" workspace={workspace} />
+      </div>
+    );
+  }
+
   const exceptions = metricsWithStats.filter((m) => m.stat.k !== "ok");
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
         <h2 className="text-lg font-semibold">Weekly Business Review</h2>
+        <FreshnessChip health={freshnessHealth} />
         <span className="text-sm text-sub">{metricsWithStats.length} metrics</span>
         {exceptions.length > 0 && (
           <span className="text-sm text-amber font-medium">
