@@ -21,6 +21,42 @@ function mulberry32(seed: number) {
   };
 }
 
+/** Country mix from the prototype user generator. */
+const DEMO_GEO_COUNTRIES = [
+  "US",
+  "US",
+  "US",
+  "FR",
+  "DE",
+  "GB",
+  "BR",
+  "JP",
+  "IN",
+  "CA",
+] as const;
+
+/**
+ * Deterministic demo country + income band.
+ * FNV-1a over the person id — never draws from the canonical mulberry32
+ * streams (777 / 31337 / 888), so pinned cohort and calendar numbers stay put.
+ */
+export function demoGeo(personId: string): {
+  country: string;
+  incomeBand: string;
+} {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < personId.length; i++) {
+    h ^= personId.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  h >>>= 0;
+  const country = DEMO_GEO_COUNTRIES[h % DEMO_GEO_COUNTRIES.length];
+  const u1 = h / 4294967296;
+  const u2 = (Math.imul(h ^ 0x9e3779b9, 0x85ebca6b) >>> 0) / 4294967296;
+  const incomeK = Math.round(28 + u1 * u2 * 180);
+  return { country, incomeBand: `${incomeK}K` };
+}
+
 // Canon named users - pinned from prototype
 export const NAMED: Array<[string, string, number]> = [
   ["Dave","🧢",0],["Mia","🎧",1],["Jo","🌱",2],["Rex","📟",0],["Kai","🛹",5],

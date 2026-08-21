@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCohorts, addDailyTexture, detectSmile, wbrStat, WBR_METRICS, NAMED } from './generators';
+import { buildCohorts, addDailyTexture, detectSmile, wbrStat, WBR_METRICS, NAMED, demoGeo } from './generators';
 
 /**
  * Golden tests for stats functions
@@ -223,6 +223,22 @@ describe('NAMED Users Canon', () => {
       expect(typeof week).toBe('number');
       expect(week).toBeGreaterThanOrEqual(0);
     });
+  });
+});
+
+describe('demoGeo (own hash, not the canonical stream)', () => {
+  it('is deterministic per person id', () => {
+    expect(demoGeo('p1')).toEqual(demoGeo('p1'));
+    expect(demoGeo('p1').country).toMatch(/^(US|FR|DE|GB|BR|JP|IN|CA)$/);
+    expect(demoGeo('p1').incomeBand).toMatch(/^\d+K$/);
+  });
+
+  it('does not shift cohort sizes from seed 777', () => {
+    const before = buildCohorts().map((c) => c.size);
+    demoGeo('p1');
+    demoGeo('p2');
+    const after = buildCohorts().map((c) => c.size);
+    expect(after).toEqual(before);
   });
 });
 
