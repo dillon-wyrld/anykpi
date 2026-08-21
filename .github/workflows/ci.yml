@@ -93,8 +93,10 @@ jobs:
           DATABASE_URL: ${{ matrix.engine == 'postgres' && 'postgres://postgres:postgres@localhost:5432/anykpi' || '' }}
 
       # ANY-67: tests/zz-real-workspace-gate.spec.ts is the "fully functional" definition.
+      # No `--` before the file path: Playwright treats `--` as end of options
+      # and then ignores the path, so this step would re-run the full suite.
       - name: Run E2E tests (real-workspace gate)
-        run: pnpm test:e2e -- tests/zz-real-workspace-gate.spec.ts
+        run: pnpm test:e2e tests/zz-real-workspace-gate.spec.ts
         env:
           ANYKPI_API_KEY: anykpi-e2e-admin
           DATABASE_URL: ${{ matrix.engine == 'postgres' && 'postgres://postgres:postgres@localhost:5432/anykpi' || '' }}
