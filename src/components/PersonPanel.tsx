@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { PersonPanelResponse } from "@/core/contracts";
+import ResearchDisclosure, {
+  type ResearchablePerson,
+} from "@/components/ResearchDisclosure";
 import { useFreshness } from "@/components/useFreshness";
 
 interface PersonPanelProps {
@@ -31,9 +35,13 @@ export default function PersonPanel({
   personId,
   onClose,
 }: PersonPanelProps) {
+  const router = useRouter();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [data, setData] = useState<PersonPanelResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [researchPerson, setResearchPerson] = useState<ResearchablePerson | null>(
+    null
+  );
 
   const loadPerson = useCallback((refresh = false) => {
     let cancelled = false;
@@ -127,6 +135,25 @@ export default function PersonPanel({
             </div>
             <p className="text-xs text-sub mt-0.5 font-mono">{personId}</p>
           </div>
+          <button
+            type="button"
+            disabled={!data}
+            data-testid="person-research"
+            aria-label={`Research ${title}`}
+            onClick={() =>
+              data &&
+              setResearchPerson({
+                personId: data.personId,
+                name: data.name,
+                emoji: data.emoji,
+                country: data.country,
+                platform: data.platform,
+              })
+            }
+            className="text-sub hover:text-text text-sm px-2 py-1 rounded border border-border disabled:opacity-40"
+          >
+            ✨
+          </button>
           <button
             ref={closeRef}
             type="button"
@@ -241,6 +268,17 @@ export default function PersonPanel({
           )}
         </div>
       </aside>
+      <ResearchDisclosure
+        workspace={workspace}
+        person={researchPerson}
+        onClose={() => setResearchPerson(null)}
+        onComplete={() => {
+          setResearchPerson(null);
+          router.replace(
+            `/dashboard?workspace=${encodeURIComponent(workspace)}&view=pmf`
+          );
+        }}
+      />
     </div>
   );
 }

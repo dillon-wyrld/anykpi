@@ -124,6 +124,25 @@ describe("research card", () => {
     });
     expect(run.people[0].signal).toContain("cached locally");
   });
+
+  it("keeps couldn't verify binding when the source found nothing", () => {
+    const result: ResearchResult = {
+      personId: "p-river",
+      name: "River",
+      workspace: "demo",
+      queriedAt: "2026-08-19T12:00:00.000Z",
+      query: "River GB",
+      outgoing: [{ field: "name", value: "River" }],
+      claims: [],
+      verified: false,
+      cached: false,
+      source: "public encyclopedia",
+    };
+    const run = pmfRunFromResearch(result);
+    expect(run.people[0]?.verified).toBe(false);
+    expect(run.people[0]?.claims).toEqual([]);
+    expect(run.people[0]?.read).toContain("couldn't verify");
+  });
 });
 
 describe("outreach + header counts", () => {

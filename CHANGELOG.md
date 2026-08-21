@@ -7,6 +7,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- PMF+ research providers (ANY-66): a BYO web-search key
+  (`ANYKPI_RESEARCH_SEARCH_KEY`) is used when set; the public
+  encyclopedia stays the fallback. ✨ on a dot-plot row, the person
+  panel, and the current filtered view opens the same
+  disclosed-and-cached research step. Confidence markers and
+  “couldn't verify” stay binding.
 - Agent onboarding (ANY-60): an Agents step on `/connect` and a permanent
   `/agents` page. Copy one prompt (instance address, `/llms.txt`,
   `AGENTS.md`, how to ask for a key). Per-client tabs (Claude, ChatGPT,

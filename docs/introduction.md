@@ -49,7 +49,7 @@ Don't have PostHog/Mixpanel/Amplitude? Add the ANYKPI SDK. Events land in the sa
 2. **Cohorts** — Retention curves with smile detection (PMF signal).
 3. **Weekly Business Review** — 6 weeks, 12 months YOY, exceptions auto-surfaced. Thresholds live in `anykpi.config.json` beside the database; see [WBR exception rules](#wbr-exception-rules).
 4. **Calendar** — Read-only timeline from connected sources.
-5. **PMF+** — Research one person from a public source after you approve the outgoing fields (listed verbatim). Outreach drafts persist as waiting until a founder session or admin key approves each send. Nothing auto-sends.
+5. **PMF+** — Research one person after you approve the outgoing fields (listed verbatim). A BYO web-search key is used when set; otherwise a public encyclopedia. Start from a dot-plot row, the person panel, or the current filtered view. Outreach drafts persist as waiting until a founder session or admin key approves each send. Nothing auto-sends.
 
 Every view has a shareable URL.
 

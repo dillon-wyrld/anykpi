@@ -9,13 +9,17 @@ import * as schema from "@/core/schema";
 import { GET as getPmf, POST as postPmf } from "@/app/api/views/pmf/route";
 import {
   approveOutgoingFields,
+  bindResearchClaims,
   buildResearchQuery,
   buildResearchUrl,
+  buildWebSearchUrl,
   discloseResearch,
   listCachedResearch,
   listOutgoingFields,
   parseOpenSearchPayload,
+  parseWebSearchPayload,
   researchCachePath,
+  resolveResearchProvider,
   runResearch,
   type ResearchSubject,
 } from "./research";
@@ -201,6 +205,158 @@ describe("public source parse", () => {
     expect(claims).toHaveLength(1);
     expect(claims[0]?.source).toBe("example.test");
     expect(claims[0]?.url).toContain("River");
+  });
+
+  it("marks confidence on every claim and never invents one", () => {
+    const claims = parseOpenSearchPayload([
+      "River",
+      ["River", "Other"],
+      ["A public page", "Another page"],
+      ["https://example.test/wiki/River", "https://example.test/wiki/Other"],
+    ]);
+    expect(claims).toHaveLength(2);
+    expect(claims[0]?.confidence).toBe("medium");
+    expect(claims[1]?.confidence).toBe("low");
+    expect(bindResearchClaims(claims).every((c) => c.confidence)).toBe(true);
+    expect(bindResearchClaims([{ title: "", source: "x", confidence: "high" }])).toEqual(
+      []
+    );
+  });
+});
+
+describe("research providers", () => {
+  it("uses the encyclopedia when no web-search key is set", () => {
+    expect(resolveResearchProvider({})).toBe("encyclopedia");
+    expect(resolveResearchProvider({ ANYKPI_RESEARCH_SEARCH_KEY: "  " })).toBe(
+      "encyclopedia"
+    );
+  });
+
+  it("uses web search when a BYO key is present", () => {
+    expect(
+      resolveResearchProvider({ ANYKPI_RESEARCH_SEARCH_KEY: "test-search-key" })
+    ).toBe("web_search");
+  });
+
+  it("fetches the web-search provider when a key is present", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      return new Response(
+        JSON.stringify({
+          results: [
+            {
+              title: "River",
+              description: "A public page about River",
+              url: "https://example.test/river",
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    });
+    const path = cachePath("web-search");
+    const first = await runResearch({
+      workspace: WS,
+      subject: subject(),
+      approvedFields: listOutgoingFields(subject()),
+      fetch: fetchMock,
+      cachePath: path,
+      env: { ANYKPI_RESEARCH_SEARCH_KEY: "test-search-key" },
+    });
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.result.source).toBe("web search");
+    expect(first.result.claims[0]?.title).toContain("River");
+    expect(first.result.claims[0]?.confidence).toBe("medium");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const url = String(
+      (fetchMock.mock.calls[0] as unknown as [string, RequestInit] | undefined)?.[0]
+    );
+    expect(url).toBe(buildWebSearchUrl("River GB"));
+    expect(url).toContain("q=River");
+    expect(url).not.toContain("wikipedia");
+    expect(url).not.toContain("hidden.test");
+    expect(url).not.toContain("p-river");
+  });
+
+  it("falls back to the encyclopedia when web search does not respond", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("wikipedia.org") || url.includes("opensearch") || url.includes("action=opensearch")) {
+        return new Response(JSON.stringify(openSearch("River")), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      throw new Error("web search down");
+    });
+    const path = cachePath("web-search-fallback");
+    const outcome = await runResearch({
+      workspace: WS,
+      subject: subject(),
+      approvedFields: listOutgoingFields(subject()),
+      fetch: fetchMock,
+      cachePath: path,
+      env: { ANYKPI_RESEARCH_SEARCH_KEY: "test-search-key" },
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.result.source).toBe("public encyclopedia");
+    expect(outcome.result.claims[0]?.title).toContain("River");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("still uses the encyclopedia without a key", async () => {
+    const fetchMock = stubFetch();
+    const path = cachePath("no-key");
+    const outcome = await runResearch({
+      workspace: WS,
+      subject: subject(),
+      approvedFields: listOutgoingFields(subject()),
+      fetch: fetchMock,
+      cachePath: path,
+      env: {},
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.result.source).toBe("public encyclopedia");
+    const url = String(
+      (fetchMock.mock.calls[0] as unknown as [string, RequestInit] | undefined)?.[0]
+    );
+    expect(url).toBe(buildResearchUrl("River GB"));
+  });
+
+  it("does not invent claims when the source returns nothing — couldn't verify", async () => {
+    const fetchMock = stubFetch(["River", [], [], []]);
+    const path = cachePath("unverified");
+    const outcome = await runResearch({
+      workspace: WS,
+      subject: subject(),
+      approvedFields: listOutgoingFields(subject()),
+      fetch: fetchMock,
+      cachePath: path,
+      env: {},
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.result.claims).toEqual([]);
+    expect(outcome.result.verified).toBe(false);
+    expect(JSON.stringify(outcome.result)).not.toContain("hidden.test");
+  });
+
+  it("parses a generic web-search payload without inventing titles", () => {
+    const claims = parseWebSearchPayload({
+      web: {
+        results: [
+          { title: "River", description: "A page", url: "https://example.test/river" },
+          { title: "", url: "https://example.test/empty" },
+        ],
+      },
+    });
+    expect(claims).toHaveLength(1);
+    expect(claims[0]?.title).toContain("River");
+    expect(claims[0]?.confidence).toBe("medium");
+    expect(parseWebSearchPayload({ results: [] })).toEqual([]);
+    expect(parseWebSearchPayload(null)).toEqual([]);
   });
 });
 

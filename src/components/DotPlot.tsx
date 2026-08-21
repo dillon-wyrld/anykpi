@@ -3,6 +3,9 @@
 import { useEffect, useState, useRef, useCallback, type MouseEvent as ReactMouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PersonPanel from "@/components/PersonPanel";
+import ResearchDisclosure, {
+  type ResearchablePerson,
+} from "@/components/ResearchDisclosure";
 import { clampCardPosition, clusterNote, stripDays } from "@/components/user-card";
 import { useFreshness } from "@/components/useFreshness";
 
@@ -280,6 +283,22 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     y: number;
     user: User | null;
   }>({ visible: false, x: 0, y: 0, user: null });
+  const [researchQueue, setResearchQueue] = useState<ResearchablePerson[]>([]);
+  const [researchTotal, setResearchTotal] = useState(0);
+
+  const toResearchable = (user: User): ResearchablePerson => ({
+    personId: user.personId,
+    name: user.name,
+    emoji: user.emoji,
+    country: user.country,
+    platform: user.platform,
+  });
+
+  const openResearch = (...people: User[]) => {
+    const next = people.map(toResearchable);
+    setResearchQueue(next);
+    setResearchTotal(next.length);
+  };
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -791,6 +810,29 @@ export default function DotPlot({ workspace }: DotPlotProps) {
           {user.name}
         </text>
         <text
+          x={LBL - 74}
+          y={cy + 4}
+          fontSize="12"
+          tabIndex={0}
+          role="button"
+          aria-label={`Research ${user.name}`}
+          data-testid={`dotplot-research-${user.personId}`}
+          style={{ cursor: "pointer" }}
+          onClick={(event) => {
+            event.stopPropagation();
+            openResearch(user);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              event.stopPropagation();
+              openResearch(user);
+            }
+          }}
+        >
+          ✨
+        </text>
+        <text
           x={LBL - 56}
           y={cy + 3.4}
           fontFamily="IBM Plex Mono, monospace"
@@ -1141,7 +1183,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
 
       {/* Filter chips */}
       {viewState.filters.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
           {viewState.filters.map((filter, idx) => (
             <span
               key={idx}
@@ -1156,6 +1198,16 @@ export default function DotPlot({ workspace }: DotPlotProps) {
               </button>
             </span>
           ))}
+          <button
+            type="button"
+            data-testid="dotplot-research-view"
+            aria-label="Research this view"
+            disabled={getFilteredUsers().length === 0}
+            onClick={() => openResearch(...getFilteredUsers())}
+            className="px-3 py-1.5 text-xs font-medium border border-border rounded-lg bg-panel text-sub hover:text-text disabled:opacity-40"
+          >
+            ✨ Research this view
+          </button>
         </div>
       )}
 
@@ -1294,6 +1346,30 @@ export default function DotPlot({ workspace }: DotPlotProps) {
           onClose={closePerson}
         />
       )}
+
+      <ResearchDisclosure
+        workspace={workspace}
+        person={researchQueue[0] ?? null}
+        queueLabel={
+          researchTotal > 1 && researchQueue.length > 0
+            ? `${researchTotal - researchQueue.length + 1} of ${researchTotal}`
+            : undefined
+        }
+        onClose={() => setResearchQueue([])}
+        onComplete={() => {
+          setResearchQueue((current) => {
+            const rest = current.slice(1);
+            if (rest.length === 0) {
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("workspace", workspace);
+              params.set("view", "pmf");
+              params.delete("user");
+              router.replace(`/dashboard?${params.toString()}`);
+            }
+            return rest;
+          });
+        }}
+      />
 
       {/* Legend */}
       <div className="flex flex-wrap gap-4 text-xs text-sub">
