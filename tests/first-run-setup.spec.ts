@@ -44,14 +44,10 @@ async function mintWriteKey(request: APIRequestContext, workspace: string) {
 async function unlock(page: Page, workspace: string, key: string) {
   await page.goto(`/dashboard?workspace=${workspace}&view=dotplot`);
   const unlockHeading = page.getByRole("heading", { name: `Unlock ${workspace}` });
-  await expect(unlockHeading.or(page.getByTestId("setup-prompt")).or(page.getByTestId("ask-anything"))).toBeVisible({
-    timeout: 20_000,
-  });
-  if (await unlockHeading.isVisible()) {
-    await page.getByLabel("API key").fill(key);
-    await page.getByRole("button", { name: "Open workspace" }).click();
-    await expect(unlockHeading).toHaveCount(0);
-  }
+  await expect(unlockHeading).toBeVisible({ timeout: 20_000 });
+  await page.getByLabel("API key").fill(key);
+  await page.getByRole("button", { name: "Open workspace" }).click();
+  await expect(unlockHeading).toHaveCount(0, { timeout: 15_000 });
 }
 
 test.describe("First-run setup (ANY-59)", () => {
