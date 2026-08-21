@@ -22,6 +22,7 @@ import {
 } from "@/core/csv-parse";
 import { AuditReadout } from "./AuditReadout";
 import { ConnectorHealthPanel } from "./ConnectorHealthPanel";
+import { ValueEventPicker } from "./ValueEventPicker";
 import {
   DEFAULT_COMPANY_NAME,
   DEMO_HOME_CITY,
@@ -1124,30 +1125,7 @@ function ConnectSettings({ workspaceFromQuery }: { workspaceFromQuery: string })
               </Link>
             </div>
 
-            <div className="bg-panel border border-border rounded-lg p-6">
-              <h3 className="font-semibold mb-3">Configure Value Events</h3>
-              <p className="text-sm text-sub mb-4">
-                Tell ANYKPI which events matter. These map to the dot plot's cell grammar.
-              </p>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-accent w-16">core:</span>
-                  <span className="text-sub">The main value action (e.g., "song_played", "doc_created")</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-accent w-16">search:</span>
-                  <span className="text-sub">Discovery actions</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-accent w-16">share:</span>
-                  <span className="text-sub">Sharing or collaboration</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-accent w-16">pay:</span>
-                  <span className="text-sub">Payment events</span>
-                </div>
-              </div>
-            </div>
+            <ValueEventPicker workspaceId={workspaceId} apiKey={adminKey} />
           </div>
         )}
 
