@@ -1,6 +1,7 @@
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
 import { eq } from "drizzle-orm";
+import { listAnnotations, serializeAnnotation } from "@/core/annotations";
 import {
   classifyCalendarDate,
   formatSyncAge,
@@ -93,5 +94,7 @@ export async function loadCalendarView(workspace: string) {
 
   mapped.sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
 
-  return { events: mapped };
+  const annotations = (await listAnnotations(workspace)).map(serializeAnnotation);
+
+  return { events: mapped, annotations };
 }

@@ -10,6 +10,14 @@ import { clampCardPosition, clusterNote, stripDays } from "@/components/user-car
 import { FreshnessChip } from "@/components/FreshnessChip";
 import { ViewEmptyState } from "@/components/ViewEmptyState";
 import { useFreshness } from "@/components/useFreshness";
+import {
+  AnnotationPinForm,
+  AnnotationStickers,
+  annotationMatchesCohort,
+  annotationMatchesPerson,
+  useAnnotations,
+  type AnnotationRecord,
+} from "@/components/AnnotationLayer";
 
 interface User {
   personId: string;
@@ -287,6 +295,8 @@ export default function DotPlot({ workspace }: DotPlotProps) {
   }>({ visible: false, x: 0, y: 0, user: null });
   const [researchQueue, setResearchQueue] = useState<ResearchablePerson[]>([]);
   const [researchTotal, setResearchTotal] = useState(0);
+  const { rows: annotations, setRows: setAnnotations, reload: reloadAnnotations } =
+    useAnnotations(workspace);
   const hideCardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showUserCard = (user: User, x: number, y: number) => {
@@ -346,12 +356,15 @@ export default function DotPlot({ workspace }: DotPlotProps) {
       .then((res) => res.json())
       .then((data) => {
         setUsers(data.users || []);
+        if (Array.isArray(data.annotations)) {
+          setAnnotations(data.annotations as AnnotationRecord[]);
+        }
         if (!refresh) setLoading(false);
       })
       .catch(() => {
         if (!refresh) setLoading(false);
       });
-  }, [workspace]);
+  }, [workspace, setAnnotations]);
 
   useEffect(() => {
     loadUsers(false);
@@ -846,6 +859,20 @@ export default function DotPlot({ workspace }: DotPlotProps) {
             🔥{user.streak}
           </text>
         )}
+        {annotations
+          .filter((row) => annotationMatchesPerson(row, user.personId))
+          .map((pin, index) => (
+            <text
+              key={pin.id}
+              data-testid={`annotation-dot-${pin.id}`}
+              x={LBL - 4}
+              y={cy - 6 - index * 12}
+              fontSize="12"
+              textAnchor="end"
+            >
+              {pin.type === "sticker" ? pin.content : "📝"}
+            </text>
+          ))}
 
         {Array.from({ length: DAYS }).map((_, d) => renderCell(user, d, LBL + d * CW, y))}
       </g>
@@ -877,6 +904,14 @@ export default function DotPlot({ workspace }: DotPlotProps) {
           style={{ cursor: "pointer" }}
         >
           {group.collapsed ? "▸" : "▾"} {group.name}
+          {annotations
+            .filter((row) => annotationMatchesCohort(row, group.name))
+            .map((pin) => (
+              <tspan key={pin.id} data-testid={`annotation-dot-${pin.id}`}>
+                {" "}
+                {pin.type === "sticker" ? pin.content : "📝"}
+              </tspan>
+            ))}
         </text>
         <text
           x={LBL - 56}
@@ -949,7 +984,18 @@ export default function DotPlot({ workspace }: DotPlotProps) {
   if (users.length === 0) {
     return (
       <div className="space-y-3">
-        <FreshnessChip health={freshnessHealth} />
+        <div className="flex items-center gap-3 flex-wrap">
+          <FreshnessChip health={freshnessHealth} />
+          <AnnotationPinForm
+            workspace={workspace}
+            people={users}
+            onPinned={(row) => {
+              setAnnotations((current) => [row, ...current]);
+              reloadAnnotations();
+            }}
+          />
+        </div>
+        <AnnotationStickers annotations={annotations} />
         <ViewEmptyState view="dotplot" workspace={workspace} />
       </div>
     );
@@ -990,6 +1036,17 @@ export default function DotPlot({ workspace }: DotPlotProps) {
       {/* Controls */}
       <div className="flex items-center gap-3 flex-wrap">
         <FreshnessChip health={freshnessHealth} />
+        <AnnotationPinForm
+          workspace={workspace}
+          people={users}
+          defaultTargetType="person"
+          defaultTargetId={selectedPersonId ?? users[0]?.personId ?? ""}
+          onPinned={(row) => {
+            setAnnotations((current) => [row, ...current]);
+            reloadAnnotations();
+          }}
+        />
+        <AnnotationStickers annotations={annotations} />
         <div className="flex gap-1 border border-border rounded-lg overflow-hidden">
           <button
             onClick={() => setZoom("day")}

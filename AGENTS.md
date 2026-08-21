@@ -30,6 +30,8 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 - `POST /api/v1/metrics` — define a WBR metric (write scope; same validation as MCP `define_metric`; status cannot be written)
 - `PATCH /api/v1/metrics` — accept / edit / reorder / retire / import manual points (browser session or write key)
 - `GET /api/v1/calendar` — multi-source timeline
+- `GET /api/v1/annotations` — pinned stickers and notes
+- `POST /api/v1/annotations` — pin a sticker or note (write scope or browser session; same body as MCP `annotate`)
 - `GET /api/v1/sync` — connector status (`syncIntervalMinutes` from `SYNC_INTERVAL_MINUTES`)
 - `GET /api/v1/freshness` — last ingest + per-source last-sync stamps
 - `GET /api/v1/audit` — action audit log (actor, action, subject, timestamp)
@@ -59,7 +61,7 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 HTTP `POST /api/mcp`. stdio: `src/mcp/server.ts`. `tools/list` is open. `tools/call` follows REST auth.
 
 - `get_overview`, `query_users`, `get_cohorts`, `get_wbr`, `get_calendar`
-- write (requires write scope): `connect_source`, `trigger_sync`, `import_csv`, `define_metric`
+- write (requires write scope): `connect_source`, `trigger_sync`, `import_csv`, `define_metric`, `disconnect_source`, `annotate`
 - `queue_outreach`, `approve_outreach`, `send_outreach` (HTTP MCP; write can queue, only session/admin can approve, unapproved send is refused)
 - stdio also: `install_sdk`, `configure_value_events` (requires write scope)
 

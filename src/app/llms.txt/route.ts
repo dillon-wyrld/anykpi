@@ -24,7 +24,7 @@ Hashed keys are workspace-bound and carry a scope: read, write, or admin. New ke
 
 ## view_url
 
-Successful overview, users, cohorts, WBR, and calendar responses include a view_url. It opens /dashboard in the workspace and view that prove the answer (for example /dashboard?workspace=demo&view=dotplot). Origin is the request Host / X-Forwarded-* unless PUBLIC_BASE_URL is set.
+Successful overview, users, cohorts, WBR, calendar, and annotation responses include a view_url. It opens /dashboard in the workspace and view that prove the answer. Origin is the request Host / X-Forwarded-* unless PUBLIC_BASE_URL is set.
 
 ## REST
 
@@ -32,12 +32,13 @@ OpenAPI spec: /api/openapi
 
 - GET /api/v1/overview — company snapshot (users, activity, retention, PMF signal, exceptions, syncHealth)
 - GET /api/v1/users — query users (cluster, platform, signup dates, limit, offset; total + hasMore + nextOffset)
-- DELETE /api/v1/users/{id} — purge a person, cascade read models, and write a tombstone so re-sync cannot resurrect them (key-only; a browser session is 403)
+- DELETE /api/v1/users/{id} — purge a person and write a tombstone (key-only; a browser session is 403)
 - GET /api/v1/cohorts — retention curves with smile detection; optional split by platform, country, or cluster (max 3 series)
 - GET /api/v1/wbr — Weekly Business Review (starter proposals on a fresh live workspace)
 - POST /api/v1/metrics — define a WBR metric (write scope; status is computed)
 - PATCH /api/v1/metrics — accept / edit / reorder / retire / import points
 - GET /api/v1/calendar — multi-source event timeline
+- GET /api/v1/annotations — list pins. POST writes a sticker or note (write or session)
 - GET /api/v1/sync — connector sync status (includes syncIntervalMinutes)
 - GET /api/v1/freshness — last ingest + per-source last-sync stamps (views poll this)
 - GET /api/v1/audit — action log (actor, action, subject, timestamp)
@@ -82,6 +83,7 @@ Tools:
 - \`import_csv\` — import users or events from CSV (requires write scope)
 - \`define_metric\` — create or update a WBR metric (write scope; status is computed)
 - \`disconnect_source\` — drop credentials and sync state (write scope; data stays)
+- \`annotate\` — pin a sticker or note (write scope)
 - \`queue_outreach\` — persist a waiting draft (write scope)
 - \`approve_outreach\` — approve a persisted draft (session or admin only)
 - \`send_outreach\` — deliver an approved draft; unapproved drafts are refused
@@ -96,7 +98,7 @@ npx @anykpi/cli
 
 Commands: login (alias: key), keys, workspaces, config, connect, import, export, identify, track, overview, users, cohorts, wbr, calendar, sync, outreach.
 
-login mints a key via POST /api/v1/keys (default scope read and workspace live; pass --scope write for ingest, --workspace demo only when you mean the public demo) and requires ANYKPI_API_KEY or --key. keys lists metadata (scope, last used, legacy). \`anykpi keys downgrade\` converts migrated write keys to read. config reads or sets the company profile via GET/PATCH /api/v1/config (\`--name\`, \`--founded\`, \`--city\`, \`--timezone\`). connect stores source credentials via POST /api/v1/connect (including \`anykpi connect csv\`). import uploads a users or events CSV via POST /api/v1/import. export writes users, events, and read models via GET /api/v1/export (docs/backup.md). outreach lists drafts or tags \`--outcome replied|interviewed|converted\`. Query commands take --workspace and --json.
+login mints a key via POST /api/v1/keys (default scope read and workspace live; --scope write for ingest; --workspace demo only when intended) and requires ANYKPI_API_KEY or --key. keys lists metadata (scope, last used, legacy). \`anykpi keys downgrade\` converts migrated write keys to read. config reads or sets the company profile via GET/PATCH /api/v1/config (\`--name\`, \`--founded\`, \`--city\`, \`--timezone\`). connect stores source credentials via POST /api/v1/connect (including \`anykpi connect csv\`). import uploads a users or events CSV via POST /api/v1/import. export writes users, events, and read models via GET /api/v1/export (docs/backup.md). outreach lists drafts or tags \`--outcome replied|interviewed|converted\`. Query commands take --workspace and --json.
 
 ## Connectors
 

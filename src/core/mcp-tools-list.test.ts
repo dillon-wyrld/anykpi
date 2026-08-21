@@ -66,7 +66,9 @@ describe("MCP tools/list schema snapshot", () => {
     expect(listed.length).toBeGreaterThan(0);
 
     for (const tool of listed) {
-      expect(tool.name, "every tool needs a stable name").toMatch(/^[a-z]+_[a-z0-9_]+$/);
+      expect(tool.name, "every tool needs a stable name").toMatch(
+        /^[a-z]+(_[a-z0-9_]+)*$/
+      );
       expect(tool.inputSchema?.type).toBe("object");
       expect(
         tool.inputSchema?.properties,

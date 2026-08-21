@@ -329,9 +329,65 @@ export const WBRResponseSchema = z.object({
   view_url: z.string().optional(),
 });
 
+export const AnnotationTypeSchema = z.enum(["sticker", "note"]);
+export const AnnotationTargetTypeSchema = z.enum([
+  "person",
+  "date",
+  "metric",
+  "cohort",
+]);
+/** Write alias: `user` stores as `person` so person-delete tombstones stay honest. */
+export const AnnotationTargetTypeInputSchema = z.enum([
+  "person",
+  "user",
+  "date",
+  "metric",
+  "cohort",
+]);
+
+export const AnnotationSchema = z.object({
+  id: z.number().int(),
+  type: AnnotationTypeSchema,
+  targetType: AnnotationTargetTypeSchema,
+  targetId: z.string(),
+  content: z.string(),
+  createdAt: z.string().datetime(),
+  workspaceId: z.string(),
+});
+
+/**
+ * Pin a sticker or note to a person, date, metric, or cohort.
+ * Same body for REST and MCP `annotate`.
+ */
+export const AnnotateRequestSchema = z
+  .object({
+    type: AnnotationTypeSchema,
+    targetType: AnnotationTargetTypeInputSchema,
+    targetId: z.string().min(1).max(200),
+    content: z.string().min(1).max(2000),
+    workspace: z.string().optional(),
+    workspaceId: z.string().optional(),
+  })
+  .strict();
+
+export const AnnotateResponseSchema = z.object({
+  annotation: AnnotationSchema,
+  workspace: z.string(),
+  view_url: z.string().optional(),
+  viewUrl: z.string().optional(),
+});
+
+export const AnnotationsListResponseSchema = z.object({
+  annotations: z.array(AnnotationSchema),
+  workspace: z.string(),
+  view_url: z.string().optional(),
+  viewUrl: z.string().optional(),
+});
+
 export const CalendarResponseSchema = z.object({
   events: z.array(CalendarEventSchema),
   sources: z.array(z.string()),
+  annotations: z.array(AnnotationSchema).optional(),
   workspace: z.string(),
   view_url: z.string().optional(),
 });
@@ -655,6 +711,7 @@ export const PINNED_MCP_TOOLS = [
   "import_csv",
   "define_metric",
   "disconnect_source",
+  "annotate",
 ] as const;
 
 /** Stdio also advertises SDK install and value-event mapping. */
@@ -860,6 +917,39 @@ export const MCP_DISCONNECT_SOURCE_TOOL: McpToolDefinition = {
       source: {
         type: "string",
         description: "Source id (ics, csv, or a connector slug)",
+      },
+    },
+  },
+};
+
+export const MCP_ANNOTATE_TOOL: McpToolDefinition = {
+  name: "annotate",
+  description:
+    "Pin a sticker or note to a person, date, metric, or cohort. Requires a write-scoped API key. Returns the annotation plus view_url.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      workspace: {
+        type: "string",
+        description: "Workspace ID (default: live)",
+      },
+      type: {
+        type: "string",
+        description: "sticker or note",
+      },
+      targetType: {
+        type: "string",
+        description:
+          "person, date, metric, or cohort. user is accepted and stored as person.",
+      },
+      targetId: {
+        type: "string",
+        description:
+          "Person id, YYYY-MM-DD, metric id, or cohort key the pin attaches to",
+      },
+      content: {
+        type: "string",
+        description: "Sticker glyph or note text",
       },
     },
   },
@@ -1236,6 +1326,10 @@ export type DeleteUserResponse = z.infer<typeof DeleteUserResponseSchema>;
 export type CohortsResponse = z.infer<typeof CohortsResponseSchema>;
 export type WBRResponse = z.infer<typeof WBRResponseSchema>;
 export type CalendarResponse = z.infer<typeof CalendarResponseSchema>;
+export type Annotation = z.infer<typeof AnnotationSchema>;
+export type AnnotateRequest = z.infer<typeof AnnotateRequestSchema>;
+export type AnnotateResponse = z.infer<typeof AnnotateResponseSchema>;
+export type AnnotationsListResponse = z.infer<typeof AnnotationsListResponseSchema>;
 export type SyncResponse = z.infer<typeof SyncResponseSchema>;
 export type FreshnessSource = z.infer<typeof FreshnessSourceSchema>;
 export type FreshnessResponse = z.infer<typeof FreshnessResponseSchema>;

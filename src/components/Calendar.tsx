@@ -13,6 +13,13 @@ import { FreshnessChip } from "@/components/FreshnessChip";
 import { ViewEmptyState } from "@/components/ViewEmptyState";
 import { useFreshness } from "@/components/useFreshness";
 import { formatCompanyDayLabel } from "@/core/company-day";
+import {
+  AnnotationPinForm,
+  AnnotationStickers,
+  annotationMatchesDate,
+  useAnnotations,
+  type AnnotationRecord,
+} from "@/components/AnnotationLayer";
 
 interface CalendarEvent {
   id: number;
@@ -100,7 +107,10 @@ export default function Calendar({ workspace }: CalendarProps) {
   const [sources, setSources] = useState<Source[]>([]);
   const [dayLabel, setDayLabel] = useState(formatCompanyDayLabel(null));
   const [loading, setLoading] = useState(true);
+  const { rows: annotations, setRows: setAnnotations, reload: reloadAnnotations } =
+    useAnnotations(workspace);
   const initialSyncDone = useRef(false);
+  const todayKey = format(today, "yyyy-MM-dd");
 
   const loadCalendar = useCallback((refresh = false) => {
     fetch(`/api/views/calendar?workspace=${workspace}`)
@@ -116,12 +126,15 @@ export default function Calendar({ workspace }: CalendarProps) {
         });
         setAllEvents(events);
         setSources(rollupCalendarSources(events));
+        if (Array.isArray(data.annotations)) {
+          setAnnotations(data.annotations as AnnotationRecord[]);
+        }
         if (!refresh) setLoading(false);
       })
       .catch(() => {
         if (!refresh) setLoading(false);
       });
-  }, [workspace, today]);
+  }, [workspace, today, setAnnotations]);
 
   useEffect(() => {
     loadCalendar(false);
@@ -188,6 +201,17 @@ export default function Calendar({ workspace }: CalendarProps) {
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
 
+  const onPinned = (row: AnnotationRecord) => {
+    setAnnotations((current) => [row, ...current]);
+    reloadAnnotations();
+  };
+
+  const stickersForDay = useCallback(
+    (day: Date) =>
+      annotations.filter((row) => annotationMatchesDate(row, format(day, "yyyy-MM-dd"))),
+    [annotations]
+  );
+
   const filteredEvents = allEvents.filter((e) => {
     if (viewState.excludedSources.has(e.source)) return false;
     if (viewState.filter !== "all" && e.type !== viewState.filter) return false;
@@ -227,6 +251,7 @@ export default function Calendar({ workspace }: CalendarProps) {
                 {isToday && <div className="text-[10px] uppercase tracking-wider mt-1">Today</div>}
               </div>
               <div className="p-2 space-y-2 min-h-[200px]">
+                <AnnotationStickers annotations={stickersForDay(day)} compact />
                 {dayEvents.length === 0 ? (
                   <div className="text-center text-sub text-xs py-8">—</div>
                 ) : (
@@ -260,7 +285,7 @@ export default function Calendar({ workspace }: CalendarProps) {
         })}
       </div>
     );
-  }, [getDateRange, filteredEvents, today]);
+  }, [getDateRange, filteredEvents, today, stickersForDay]);
 
   const renderMonthView = useCallback(() => {
     const { from, to } = getDateRange();
@@ -286,6 +311,7 @@ export default function Calendar({ workspace }: CalendarProps) {
               {day.getDate()}
             </div>
             <div className="space-y-1">
+              <AnnotationStickers annotations={stickersForDay(day)} compact />
               {dayEvents.slice(0, 3).map((event) => (
                 <div
                   key={event.id}
@@ -318,7 +344,7 @@ export default function Calendar({ workspace }: CalendarProps) {
         {cells}
       </div>
     );
-  }, [getDateRange, filteredEvents, today]);
+  }, [getDateRange, filteredEvents, today, stickersForDay]);
 
   if (loading) {
     return (
@@ -334,7 +360,16 @@ export default function Calendar({ workspace }: CalendarProps) {
   if (allEvents.length === 0) {
     return (
       <div className="space-y-3">
-        <FreshnessChip health={freshnessHealth} />
+        <div className="flex items-center gap-3 flex-wrap">
+          <FreshnessChip health={freshnessHealth} />
+          <AnnotationPinForm
+            workspace={workspace}
+            defaultTargetType="date"
+            defaultTargetId={todayKey}
+            onPinned={onPinned}
+          />
+        </div>
+        <AnnotationStickers annotations={annotations} />
         <ViewEmptyState view="calendar" workspace={workspace} />
       </div>
     );
@@ -353,6 +388,13 @@ export default function Calendar({ workspace }: CalendarProps) {
       <div className="flex items-center gap-3 flex-wrap">
         <h2 className="text-lg font-semibold">Calendar</h2>
         <FreshnessChip health={freshnessHealth} />
+        <AnnotationPinForm
+          workspace={workspace}
+          defaultTargetType="date"
+          defaultTargetId={todayKey}
+          onPinned={onPinned}
+        />
+        <AnnotationStickers annotations={annotations} />
 
         <div className="flex gap-1 border border-border rounded-lg overflow-hidden">
           <button

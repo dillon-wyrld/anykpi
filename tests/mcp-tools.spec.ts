@@ -81,6 +81,17 @@ const HAPPY_PATH: Record<
     fields: ["disconnected", "source", "workspaceId", "viewUrl", "view_url"],
     write: true,
   },
+  annotate: {
+    args: {
+      workspace: "e2e-mcp-write",
+      type: "note",
+      targetType: "date",
+      targetId: "2026-08-21",
+      content: "Ship day",
+    },
+    fields: ["annotation", "workspace", "viewUrl", "view_url"],
+    write: true,
+  },
   queue_outreach: {
     args: {
       workspace: "demo",

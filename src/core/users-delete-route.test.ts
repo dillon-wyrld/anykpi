@@ -53,6 +53,7 @@ afterEach(async () => {
   await db.delete(schema.sources).where(eq(schema.sources.workspaceId, WS));
   await db.delete(schema.syncState).where(eq(schema.syncState.workspaceId, WS));
   await db.delete(schema.apiKeys).where(eq(schema.apiKeys.workspaceId, WS));
+  await db.delete(schema.annotations).where(eq(schema.annotations.workspaceId, WS));
 });
 
 function asAdmin(url: string, method: string, body?: unknown) {
@@ -149,6 +150,24 @@ async function syncEverySource() {
 describe("DELETE /api/v1/users/:id", () => {
   it("purges the person, write models, and records an audit row", async () => {
     const personId = await seedPerson();
+    await db.insert(schema.annotations).values([
+      {
+        type: "sticker",
+        targetType: "person",
+        targetId: personId,
+        content: "📌",
+        createdAt: new Date(),
+        workspaceId: WS,
+      },
+      {
+        type: "note",
+        targetType: "date",
+        targetId: "2026-08-21",
+        content: "kept after delete",
+        createdAt: new Date(),
+        workspaceId: WS,
+      },
+    ]);
     const res = await deleteUser(
       asAdmin(`http://localhost:3000/api/v1/users/${personId}?workspace=${WS}`, "DELETE"),
       { params: Promise.resolve({ id: personId }) }
@@ -189,6 +208,14 @@ describe("DELETE /api/v1/users/:id", () => {
     expect(stones.map((row) => row.externalId)).toEqual(
       expect.arrayContaining([personId, "erase-me", "ada@example.com"])
     );
+
+    const leftover = await db
+      .select()
+      .from(schema.annotations)
+      .where(eq(schema.annotations.workspaceId, WS))
+      .all();
+    expect(leftover.map((row) => row.content)).toEqual(["kept after delete"]);
+    expect(leftover.some((row) => row.targetType === "person")).toBe(false);
 
     const audit = await getAudit(
       asAdmin(`http://localhost:3000/api/v1/audit?workspace=${WS}`, "GET")

@@ -34,7 +34,7 @@ function sectionBody(text: string, heading: string): string {
 
 function namedTools(text: string): string[] {
   const section = sectionBody(text, "MCP");
-  const matches = [...section.matchAll(/`([a-z]+_[a-z0-9_]+)`/g)];
+  const matches = [...section.matchAll(/`([a-z]+(?:_[a-z0-9_]+)*)`/g)];
   return unique(matches.map((m) => m[1]));
 }
 

@@ -1,6 +1,6 @@
 /**
  * MCP write tools — connect_source, trigger_sync, import_csv,
- * define_metric, disconnect_source.
+ * define_metric, disconnect_source, annotate.
  *
  * HTTP and stdio advertise the same schemas. Callers gate write scope.
  * Successful payloads include a dashboard view_url that proves the result.
@@ -8,14 +8,22 @@
 
 import { getConnector, resolveSources, sync } from "@/connectors";
 import {
+  AnnotateRequestSchema,
   ConnectSourceRequestSchema,
   DefineMetricRequestSchema,
   DisconnectSourceRequestSchema,
   ImportRequestSchema,
+  MCP_ANNOTATE_TOOL,
   MCP_DEFINE_METRIC_TOOL,
   MCP_DISCONNECT_SOURCE_TOOL,
   SyncTriggerRequestSchema,
 } from "./contracts";
+import {
+  AnnotateError,
+  annotationViewUrl,
+  createAnnotation,
+  serializeAnnotation,
+} from "./annotations";
 import {
   WbrBuilderError,
   deckViewUrl,
@@ -43,6 +51,7 @@ export const MCP_WRITE_TOOL_NAMES = [
   "import_csv",
   "define_metric",
   "disconnect_source",
+  "annotate",
 ] as const;
 
 export type McpWriteToolName = (typeof MCP_WRITE_TOOL_NAMES)[number];
@@ -133,6 +142,7 @@ export const MCP_WRITE_TOOLS: McpToolDefinition[] = [
     },
     MCP_DEFINE_METRIC_TOOL,
     MCP_DISCONNECT_SOURCE_TOOL,
+    MCP_ANNOTATE_TOOL,
   ];
 
 export type McpWriteArgs = {
@@ -143,6 +153,9 @@ export type McpWriteArgs = {
   kind?: string;
   mapping?: Record<string, unknown>;
   preview?: boolean;
+  targetType?: string;
+  targetId?: string;
+  content?: string;
   id?: string;
   name?: string;
   section?: string;
@@ -395,6 +408,46 @@ export async function runDefineMetric(
   }
 }
 
+export async function runAnnotate(
+  args: McpWriteArgs,
+  workspace: string,
+  baseUrl: string
+): Promise<McpWriteResult> {
+  const parsed = AnnotateRequestSchema.safeParse({
+    type: args.type,
+    targetType: args.targetType,
+    targetId: args.targetId,
+    content: args.content,
+    workspace,
+  });
+  if (!parsed.success) {
+    return { ok: false, error: "Bad Request" };
+  }
+  try {
+    const row = await createAnnotation(workspace, parsed.data);
+    const viewUrl = annotationViewUrl(
+      baseUrl,
+      workspace,
+      row.targetType,
+      row.targetId
+    );
+    return {
+      ok: true,
+      payload: {
+        annotation: serializeAnnotation(row),
+        workspace,
+        viewUrl,
+        view_url: viewUrl,
+      },
+    };
+  } catch (error) {
+    if (error instanceof AnnotateError) {
+      return { ok: false, error: error.message };
+    }
+    throw error;
+  }
+}
+
 export async function runDisconnectSource(
   args: McpWriteArgs,
   workspace: string,
@@ -448,6 +501,8 @@ export async function runMcpWriteTool(
       return runDefineMetric(args, workspace, baseUrl);
     case "disconnect_source":
       return runDisconnectSource(args, workspace, baseUrl);
+    case "annotate":
+      return runAnnotate(args, workspace, baseUrl);
     default:
       return null;
   }
