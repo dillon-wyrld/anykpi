@@ -104,8 +104,9 @@ afterEach(async () => {
 describe("loadWbrView — revenue lanes on the read models", () => {
   it("shows MRR, churn, ARPU, and runway with WoW on seeded snapshots", async () => {
     await seedMini();
-    const { metrics } = await loadWbrView(WS);
-    const byId = Object.fromEntries(metrics.map((m) => [m.id, m]));
+    const { metrics, proposals } = await loadWbrView(WS);
+    expect(metrics).toHaveLength(0);
+    const byId = Object.fromEntries(proposals.map((m) => [m.id, m]));
 
     expect(byId.rev_mrr.current).toBe(656);
     expect(byId.rev_mrr.wow).toBe(18.6);

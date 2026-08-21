@@ -65,6 +65,17 @@ const HAPPY_PATH: Record<
     fields: ["imported", "kind", "workspaceId", "viewUrl"],
     write: true,
   },
+  define_metric: {
+    args: {
+      workspace: "e2e-mcp-write",
+      name: "Weekly actives",
+      section: "eng",
+      type: "input",
+      source: { kind: "event_count", measure: "actives" },
+    },
+    fields: ["metric", "workspace", "viewUrl", "view_url"],
+    write: true,
+  },
   queue_outreach: {
     args: {
       workspace: "demo",

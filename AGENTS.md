@@ -26,7 +26,9 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 - `GET /api/v1/users` — query users (cluster, platform, dates, limit, offset)
 - `DELETE /api/v1/users/{id}` — purge a person and write a tombstone (key-only; survives re-sync)
 - `GET /api/v1/cohorts` — retention with smile detection; optional `split` by platform, country, or cluster (max 3 series)
-- `GET /api/v1/wbr` — Weekly Business Review
+- `GET /api/v1/wbr` — Weekly Business Review (includes starter proposals on a fresh live workspace)
+- `POST /api/v1/metrics` — define a WBR metric (write scope; same validation as MCP `define_metric`; status cannot be written)
+- `PATCH /api/v1/metrics` — accept / edit / reorder / retire / import manual points (browser session or write key)
 - `GET /api/v1/calendar` — multi-source timeline
 - `GET /api/v1/sync` — connector status (`syncIntervalMinutes` from `SYNC_INTERVAL_MINUTES`)
 - `GET /api/v1/freshness` — last ingest + per-source last-sync stamps
@@ -57,7 +59,7 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 HTTP `POST /api/mcp`. stdio: `src/mcp/server.ts`. `tools/list` is open. `tools/call` follows REST auth.
 
 - `get_overview`, `query_users`, `get_cohorts`, `get_wbr`, `get_calendar`
-- write (requires write scope): `connect_source`, `trigger_sync`, `import_csv`
+- write (requires write scope): `connect_source`, `trigger_sync`, `import_csv`, `define_metric`
 - `queue_outreach`, `approve_outreach`, `send_outreach` (HTTP MCP; write can queue, only session/admin can approve, unapproved send is refused)
 - stdio also: `install_sdk`, `configure_value_events` (requires write scope)
 

@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
 
     const response = WBRResponseSchema.parse({
       metrics,
+      proposals: wbrData.proposals || [],
       sections,
       exceptionsCount,
       workspace,

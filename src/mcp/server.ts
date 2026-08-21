@@ -479,6 +479,7 @@ export async function handleStdioToolCall(
                 text: JSON.stringify(
                   {
                     metrics: data.metrics,
+                    proposals: data.proposals,
                     exceptions: data.metrics.filter((m) => m.status !== "ok"),
                     viewUrl: buildViewUrl(`${BASE_URL}/dashboard`, {
                       view: "wbr",
@@ -571,7 +572,8 @@ export async function handleStdioToolCall(
 
         case "connect_source":
         case "trigger_sync":
-        case "import_csv": {
+        case "import_csv":
+        case "define_metric": {
           const presented = process.env.ANYKPI_API_KEY;
           const writeAuth = await authorize(
             {

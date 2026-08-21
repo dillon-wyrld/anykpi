@@ -166,6 +166,59 @@
       }
     },
     {
+      "name": "define_metric",
+      "description": "Create or update a WBR metric (name, section, input/output, unit, target, direction, source). Status is computed and cannot be written. Requires a write-scoped API key. Returns the metric plus view_url.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "description": "Workspace ID (default: live)"
+          },
+          "id": {
+            "type": "string",
+            "description": "Metric id. Generated from the name when omitted."
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name"
+          },
+          "section": {
+            "type": "string",
+            "description": "Deck section: fin, acq, act, eng, or qua"
+          },
+          "type": {
+            "type": "string",
+            "description": "input or output"
+          },
+          "unit": {
+            "type": "string",
+            "description": "Display unit ($ , %, or empty)"
+          },
+          "target": {
+            "type": "number",
+            "description": "Target value. Changing it does not rewrite history."
+          },
+          "goodDir": {
+            "type": "string",
+            "description": "up or down"
+          },
+          "owner": {
+            "type": "string",
+            "description": "Short owner mark on the card"
+          },
+          "source": {
+            "type": "object",
+            "description": "event_count (optional event name + filters), revenue series, or manual/CSV"
+          },
+          "points": {
+            "type": "array",
+            "description": "Optional manual points (timestamp, value, grain)"
+          }
+        }
+      }
+    },
+    {
       "name": "queue_outreach",
       "description": "Queue a persisted outreach draft (waiting). Write scope can queue; it cannot approve.",
       "inputSchema": {

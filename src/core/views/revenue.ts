@@ -62,23 +62,24 @@ function priorYear<T extends { period: Date }>(
 }
 
 export async function loadRevenueSeries(workspace: string): Promise<RevenueLaneSeries> {
-  const [snapshots, events, balances] = await Promise.all([
-    db
-      .select()
-      .from(schema.mrrSnapshots)
-      .where(eq(schema.mrrSnapshots.workspaceId, workspace))
-      .all(),
-    db
-      .select()
-      .from(schema.subscriptionEvents)
-      .where(eq(schema.subscriptionEvents.workspaceId, workspace))
-      .all(),
-    db
-      .select()
-      .from(schema.balanceSnapshots)
-      .where(eq(schema.balanceSnapshots.workspaceId, workspace))
-      .all(),
-  ]);
+  // Sequential: overview already holds a pool connection when it
+  // calls loadWbrView, which calls this. A 3-wide Promise.all
+  // contributed to postgres e2e ECONNRESET / 500 cascades.
+  const snapshots = await db
+    .select()
+    .from(schema.mrrSnapshots)
+    .where(eq(schema.mrrSnapshots.workspaceId, workspace))
+    .all();
+  const events = await db
+    .select()
+    .from(schema.subscriptionEvents)
+    .where(eq(schema.subscriptionEvents.workspaceId, workspace))
+    .all();
+  const balances = await db
+    .select()
+    .from(schema.balanceSnapshots)
+    .where(eq(schema.balanceSnapshots.workspaceId, workspace))
+    .all();
 
   if (snapshots.length === 0 && events.length === 0 && balances.length === 0) {
     return EMPTY_SERIES;

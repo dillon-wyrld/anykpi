@@ -170,6 +170,7 @@ Machine Context Protocol server at `/api/mcp`:
 - `connect_source` → store per-source credentials (write scope)
 - `trigger_sync` → run a connector sync (write scope)
 - `import_csv` → import users or events from CSV (write scope)
+- `define_metric` → create or update a WBR metric (write scope; status is computed)
 - `install_sdk` → generate SDK snippet
 - `configure_value_events` → map events to activity classes
 
