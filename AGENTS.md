@@ -44,6 +44,7 @@ Demo workspace is public-read. Live workspaces require a key (`Authorization: Be
 - `GET /api/v1/workspaces` — catalog (id, name, archivedAt) for the switcher
 - `POST /api/v1/workspaces` — create a live workspace (admin / env key)
 - `PATCH /api/v1/workspaces` — archive a live workspace (admin / env key; demo cannot be archived)
+- `DELETE /api/v1/workspaces` — typed-name-confirmed delete (write/admin key or browser session; that workspace only; no MCP tool). Demo can be re-seeded after wipe.
 - `GET /api/v1/keys` / `POST /api/v1/keys` — list metadata (scope, last used, legacy) / mint a key (default read)
 - `POST /api/v1/keys/downgrade` — convert legacy write keys to read
 - `POST /api/v1/ingest/identify` / `POST /api/v1/ingest/event` — identify and track

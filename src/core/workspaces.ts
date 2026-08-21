@@ -7,11 +7,20 @@ import { eq } from "drizzle-orm";
 import { db } from "./db";
 import * as schema from "./schema";
 import { DEMO_WORKSPACE, LIVE_WORKSPACE } from "./auth";
+import { purgeWorkspace } from "./tombstones";
 
 export const WORKSPACE_ID_PATTERN = /^[a-z][a-z0-9_-]{0,63}$/;
 
 export const WORKSPACE_ID_ERROR =
   "Workspace id must be 1–64 characters: start with a letter, then letters, digits, _ or -.";
+
+export const WORKSPACE_DELETE_CONFIRM_ERROR =
+  "Type the workspace name to confirm deletion";
+
+/** Exact display-name match after trim. Used by REST and the switcher. */
+export function typedNameConfirms(typed: string, name: string): boolean {
+  return typed.trim() === name;
+}
 
 const DISPLAY_NAMES: Record<string, string> = {
   [DEMO_WORKSPACE]: "Demo",
@@ -135,4 +144,23 @@ export async function archiveWorkspace(
     .set({ archivedAt })
     .where(eq(schema.workspaces.id, id));
   return { ok: true, workspace: { ...existing, archivedAt } };
+}
+
+export async function deleteWorkspace(
+  id: string,
+  typedName: string
+): Promise<
+  | { ok: true; workspace: WorkspaceRow }
+  | { ok: false; error: string; notFound?: boolean }
+> {
+  const existing = await getWorkspace(id);
+  if (!existing) {
+    return { ok: false, error: "Workspace not found", notFound: true };
+  }
+  if (!typedNameConfirms(typedName, existing.name)) {
+    return { ok: false, error: WORKSPACE_DELETE_CONFIRM_ERROR };
+  }
+  await purgeWorkspace(id);
+  await db.delete(schema.workspaces).where(eq(schema.workspaces.id, id));
+  return { ok: true, workspace: existing };
 }

@@ -35,6 +35,7 @@ export const AUDIT_ACTIONS = {
   usersDelete: "users.delete",
   workspaceCreate: "workspace.create",
   workspaceArchive: "workspace.archive",
+  workspaceDelete: "workspace.delete",
   configSave: "config.save",
 } as const;
 
@@ -63,6 +64,7 @@ export const WRITE_HTTP_ROUTES = [
   { method: "DELETE", path: "/api/v1/users/:id", action: AUDIT_ACTIONS.usersDelete },
   { method: "POST", path: "/api/v1/workspaces", action: AUDIT_ACTIONS.workspaceCreate },
   { method: "PATCH", path: "/api/v1/workspaces", action: AUDIT_ACTIONS.workspaceArchive },
+  { method: "DELETE", path: "/api/v1/workspaces", action: AUDIT_ACTIONS.workspaceDelete },
   { method: "PATCH", path: "/api/v1/config", action: AUDIT_ACTIONS.configSave },
 ] as const;
 

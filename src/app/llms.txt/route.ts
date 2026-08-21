@@ -52,6 +52,7 @@ OpenAPI spec: /api/openapi
 - GET /api/v1/workspaces — catalog of named workspaces (id, name, archivedAt)
 - POST /api/v1/workspaces — create a live workspace (admin / env key)
 - PATCH /api/v1/workspaces — archive a live workspace (admin / env key; demo cannot be archived)
+- DELETE /api/v1/workspaces — typed-name-confirmed delete (write/admin key or browser session; that workspace only; no MCP tool). Demo can be re-seeded after wipe.
 - GET /api/v1/keys — list key metadata (scope, lastUsedAt, legacy; raw keys never returned)
 - POST /api/v1/keys — mint a key (defaults to read; requires an existing operator or hashed key; raw key returned once)
 - POST /api/v1/keys/downgrade — convert legacy write keys to read (\`anykpi keys downgrade\`)

@@ -656,6 +656,16 @@ export const WorkspaceArchiveRequestSchema = z.object({
   id: WorkspaceIdSchema,
 });
 
+export const WorkspaceDeleteRequestSchema = z.object({
+  id: WorkspaceIdSchema,
+  name: z.string().min(1).max(80),
+});
+
+export const WorkspaceDeleteResponseSchema = z.object({
+  deleted: z.literal(true),
+  workspace: WorkspaceRecordSchema,
+});
+
 export const APIKeyCreateRequestSchema = z.object({
   name: z.string(),
   scope: ApiKeyScopeSchema.default('read'),
@@ -881,6 +891,8 @@ export type WorkspaceRecord = z.infer<typeof WorkspaceRecordSchema>;
 export type WorkspaceListResponse = z.infer<typeof WorkspaceListResponseSchema>;
 export type WorkspaceCreateRequest = z.infer<typeof WorkspaceCreateRequestSchema>;
 export type WorkspaceArchiveRequest = z.infer<typeof WorkspaceArchiveRequestSchema>;
+export type WorkspaceDeleteRequest = z.infer<typeof WorkspaceDeleteRequestSchema>;
+export type WorkspaceDeleteResponse = z.infer<typeof WorkspaceDeleteResponseSchema>;
 export type APIKeyCreateRequest = z.infer<typeof APIKeyCreateRequestSchema>;
 export type APIKeyResponse = z.infer<typeof APIKeyResponseSchema>;
 export type APIKeyDowngradeRequest = z.infer<typeof APIKeyDowngradeRequestSchema>;

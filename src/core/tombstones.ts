@@ -232,3 +232,83 @@ export async function deletePerson(
   await persistWorkspaceMilestones(workspaceId);
   return result;
 }
+
+/**
+ * Wipe every workspace-scoped row for one workspace. Person-level
+ * tables go through `purgePerson` so the same cascade as a single
+ * delete runs first; leftover read models, credentials, keys, and
+ * config are then removed. Does not delete the catalog row.
+ */
+export async function purgeWorkspace(workspaceId: string): Promise<{
+  personIds: string[];
+}> {
+  const users = await db
+    .select({ personId: schema.users.personId })
+    .from(schema.users)
+    .where(eq(schema.users.workspaceId, workspaceId))
+    .all();
+
+  for (const user of users) {
+    await purgePerson(workspaceId, user.personId);
+  }
+
+  await db
+    .delete(schema.outreachDelivery)
+    .where(eq(schema.outreachDelivery.workspaceId, workspaceId));
+  await db
+    .delete(schema.outreach)
+    .where(eq(schema.outreach.workspaceId, workspaceId));
+  await db
+    .delete(schema.activity)
+    .where(eq(schema.activity.workspaceId, workspaceId));
+  await db
+    .delete(schema.seats)
+    .where(eq(schema.seats.workspaceId, workspaceId));
+  await db
+    .delete(schema.personRevenue)
+    .where(eq(schema.personRevenue.workspaceId, workspaceId));
+  await db
+    .delete(schema.subscriptionEvents)
+    .where(eq(schema.subscriptionEvents.workspaceId, workspaceId));
+  await db
+    .delete(schema.annotations)
+    .where(eq(schema.annotations.workspaceId, workspaceId));
+  await db
+    .delete(schema.users)
+    .where(eq(schema.users.workspaceId, workspaceId));
+  await db
+    .delete(schema.accounts)
+    .where(eq(schema.accounts.workspaceId, workspaceId));
+  await db
+    .delete(schema.metricDefs)
+    .where(eq(schema.metricDefs.workspaceId, workspaceId));
+  await db
+    .delete(schema.metricPoints)
+    .where(eq(schema.metricPoints.workspaceId, workspaceId));
+  await db
+    .delete(schema.calEvents)
+    .where(eq(schema.calEvents.workspaceId, workspaceId));
+  await db
+    .delete(schema.syncState)
+    .where(eq(schema.syncState.workspaceId, workspaceId));
+  await db
+    .delete(schema.apiKeys)
+    .where(eq(schema.apiKeys.workspaceId, workspaceId));
+  await db
+    .delete(schema.config)
+    .where(eq(schema.config.workspaceId, workspaceId));
+  await db
+    .delete(schema.mrrSnapshots)
+    .where(eq(schema.mrrSnapshots.workspaceId, workspaceId));
+  await db
+    .delete(schema.sources)
+    .where(eq(schema.sources.workspaceId, workspaceId));
+  await db
+    .delete(schema.tombstones)
+    .where(eq(schema.tombstones.workspaceId, workspaceId));
+  await db
+    .delete(schema.balanceSnapshots)
+    .where(eq(schema.balanceSnapshots.workspaceId, workspaceId));
+
+  return { personIds: users.map((user) => user.personId) };
+}

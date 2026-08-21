@@ -28,6 +28,8 @@ import {
   WorkspaceListResponseSchema,
   WorkspaceCreateRequestSchema,
   WorkspaceArchiveRequestSchema,
+  WorkspaceDeleteRequestSchema,
+  WorkspaceDeleteResponseSchema,
   WorkspaceRecordSchema,
   CompanyProfileSchema,
   CompanyProfileUpdateSchema,
@@ -1209,6 +1211,62 @@ export async function GET(request: NextRequest) {
             },
             400: {
               description: 'Demo cannot be archived',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            404: {
+              description: 'Workspace not found',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            }
+          }
+        },
+        delete: {
+          tags: ['Workspaces'],
+          summary: 'Delete a workspace',
+          description:
+            'Typed-name-confirmed delete. Cascades users, activity, read models, credentials, sync state, annotations, keys, and config for that workspace only. Write or admin key, or a signed browser session. There is no MCP tool for this.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(WorkspaceDeleteRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Workspace deleted',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(WorkspaceDeleteResponseSchema)
+                }
+              }
+            },
+            400: {
+              description: 'Name confirmation did not match',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            401: {
+              description: 'Unauthorized',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(ErrorResponseSchema)
+                }
+              }
+            },
+            403: {
+              description: 'Read-only key cannot delete a workspace',
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(ErrorResponseSchema)

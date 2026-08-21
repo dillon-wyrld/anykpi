@@ -22,6 +22,7 @@ import { POST as postOutreachSend } from "@/app/api/v1/outreach/send/route";
 import { POST as postOutreachOutcome } from "@/app/api/v1/outreach/outcome/route";
 import { DELETE as deleteUser } from "@/app/api/v1/users/[id]/route";
 import {
+  DELETE as deleteWorkspaceRoute,
   PATCH as archiveWorkspaceRoute,
   POST as createWorkspaceRoute,
 } from "@/app/api/v1/workspaces/route";
@@ -429,6 +430,25 @@ const drivers: Record<(typeof WRITE_HTTP_ROUTES)[number]["action"], Driver> = {
     await db.delete(schema.auditLog).where(eq(schema.auditLog.workspaceId, WS));
     const res = await archiveWorkspaceRoute(
       asAdmin("http://localhost:3000/api/v1/workspaces", "PATCH", { id: WS })
+    );
+    expect(res.status).toBe(200);
+    return { actor: AUDIT_ACTOR_ENV, subject: WS };
+  },
+  [AUDIT_ACTIONS.workspaceDelete]: async () => {
+    await db.delete(schema.workspaces).where(eq(schema.workspaces.id, WS));
+    const created = await createWorkspaceRoute(
+      asAdmin("http://localhost:3000/api/v1/workspaces", "POST", {
+        id: WS,
+        name: "Audit log",
+      })
+    );
+    expect(created.status).toBe(201);
+    await db.delete(schema.auditLog).where(eq(schema.auditLog.workspaceId, WS));
+    const res = await deleteWorkspaceRoute(
+      asAdmin("http://localhost:3000/api/v1/workspaces", "DELETE", {
+        id: WS,
+        name: "Audit log",
+      })
     );
     expect(res.status).toBe(200);
     return { actor: AUDIT_ACTOR_ENV, subject: WS };
