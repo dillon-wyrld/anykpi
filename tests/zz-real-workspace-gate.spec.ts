@@ -40,6 +40,7 @@ const WRITE_TOOLS = new Set([
   "connect_source",
   "trigger_sync",
   "import_csv",
+  "define_metric",
   "queue_outreach",
   "approve_outreach",
   "send_outreach",
@@ -376,6 +377,52 @@ test.describe("ANY-67 real-workspace gate", () => {
           await expectAuditContains(request, ctx.workspace, ctx.writeKey, {
             action: "mcp.call",
             subject: "import_csv",
+          });
+          continue;
+        }
+
+        if (name === "define_metric") {
+          const payload = await callTool(
+            request,
+            name,
+            {
+              workspace: ctx.workspace,
+              name: "Rwg Actives",
+              section: "eng",
+              type: "input",
+              source: { kind: "event_count", measure: "actives" },
+            },
+            ctx.writeKey
+          );
+          const metric = payload.metric as {
+            id?: string;
+            name?: string;
+            section?: string;
+            type?: string;
+            lifecycle?: string;
+            source?: { kind?: string; measure?: string };
+          };
+          expect(metric.id).toBe("rwg_actives");
+          expect(metric.name).toBe("Rwg Actives");
+          expect(metric.section).toBe("eng");
+          expect(metric.type).toBe("input");
+          expect(metric.lifecycle).toBe("active");
+          expect(metric.source).toEqual({
+            kind: "event_count",
+            measure: "actives",
+          });
+          expect(payload.workspace).toBe(ctx.workspace);
+          expect(String(payload.view_url ?? payload.viewUrl)).toContain("view=wbr");
+          const wbr = await request.get(
+            `/api/v1/wbr?workspace=${ctx.workspace}`,
+            { headers: { authorization: `Bearer ${ctx.writeKey}` } }
+          );
+          expect(wbr.ok(), `GET /api/v1/wbr after define_metric ${wbr.status()}`).toBeTruthy();
+          const deck = (await wbr.json()) as { metrics?: { id?: string }[] };
+          expect((deck.metrics ?? []).map((row) => row.id)).toContain("rwg_actives");
+          await expectAuditContains(request, ctx.workspace, ctx.writeKey, {
+            action: "mcp.call",
+            subject: "define_metric",
           });
           continue;
         }
