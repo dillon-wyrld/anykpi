@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { browserSnippet } from "@/sdk";
 import {
+  DEFAULT_INSTANCE_ORIGIN,
+  READ_KEY_CONSENT,
+  buildAgentPrompt,
+  mcpAddress,
+} from "@/app/agents/onboarding";
+import {
   detectKind,
   fieldsFor,
   parseCsv,
@@ -21,7 +27,11 @@ import {
 } from "@/core/company-day";
 
 export default function ConnectPage() {
-  const [selectedPath, setSelectedPath] = useState<"existing" | "sdk" | "csv" | null>(null);
+  const [selectedPath, setSelectedPath] = useState<
+    "existing" | "sdk" | "csv" | "agents" | null
+  >(null);
+  const [origin, setOrigin] = useState(DEFAULT_INSTANCE_ORIGIN);
+  const [copied, setCopied] = useState("");
   const [csvText, setCsvText] = useState("");
   const [csvName, setCsvName] = useState("");
   const [csvKind, setCsvKind] = useState<ImportKind>("events");
@@ -72,6 +82,20 @@ export default function ConnectPage() {
     ok: boolean;
     error?: string;
   } | null>(null);
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
+
+  const copyText = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(label);
+      setTimeout(() => setCopied(""), 2000);
+    } catch {
+      setCopied("");
+    }
+  };
 
   useEffect(() => {
     const headers: Record<string, string> = {};
@@ -407,7 +431,8 @@ export default function ConnectPage() {
         <div className="mb-8">
           <h1 className="font-display text-3xl font-bold mb-2">Connect Your Data</h1>
           <p className="text-sub">
-            Three paths. All doable by a human OR an AI agent. Choose one:
+            Three data paths, plus an Agents step. All doable by a human OR an AI
+            agent. Choose one:
           </p>
         </div>
 
@@ -543,7 +568,7 @@ export default function ConnectPage() {
           )}
         </section>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           <button
             onClick={() => setSelectedPath("existing")}
             className={`bg-panel border-2 rounded-lg p-6 text-left hover:border-accent ${
@@ -582,6 +607,24 @@ export default function ConnectPage() {
             <h2 className="font-display text-xl font-semibold mb-2">Path 3: Import CSV</h2>
             <p className="text-sm text-sub">
               Upload users or events. Preview the column mapping, then import in one transaction.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            data-testid="agents-setup-step"
+            onClick={() => {
+              setSelectedPath("agents");
+              document.getElementById("agents")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className={`bg-panel border-2 rounded-lg p-6 text-left hover:border-accent ${
+              selectedPath === "agents" ? "border-accent" : "border-border"
+            }`}
+          >
+            <div className="text-3xl mb-3">🤖</div>
+            <h2 className="font-display text-xl font-semibold mb-2">Agents</h2>
+            <p className="text-sm text-sub">
+              Copy one prompt. Connect Claude, ChatGPT, Cursor, Claude Code, or the CLI.
             </p>
           </button>
         </div>
@@ -1062,9 +1105,9 @@ export default function ConnectPage() {
                 <strong>For agents:</strong> An agent can install this snippet, configure value events,
                 and verify first events arrive — all unattended via MCP.
               </p>
-              <a href="#agent-setup" className="text-accent hover:underline text-xs">
-                View agent setup guide →
-              </a>
+              <Link href="/agents" className="text-accent hover:underline text-xs">
+                View agent setup →
+              </Link>
             </div>
 
             <div className="bg-panel border border-border rounded-lg p-6">
@@ -1277,22 +1320,69 @@ export default function ConnectPage() {
           </div>
         )}
 
+        {selectedPath === "agents" && (
+          <div className="space-y-4 mb-12">
+            <section className="bg-panel border border-border rounded-lg p-6 space-y-3">
+              <h2 className="font-display text-xl font-semibold">Agents step</h2>
+              <p className="text-sm text-sub">
+                Copy one prompt, then issue a read key below. Per-client tabs live on{" "}
+                <Link href="/agents" className="text-accent hover:underline">
+                  /agents
+                </Link>
+                .
+              </p>
+              <button
+                type="button"
+                onClick={() => copyText(buildAgentPrompt(origin), "setup-prompt")}
+                className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90"
+              >
+                {copied === "setup-prompt" ? "Copied" : "Copy prompt"}
+              </button>
+            </section>
+          </div>
+        )}
+
         <div className="mt-12 space-y-8">
           <ConnectorHealthPanel apiKey={adminKey} workspace={workspaceId} />
 
           <AuditReadout apiKey={adminKey} />
 
-          <section>
+          <section id="agents">
             <h2 className="font-display text-xl font-semibold mb-4">Agents</h2>
             <div className="bg-panel border border-border rounded-lg p-6">
               <div className="flex items-start gap-4 mb-4">
                 <span className="text-3xl">🤖</span>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-base mb-1">MCP Server</h3>
+                  <h3 className="font-semibold text-base mb-1">Copy one prompt</h3>
                   <p className="text-sm text-sub mb-3">
-                    Give your AI agents access to ANYKPI data. Every answer includes a view_url
-                    that opens the dashboard in the state that proves it.
+                    Instance address, <code className="text-xs">/llms.txt</code>,{" "}
+                    <code className="text-xs">AGENTS.md</code>, and how to ask for a
+                    key. {READ_KEY_CONSENT}
                   </p>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => copyText(buildAgentPrompt(origin), "prompt")}
+                      className="px-4 py-2 bg-accent text-white text-sm rounded hover:opacity-90"
+                    >
+                      {copied === "prompt" ? "Copied" : "Copy prompt"}
+                    </button>
+                    <Link
+                      href="/agents"
+                      className="px-4 py-2 border border-border rounded text-sm hover:bg-panel-2"
+                    >
+                      Open /agents
+                    </Link>
+                  </div>
+                  <pre
+                    data-testid="connect-agent-prompt"
+                    className="bg-bg border border-border rounded p-3 text-xs font-mono overflow-x-auto whitespace-pre-wrap mb-6"
+                  >
+                    {buildAgentPrompt(origin)}
+                  </pre>
+
+                  <h3 className="font-semibold text-base mb-1">Issue a key</h3>
+                  <p className="text-sm text-sub mb-3">{READ_KEY_CONSENT}</p>
 
                   {!showApiKey ? (
                     <div className="space-y-3">
@@ -1319,7 +1409,7 @@ export default function ConnectPage() {
                     <div className="space-y-3">
                       <div>
                         <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
-                          API Key (save this — it won't be shown again)
+                          API Key (save this — it won&apos;t be shown again)
                         </label>
                         <div className="flex gap-2">
                           <input
@@ -1329,19 +1419,22 @@ export default function ConnectPage() {
                             className="flex-1 px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
                           />
                           <button
-                            onClick={() => navigator.clipboard.writeText(apiKey)}
+                            onClick={() => copyText(apiKey, "key")}
                             className="px-3 py-2 border border-border rounded text-sm hover:bg-panel-2"
                           >
-                            Copy
+                            {copied === "key" ? "Copied" : "Copy"}
                           </button>
                         </div>
                       </div>
                       <div>
                         <label className="block text-xs font-mono uppercase tracking-wider text-faint mb-1">
-                          MCP Endpoint
+                          MCP address
                         </label>
-                        <code className="block px-3 py-2 text-sm bg-bg border border-border rounded font-mono">
-                          http://localhost:3000/api/mcp
+                        <code
+                          data-testid="connect-mcp-address"
+                          className="block px-3 py-2 text-sm bg-bg border border-border rounded font-mono"
+                        >
+                          {mcpAddress(origin)}
                         </code>
                       </div>
                     </div>
@@ -1352,16 +1445,17 @@ export default function ConnectPage() {
 
             <div className="mt-4 p-4 bg-accent-soft border border-accent-line rounded-lg text-sm">
               <p className="mb-2">
-                <strong>For agents:</strong> Add this MCP server to your agent's configuration
-                with the API key above. The agent can then query users, get cohorts, check WBR
-                metrics, and more — every response includes a clickable link to the view.
+                <strong>For agents:</strong> Paste the prompt, then add the MCP
+                address with the API key. The agent can query users, cohorts, and
+                WBR — every response includes a view_url. Revoke on{" "}
+                <Link href="/agents" className="text-accent hover:underline">
+                  /agents
+                </Link>
+                .
               </p>
-              <a
-                href="https://github.com/anykpi/anykpi#agent-setup"
-                className="text-accent hover:underline text-xs"
-              >
-                View agent setup guide →
-              </a>
+              <Link href="/agents" className="text-accent hover:underline text-xs">
+                View agent setup →
+              </Link>
             </div>
           </section>
 

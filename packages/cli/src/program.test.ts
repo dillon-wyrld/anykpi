@@ -99,6 +99,12 @@ describe("published CLI surface", () => {
     expect(workspace?.defaultValue).not.toBe("demo");
   });
 
+  it("points login at /llms.txt and /agents after minting", () => {
+    const login = createProgram().commands.find((command) => command.name() === "login");
+    const src = `${login?.description() ?? ""}`;
+    expect(src).toMatch(/agent/i);
+  });
+
   it("advertises keys downgrade as one command", () => {
     const keys = createProgram().commands.find((command) => command.name() === "keys");
     expect(keys).toBeDefined();
