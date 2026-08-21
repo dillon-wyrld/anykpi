@@ -1,3 +1,5 @@
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { describe, expect, it } from "vitest";
 import { isPostgresUrl, sqlEngine } from "./dialect";
 
@@ -27,6 +29,14 @@ describe("sqlEngine", () => {
         DATABASE_URL: "postgres://localhost/anykpi",
       })
     ).toBe("postgres");
+  });
+});
+
+describe("postgres client lifetime", () => {
+  it("pins the drizzle client on globalThis so next dev cannot exhaust max_connections", () => {
+    const src = readFileSync(resolve(__dirname, "db.ts"), "utf8");
+    expect(src).toMatch(/__anykpiPostgresDb/);
+    expect(src).toMatch(/globalForPostgres\.__anykpiPostgresDb = postgresDb/);
   });
 });
 

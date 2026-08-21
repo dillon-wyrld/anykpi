@@ -312,7 +312,14 @@ function openSqlite(): AppDatabase {
   return drizzle(sqlite, { schema });
 }
 
+const globalForPostgres = globalThis as typeof globalThis & {
+  __anykpiPostgresDb?: AppDatabase;
+};
+
 function openPostgres(): AppDatabase {
+  if (globalForPostgres.__anykpiPostgresDb) {
+    return globalForPostgres.__anykpiPostgresDb;
+  }
   const url = process.env.DATABASE_URL;
   if (!url || !isPostgresUrl(url)) {
     throw new Error(
@@ -325,6 +332,7 @@ function openPostgres(): AppDatabase {
   const client = postgres(url, { max: 24 });
   const postgresDb = drizzlePostgres(client, { schema }) as unknown as AppDatabase;
   installQueryCompat(postgresDb);
+  globalForPostgres.__anykpiPostgresDb = postgresDb;
   return postgresDb;
 }
 
