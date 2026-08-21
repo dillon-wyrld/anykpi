@@ -18,6 +18,8 @@ import {
   readJsonBounded,
 } from "@/core/errors";
 import { gate, gateDisplayPrefs } from "@/core/session-auth";
+import { saveValueEvents } from "@/core/value-events";
+import { readValueEventsField } from "@/core/vanity-events";
 
 function requestedWorkspace(request: NextRequest, body?: { workspaceId?: string; workspace?: string }) {
   const { searchParams } = new URL(request.url);
@@ -91,10 +93,22 @@ export async function PATCH(request: NextRequest) {
       return badRequest(parsed.error.issues[0]?.message ?? "Bad Request");
     }
 
+    const valueEventsRaw = readValueEventsField(raw);
+    if (valueEventsRaw !== undefined) {
+      if (
+        !valueEventsRaw ||
+        typeof valueEventsRaw !== "object" ||
+        Array.isArray(valueEventsRaw)
+      ) {
+        return badRequest("valueEvents must be an object");
+      }
+    }
+
     const requested = requestedWorkspace(request, parsed.data);
-    const gated = isPrefsOnlyPatch(parsed.data)
-      ? await gateDisplayPrefs(request, { workspace: requested })
-      : await gate(request, { workspace: requested, write: true });
+    const gated =
+      valueEventsRaw === undefined && isPrefsOnlyPatch(parsed.data)
+        ? await gateDisplayPrefs(request, { workspace: requested })
+        : await gate(request, { workspace: requested, write: true });
     if (!gated.ok) return gated.response;
 
     const profile = await saveCompanyProfile(gated.workspace, {
@@ -105,14 +119,34 @@ export async function PATCH(request: NextRequest) {
       celebratedMilestoneKeys: parsed.data.celebratedMilestoneKeys,
     });
 
+    const savedEvents =
+      valueEventsRaw === undefined
+        ? null
+        : await saveValueEvents(gated.workspace, valueEventsRaw);
+
     await recordWriteAudit(
       gated.auth,
       gated.workspace,
       AUDIT_ACTIONS.configSave,
-      "company_profile"
+      savedEvents &&
+        parsed.data.companyName === undefined &&
+        parsed.data.foundedAt === undefined &&
+        parsed.data.homeCity === undefined &&
+        parsed.data.shownCities === undefined &&
+        parsed.data.celebratedMilestoneKeys === undefined
+        ? "value_events"
+        : "company_profile"
     );
 
-    return NextResponse.json(CompanyProfileSchema.parse(profile));
+    return NextResponse.json({
+      ...CompanyProfileSchema.parse(profile),
+      ...(savedEvents
+        ? {
+            valueEvents: savedEvents.mapping,
+            ...(savedEvents.warning ? { warning: savedEvents.warning } : {}),
+          }
+        : {}),
+    });
   } catch (error) {
     if (error instanceof CompanyProfileError) {
       return badRequest(error.message);

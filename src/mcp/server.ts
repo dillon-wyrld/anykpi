@@ -6,7 +6,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
-import { upsertConfig } from "@/core/upsert";
+import { saveValueEvents } from "@/core/value-events";
 import { eq, and } from "drizzle-orm";
 import { authorize, isReadOnlyMcpTool } from "@/core/auth";
 import {
@@ -614,13 +614,7 @@ export async function handleStdioToolCall(
             };
           }
 
-          const mapping = (args as any)?.mapping || {};
-
-          await upsertConfig({
-            key: "value_events",
-            value: JSON.stringify(mapping),
-            workspaceId: workspace,
-          });
+          const saved = await saveValueEvents(workspace, args?.mapping);
 
           return {
             content: [
@@ -629,9 +623,10 @@ export async function handleStdioToolCall(
                 text: JSON.stringify(
                   {
                     success: true,
-                    mapping,
+                    mapping: saved.mapping,
                     message:
                       "Value events configured. These events will now appear in the dot plot and activity views.",
+                    ...(saved.warning ? { warning: saved.warning } : {}),
                   },
                   null,
                   2

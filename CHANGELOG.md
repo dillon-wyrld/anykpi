@@ -7,6 +7,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Vanity-event guard (ANY-65): picking a page view, app open, session
+  start, or login as a value event shows a one-sentence warning on the
+  `/connect` picker and `configure_value_events`. The write still
+  succeeds — never a hard block.
 - Annotations (ANY-63): pin a sticker or note to a user, date, metric,
   or cohort from the dot plot and calendar. The same write is
   `POST /api/v1/annotations` and the write-scoped, audited `annotate`
