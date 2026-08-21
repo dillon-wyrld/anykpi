@@ -7,6 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Agent onboarding (ANY-60): an Agents step on `/connect` and a permanent
+  `/agents` page. Copy one prompt (instance address, `/llms.txt`,
+  `AGENTS.md`, how to ask for a key). Per-client tabs (Claude, ChatGPT,
+  Cursor, Claude Code, CLI) with a copyable MCP address. Key issuance is
+  consent — a read key can read every view and ask questions, and nothing
+  else — and is revocable on the same screen. In-app agent-setup links
+  point at `/agents`.
 - Workspace delete (ANY-69): `DELETE /api/v1/workspaces` with typed-name
   confirmation. Cascades users, activity, read models, credentials, sync
   state, annotations, keys, and config for that workspace only. A write

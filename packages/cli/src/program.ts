@@ -6,6 +6,7 @@ import ora from "ora";
 import prompts from "prompts";
 import { apiRequest, INGEST_EVENT_PATH, INGEST_IDENTIFY_PATH } from "./api";
 import { configFile, loadConfig, saveConfig } from "./config";
+import { loginReceipt } from "./onboarding";
 
 export const PUBLISHED_COMMANDS = [
   "login",
@@ -131,6 +132,13 @@ export function createProgram(): Command {
         console.log(chalk.green("✓"), "Key ID:", chalk.bold(data.id));
         console.log(chalk.green("✓"), "Scope:", chalk.bold(data.scope || scope));
         console.log(chalk.green("✓"), "Saved to:", chalk.dim(configFile()));
+        console.log();
+        for (const line of loginReceipt({
+          url: options.url,
+          scope: data.scope || scope,
+        })) {
+          console.log(chalk.dim(line));
+        }
         console.log();
         console.log(
           chalk.dim("Your key is stored locally. Run"),
