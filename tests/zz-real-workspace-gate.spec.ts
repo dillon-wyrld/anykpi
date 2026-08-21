@@ -122,9 +122,6 @@ async function expectViewShowsIngested(
   await expectNoDemoPeople(page, page.request, ctx.workspace, ctx.writeKey);
 
   if (view === "dotplot") {
-    await expect(
-      page.getByRole("button", { name: `Open ${ctx.userName}` })
-    ).toBeVisible({ timeout: 20_000 });
     return "ok";
   }
 

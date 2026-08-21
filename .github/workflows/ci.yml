@@ -85,14 +85,14 @@ jobs:
       # Separate steps so each Playwright webServer is fresh. Sharing one
       # Next process on postgres exhausts the pool once the gate runs.
       - name: Run E2E tests (existing suite)
-        run: pnpm exec playwright test --grep-invert "ANY-67 real-workspace gate"
+        run: pnpm test:e2e -- --grep-invert "ANY-67 real-workspace gate"
         env:
           ANYKPI_API_KEY: anykpi-e2e-admin
           DATABASE_URL: ${{ matrix.engine == 'postgres' && 'postgres://postgres:postgres@localhost:5432/anykpi' || '' }}
 
       # ANY-67: tests/zz-real-workspace-gate.spec.ts is the "fully functional" definition.
       - name: Run E2E tests (real-workspace gate)
-        run: pnpm exec playwright test tests/zz-real-workspace-gate.spec.ts
+        run: pnpm test:e2e -- tests/zz-real-workspace-gate.spec.ts
         env:
           ANYKPI_API_KEY: anykpi-e2e-admin
           DATABASE_URL: ${{ matrix.engine == 'postgres' && 'postgres://postgres:postgres@localhost:5432/anykpi' || '' }}
