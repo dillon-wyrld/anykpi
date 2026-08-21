@@ -35,11 +35,15 @@ async function mintWriteKey(request: APIRequestContext, workspace: string) {
 
 async function unlock(page: Page, workspace: string, key: string) {
   await page.goto(`/dashboard?workspace=${workspace}&view=dotplot`);
-  if (await page.getByRole("heading", { name: `Unlock ${workspace}` }).count()) {
+  const unlockHeading = page.getByRole("heading", { name: `Unlock ${workspace}` });
+  const module = page.getByTestId("daytrack");
+  await expect(unlockHeading.or(module)).toBeVisible({ timeout: 20_000 });
+  if (await unlockHeading.isVisible()) {
     await page.getByLabel("API key").fill(key);
     await page.getByRole("button", { name: "Open workspace" }).click();
+    await expect(unlockHeading).toHaveCount(0);
   }
-  await page.waitForSelector("[data-testid=daytrack]", { timeout: 20_000 });
+  await expect(module).toBeVisible({ timeout: 20_000 });
 }
 
 test.describe("Day of YourCo sidebar", () => {
@@ -198,6 +202,7 @@ test.describe("Day of YourCo sidebar", () => {
 </html>`;
 
     const fixture = await page.context().newPage();
+    await fixture.goto("http://localhost:3000/connect");
     const identify = fixture.waitForResponse(
       (res) =>
         res.url().includes("/api/ingest/identify") &&
