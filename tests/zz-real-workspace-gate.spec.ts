@@ -158,9 +158,17 @@ async function expectViewShowsIngested(
   }
 
   if (view === "pmf") {
+    const body = (await api.json()) as {
+      candidates?: { personId?: string; name?: string }[];
+    };
+    expect((body.candidates ?? []).map((row) => row.personId)).toContain(
+      ctx.personId
+    );
     const select = page.getByLabel("Person to research");
-    await expect(select).toBeVisible();
-    await expect(select.locator(`option`, { hasText: ctx.userName })).toHaveCount(1);
+    await expect(select).toBeVisible({ timeout: 20_000 });
+    await expect(
+      select.locator(`option[value="${ctx.personId}"]`)
+    ).toHaveCount(1, { timeout: 20_000 });
     return;
   }
 
