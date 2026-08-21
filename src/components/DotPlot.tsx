@@ -769,7 +769,13 @@ export default function DotPlot({ workspace }: DotPlotProps) {
         <text x="2" y={cy + 4.4} fontSize="14">
           {user.emoji}
         </text>
-        <g
+        <text
+          x="28"
+          y={cy + 4}
+          fontFamily="IBM Plex Sans, sans-serif"
+          fontSize="11.5"
+          fontWeight="500"
+          fill="var(--text)"
           tabIndex={0}
           role="button"
           aria-label={`Open ${user.name}`}
@@ -783,7 +789,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
             }
           }}
           onMouseEnter={(e) => {
-            const rect = (e.currentTarget as SVGElement).getBoundingClientRect();
+            const rect = (e.target as SVGElement).getBoundingClientRect();
             const pos = clampCardPosition(
               rect.left + 40,
               rect.bottom + 6,
@@ -801,25 +807,8 @@ export default function DotPlot({ workspace }: DotPlotProps) {
             setUserCard({ visible: false, x: 0, y: 0, user: null });
           }}
         >
-          <rect
-            x="26"
-            y={y + 2}
-            width={LBL - 92}
-            height={viewState.cc.rh - 4}
-            fill="transparent"
-          />
-          <text
-            x="28"
-            y={cy + 4}
-            fontFamily="IBM Plex Sans, sans-serif"
-            fontSize="11.5"
-            fontWeight="500"
-            fill="var(--text)"
-            style={{ pointerEvents: "none" }}
-          >
-            {user.name}
-          </text>
-        </g>
+          {user.name}
+        </text>
         <g
           role="button"
           aria-label={`Research ${user.name}`}
