@@ -1,7 +1,14 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Suspense,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import Link from "next/link";
 import DotPlot from "@/components/DotPlot";
 import Cohorts from "@/components/Cohorts";
@@ -15,6 +22,8 @@ import {
 } from "@/components/WorkspaceSession";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import DayTracker from "@/components/DayTracker";
+import { askDashboardPath, parseAskQuery } from "@/core/ask";
+import { viewFromSearchParams } from "@/core/view-state";
 
 const WORDMARK_LIGHT_2X = "/brand/wordmark-light@2x.png";
 const WORDMARK_LIGHT_3X = "/brand/wordmark-light@3x.png";
@@ -63,11 +72,108 @@ function LogoRow({ href }: { href?: string }) {
   );
 }
 
+function AskBar({
+  workspace,
+  wall,
+  onAsk,
+}: {
+  workspace: string;
+  wall: boolean;
+  onAsk: () => void;
+}) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [miss, setMiss] = useState(false);
+  const [ready, setReady] = useState(false);
+
+  useLayoutEffect(() => {
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      const isK = event.key.toLowerCase() === "k" || event.code === "KeyK";
+      if ((event.metaKey || event.ctrlKey) && isK) {
+        event.preventDefault();
+        event.stopPropagation();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    setReady(true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
+
+  const submit = useCallback(
+    (raw: string) => {
+      const phrase = raw.trim();
+      if (!phrase) return;
+      const state = parseAskQuery(phrase);
+      if (!state) {
+        setMiss(false);
+        requestAnimationFrame(() => setMiss(true));
+        return;
+      }
+      setMiss(false);
+      onAsk();
+      router.push(askDashboardPath(workspace, state, { wall }));
+    },
+    [onAsk, router, wall, workspace]
+  );
+
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const value = event.currentTarget.value;
+    submit(value);
+    event.currentTarget.value = "";
+  };
+
+  return (
+    <div
+      className={`flex items-center gap-2.5 px-4 py-2.5 border-b border-border bg-panel flex-shrink-0 ${
+        wall ? "px-[22px]" : ""
+      }`}
+      data-testid="ask-anything-chrome"
+    >
+      <style>{`
+        @keyframes ask-miss-nudge {
+          25% { transform: translateX(-3px); }
+          75% { transform: translateX(3px); }
+        }
+        .ask-miss { animation: ask-miss-nudge 0.28s ease-out; border-color: var(--red); }
+      `}</style>
+      <div
+        className={`flex-1 flex items-center gap-2.5 border border-border rounded-[9px] px-3 py-[7px] bg-bg focus-within:border-accent ${
+          miss ? "ask-miss" : ""
+        }`}
+        data-testid="ask-anything-bar"
+        data-ask-ready={ready ? "1" : "0"}
+        onAnimationEnd={() => setMiss(false)}
+      >
+        <span className="text-sm leading-none text-sub" aria-hidden>
+          ✦
+        </span>
+        <input
+          ref={inputRef}
+          id="ask-anything"
+          data-testid="ask-anything"
+          className="flex-1 bg-transparent border-0 outline-none text-[13px] text-text placeholder:text-faint"
+          placeholder='ask anything — "ios users in france", "are we smiling yet?", "who churned this week"'
+          autoComplete="off"
+          aria-label="Ask anything"
+          onKeyDown={onKeyDown}
+        />
+        <kbd className="font-sans text-[10.5px] border border-border border-b-2 rounded-[5px] px-1.5 py-px bg-panel text-sub">
+          ⌘K
+        </kbd>
+      </div>
+    </div>
+  );
+}
+
 function DashboardContent() {
   const searchParams = useSearchParams();
   const workspace = searchParams.get("workspace") || "demo";
-  const view = searchParams.get("view") || "dotplot";
+  const view = viewFromSearchParams(searchParams);
   const wall = searchParams.get("w") === "1";
+  const [askTick, setAskTick] = useState(0);
 
   const navItems = [
     { id: "dotplot", label: "Dot Plot", icon: "grid" },
@@ -125,17 +231,30 @@ function DashboardContent() {
           </nav>
         )}
 
-        <main className={`flex-1 overflow-auto ${wall ? "px-[22px] py-3" : "p-6"}`}>
-          <div className="max-w-6xl mx-auto">
-            <LiveWorkspaceGate>
-              {view === "dotplot" && <DotPlot workspace={workspace} />}
-              {view === "cohorts" && <Cohorts workspace={workspace} />}
-              {view === "wbr" && <WBR workspace={workspace} />}
-              {view === "calendar" && <Calendar workspace={workspace} />}
-              {view === "pmf" && <PMF workspace={workspace} />}
-            </LiveWorkspaceGate>
-          </div>
-        </main>
+        <div className="flex-1 min-w-0 flex flex-col">
+          <AskBar
+            workspace={workspace}
+            wall={wall}
+            onAsk={() => setAskTick((tick) => tick + 1)}
+          />
+          <main className={`flex-1 overflow-auto ${wall ? "px-[22px] py-3" : "p-6"}`}>
+            <div className="max-w-6xl mx-auto">
+              <LiveWorkspaceGate>
+                {view === "dotplot" && (
+                  <DotPlot key={`dotplot-${askTick}`} workspace={workspace} />
+                )}
+                {view === "cohorts" && (
+                  <Cohorts key={`cohorts-${askTick}`} workspace={workspace} />
+                )}
+                {view === "wbr" && <WBR key={`wbr-${askTick}`} workspace={workspace} />}
+                {view === "calendar" && (
+                  <Calendar key={`calendar-${askTick}`} workspace={workspace} />
+                )}
+                {view === "pmf" && <PMF key={`pmf-${askTick}`} workspace={workspace} />}
+              </LiveWorkspaceGate>
+            </div>
+          </main>
+        </div>
       </div>
     </WorkspaceSessionProvider>
   );

@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { personViewUrl, publicBaseUrl, queryUsersPayload } from "./view-state";
+import {
+  decodeViewState,
+  encodeViewState,
+  personViewUrl,
+  publicBaseUrl,
+  queryUsersPayload,
+  viewFromSearchParams,
+} from "./view-state";
 
 function requestWith(
   headers: Record<string, string> = {},
@@ -92,6 +99,20 @@ describe("publicBaseUrl", () => {
 
   it("falls back to localhost when no request is provided", () => {
     expect(publicBaseUrl()).toBe("http://localhost:3000");
+  });
+});
+
+describe("viewFromSearchParams", () => {
+  it("prefers a decoded state payload over view=", () => {
+    const encoded = encodeViewState({ view: "cohorts" });
+    const params = new URLSearchParams(`workspace=demo&view=dotplot&state=${encoded}`);
+    expect(viewFromSearchParams(params)).toBe("cohorts");
+    expect(decodeViewState(encoded)).toEqual({ view: "cohorts" });
+  });
+
+  it("reads view= when state is absent", () => {
+    const params = new URLSearchParams("workspace=demo&view=wbr");
+    expect(viewFromSearchParams(params)).toBe("wbr");
   });
 });
 
