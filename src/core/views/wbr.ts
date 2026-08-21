@@ -11,15 +11,16 @@ import {
   wbrStat,
   type WbrExceptionRules,
 } from "@/core/views/wbr-math";
-import { loadRevenueLanes, loadRevenueSeries, wbrSectionId } from "@/core/views/revenue";
+import { buildRevenueLanes, loadRevenueSeries, wbrSectionId } from "@/core/views/revenue";
 import type { RevenueLane } from "@/core/views/revenue-math";
 import {
   computeEventCountSeries,
-  listStarterProposals,
   loadDeckMeta,
   padSeries,
   pointsToSeries,
   revenueSeriesFor,
+  starterProposals,
+  takenMetricIds,
   type ComputedSeries,
   type MetricLifecycle,
 } from "@/core/wbr-builder";
@@ -154,27 +155,35 @@ function fromSeries(
 export async function loadWbrView(workspace: string) {
   const rules = getAnykpiConfig().wbr.exceptions;
 
-  const [metricDefs, metricPoints, meta, users, activity, revenueSeries] =
-    await Promise.all([
-      db
-        .select()
-        .from(schema.metricDefs)
-        .where(eq(schema.metricDefs.workspaceId, workspace))
-        .all(),
-      db
-        .select()
-        .from(schema.metricPoints)
-        .where(eq(schema.metricPoints.workspaceId, workspace))
-        .all(),
-      loadDeckMeta(workspace),
-      db.select().from(schema.users).where(eq(schema.users.workspaceId, workspace)).all(),
-      db
+  // Sequential on purpose. `GET /overview` already holds pool connections
+  // and then calls this; a wide Promise.all deadlocks the postgres pool
+  // (max 8) and the e2e suite starts returning 500s.
+  const metricDefs = await db
+    .select()
+    .from(schema.metricDefs)
+    .where(eq(schema.metricDefs.workspaceId, workspace))
+    .all();
+  const metricPoints = await db
+    .select()
+    .from(schema.metricPoints)
+    .where(eq(schema.metricPoints.workspaceId, workspace))
+    .all();
+  const meta = await loadDeckMeta(workspace);
+  const revenueSeries = await loadRevenueSeries(workspace);
+
+  const needsEventRows =
+    workspace !== DEMO_WORKSPACE ||
+    metricDefs.some((def) => meta.specs[def.metricId]?.source?.kind === "event_count");
+  const users = needsEventRows
+    ? await db.select().from(schema.users).where(eq(schema.users.workspaceId, workspace)).all()
+    : [];
+  const activity = needsEventRows
+    ? await db
         .select()
         .from(schema.activity)
         .where(eq(schema.activity.workspaceId, workspace))
-        .all(),
-      loadRevenueSeries(workspace),
-    ]);
+        .all()
+    : [];
 
   const fromDefs = metricDefs
     .filter((def) => meta.specs[def.metricId]?.lifecycle !== "retired")
@@ -209,7 +218,10 @@ export async function loadWbrView(workspace: string) {
       );
     });
 
-  const revenueLanes = await loadRevenueLanes(workspace);
+  const revenueLanes =
+    revenueSeries.mrrWeeks.length === 0 && revenueSeries.runwayWeeks.length === 0
+      ? []
+      : buildRevenueLanes(revenueSeries);
   const definedIds = new Set(fromDefs.map((m) => m.id));
   const extraLanes: RevenueLane[] =
     workspace === DEMO_WORKSPACE
@@ -235,7 +247,16 @@ export async function loadWbrView(workspace: string) {
     return a.sectionOrder.localeCompare(b.sectionOrder);
   });
 
-  const proposals = (await listStarterProposals(workspace)).map((proposal) => {
+  const proposals = (
+    workspace === DEMO_WORKSPACE
+      ? []
+      : starterProposals({
+          userCount: users.length,
+          activityCount: activity.length,
+          revenueLanes,
+          takenIds: takenMetricIds(meta, metricDefs),
+        })
+  ).map((proposal) => {
     let series: ComputedSeries;
     if (proposal.source.kind === "event_count") {
       series = computeEventCountSeries(proposal.source, users, activity);

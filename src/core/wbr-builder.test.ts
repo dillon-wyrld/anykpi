@@ -21,6 +21,7 @@ import {
   parseManualCsv,
   reorderMetrics,
   retireMetric,
+  takenMetricIds,
   trailingWeekStarts,
 } from "@/core/wbr-builder";
 
@@ -357,5 +358,25 @@ describe("REST write path refuses status and shares define_metric", () => {
       )
     );
     expect(patched.status).toBe(400);
+  });
+});
+
+describe("takenMetricIds", () => {
+  it("treats deck-less defs as taken so a starter does not replace them", () => {
+    const taken = takenMetricIds(
+      {
+        version: 1,
+        specs: {
+          wbr_signups: { source: { kind: "event_count", measure: "signups" }, lifecycle: "retired" },
+          wbr_actives: { source: { kind: "event_count", measure: "actives" }, lifecycle: "active" },
+        },
+        order: ["wbr_actives"],
+      },
+      [{ metricId: "custom_nps" }]
+    );
+    expect(taken.has("wbr_signups")).toBe(true);
+    expect(taken.has("wbr_actives")).toBe(true);
+    expect(taken.has("custom_nps")).toBe(true);
+    expect(taken.has("wbr_retention")).toBe(false);
   });
 });

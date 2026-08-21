@@ -826,35 +826,49 @@ export function starterProposals(input: {
   return out;
 }
 
-export async function listStarterProposals(workspace: string): Promise<StarterProposal[]> {
-  if (workspace === DEMO_WORKSPACE) return [];
-  const [users, activity, meta, revenueSeries] = await Promise.all([
-    db.select().from(schema.users).where(eq(schema.users.workspaceId, workspace)).all(),
-    db.select().from(schema.activity).where(eq(schema.activity.workspaceId, workspace)).all(),
-    loadDeckMeta(workspace),
-    loadRevenueSeries(workspace),
-  ]);
-  const lanes = buildRevenueLanes(revenueSeries);
+export function takenMetricIds(
+  meta: WbrDeckMeta,
+  defs: Array<{ metricId: string }>
+): Set<string> {
   const taken = new Set<string>();
   for (const [id, spec] of Object.entries(meta.specs)) {
     if (spec.lifecycle === "active" || spec.lifecycle === "retired") taken.add(id);
   }
-  const defs = await db
-    .select()
-    .from(schema.metricDefs)
-    .where(eq(schema.metricDefs.workspaceId, workspace))
-    .all();
   for (const def of defs) {
     if (meta.specs[def.metricId]?.lifecycle === "retired") continue;
     if (meta.specs[def.metricId]?.lifecycle === "active" || !meta.specs[def.metricId]) {
       taken.add(def.metricId);
     }
   }
+  return taken;
+}
+
+export async function listStarterProposals(workspace: string): Promise<StarterProposal[]> {
+  if (workspace === DEMO_WORKSPACE) return [];
+  // Sequential on purpose: the process pool is 8 connections and
+  // overview already holds some while it loads WBR.
+  const users = await db
+    .select()
+    .from(schema.users)
+    .where(eq(schema.users.workspaceId, workspace))
+    .all();
+  const activity = await db
+    .select()
+    .from(schema.activity)
+    .where(eq(schema.activity.workspaceId, workspace))
+    .all();
+  const meta = await loadDeckMeta(workspace);
+  const revenueSeries = await loadRevenueSeries(workspace);
+  const defs = await db
+    .select()
+    .from(schema.metricDefs)
+    .where(eq(schema.metricDefs.workspaceId, workspace))
+    .all();
   return starterProposals({
     userCount: users.length,
     activityCount: activity.length,
-    revenueLanes: lanes,
-    takenIds: taken,
+    revenueLanes: buildRevenueLanes(revenueSeries),
+    takenIds: takenMetricIds(meta, defs),
   });
 }
 
