@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { browserSnippet } from "@/sdk";
+import { setupPath } from "@/core/setup-flow";
+import { SetupFlow } from "./SetupFlow";
 import {
   DEFAULT_INSTANCE_ORIGIN,
   READ_KEY_CONSENT,
@@ -26,7 +29,7 @@ import {
   HOME_CITY_PRESETS,
 } from "@/core/company-day";
 
-export default function ConnectPage() {
+function ConnectSettings({ workspaceFromQuery }: { workspaceFromQuery: string }) {
   const [selectedPath, setSelectedPath] = useState<
     "existing" | "sdk" | "csv" | "agents" | null
   >(null);
@@ -48,7 +51,7 @@ export default function ConnectPage() {
     error?: string;
     errors?: Array<{ line: number; message: string }>;
   } | null>(null);
-  const [workspaceId, setWorkspaceId] = useState("live");
+  const [workspaceId, setWorkspaceId] = useState(workspaceFromQuery);
   const [posthogKey, setPosthogKey] = useState("");
   const [posthogProject, setPosthogProject] = useState("");
   const [posthogHost, setPosthogHost] = useState("");
@@ -86,6 +89,10 @@ export default function ConnectPage() {
   useEffect(() => {
     setOrigin(window.location.origin);
   }, []);
+
+  useEffect(() => {
+    setWorkspaceId(workspaceFromQuery);
+  }, [workspaceFromQuery]);
 
   const copyText = async (text: string, label: string) => {
     try {
@@ -422,9 +429,16 @@ export default function ConnectPage() {
   return (
     <div className="min-h-screen bg-bg">
       <div className="max-w-4xl mx-auto p-8">
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center justify-between gap-4 mb-8">
           <Link href="/dashboard" className="text-accent hover:underline text-sm">
             ← Back to Dashboard
+          </Link>
+          <Link
+            href={setupPath(workspaceId)}
+            data-testid="reenter-setup"
+            className="text-sm text-accent hover:underline"
+          >
+            First-run setup
           </Link>
         </div>
 
@@ -1473,5 +1487,27 @@ export default function ConnectPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ConnectPageInner() {
+  const searchParams = useSearchParams();
+  const workspace = searchParams.get("workspace") || "live";
+  if (searchParams.get("setup") === "1") {
+    return (
+      <SetupFlow
+        workspaceId={workspace}
+        reentry={searchParams.get("reentry") === "1"}
+      />
+    );
+  }
+  return <ConnectSettings workspaceFromQuery={workspace} />;
+}
+
+export default function ConnectPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-bg" />}>
+      <ConnectPageInner />
+    </Suspense>
   );
 }

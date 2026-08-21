@@ -22,6 +22,8 @@ import {
 } from "@/components/WorkspaceSession";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
 import DayTracker from "@/components/DayTracker";
+import { DemoBanner } from "@/components/DemoBanner";
+import { SetupPrompt } from "@/components/SetupPrompt";
 import { askDashboardPath, parseAskQuery } from "@/core/ask";
 import { viewFromSearchParams } from "@/core/view-state";
 
@@ -240,6 +242,8 @@ function DashboardContent() {
           <main className={`flex-1 overflow-auto ${wall ? "px-[22px] py-3" : "p-6"}`}>
             <div className="max-w-6xl mx-auto">
               <LiveWorkspaceGate>
+                {!wall && <SetupPrompt workspace={workspace} />}
+                {!wall && <DemoBanner workspace={workspace} />}
                 {view === "dotplot" && (
                   <DotPlot key={`dotplot-${askTick}`} workspace={workspace} />
                 )}
