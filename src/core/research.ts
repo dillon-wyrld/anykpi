@@ -15,13 +15,32 @@ import type {
   ResearchOutgoingField,
   ResearchResult,
 } from "@/core/contracts";
+import { operatorFetchUrlAllowed } from "@/connectors/operator-fetch";
 
 export const RESEARCH_OUTGOING_FIELD_NAMES = ["name", "country"] as const;
 export type ResearchOutgoingFieldName = (typeof RESEARCH_OUTGOING_FIELD_NAMES)[number];
 
-/** Public encyclopedia OpenSearch. The only default egress target. */
+/** Public encyclopedia OpenSearch. Used when no BYO web-search key is set. */
 export const PUBLIC_RESEARCH_ENDPOINT = "https://en.wikipedia.org/w/api.php";
 export const PUBLIC_RESEARCH_SOURCE = "public encyclopedia";
+
+/** Default GET `?q=` web-search API. Used only when a BYO key is present. */
+export const DEFAULT_WEB_SEARCH_ENDPOINT =
+  "https://api.search.brave.com/res/v1/web/search";
+export const WEB_SEARCH_SOURCE = "web search";
+
+export type ResearchProviderId = "encyclopedia" | "web_search";
+
+export type ResearchEnv = {
+  ANYKPI_RESEARCH_SEARCH_KEY?: string;
+  ANYKPI_RESEARCH_SEARCH_URL?: string;
+};
+
+const CLAIM_CONFIDENCE = new Set<ResearchClaim["confidence"]>([
+  "high",
+  "medium",
+  "low",
+]);
 
 export type ResearchSubject = {
   personId: string;
@@ -57,6 +76,8 @@ export type RunResearchOptions = {
   now?: Date;
   refresh?: boolean;
   cachePath?: string;
+  /** Test seam. Production reads `process.env`. */
+  env?: ResearchEnv;
 };
 
 type CacheFile = {
@@ -126,6 +147,37 @@ export function buildResearchUrl(query: string): string {
   url.searchParams.set("limit", "5");
   url.searchParams.set("namespace", "0");
   url.searchParams.set("format", "json");
+  return url.toString();
+}
+
+export function researchSearchKey(
+  env: ResearchEnv | NodeJS.ProcessEnv = process.env
+): string | null {
+  const key = env.ANYKPI_RESEARCH_SEARCH_KEY?.trim();
+  return key && key.length > 0 ? key : null;
+}
+
+export function resolveResearchProvider(
+  env: ResearchEnv | NodeJS.ProcessEnv = process.env
+): ResearchProviderId {
+  return researchSearchKey(env) ? "web_search" : "encyclopedia";
+}
+
+export function researchSearchEndpoint(
+  env: ResearchEnv | NodeJS.ProcessEnv = process.env
+): string {
+  const configured = env.ANYKPI_RESEARCH_SEARCH_URL?.trim();
+  return configured && configured.length > 0
+    ? configured
+    : DEFAULT_WEB_SEARCH_ENDPOINT;
+}
+
+export function buildWebSearchUrl(
+  query: string,
+  endpoint = DEFAULT_WEB_SEARCH_ENDPOINT
+): string {
+  const url = new URL(endpoint);
+  url.searchParams.set("q", query);
   return url.toString();
 }
 
@@ -262,6 +314,117 @@ export function parseOpenSearchPayload(payload: unknown): ResearchClaim[] {
   return claims;
 }
 
+function asResultList(payload: unknown): unknown[] {
+  if (!payload || typeof payload !== "object") return [];
+  const obj = payload as Record<string, unknown>;
+  const brave = obj.web;
+  if (brave && typeof brave === "object") {
+    const results = (brave as { results?: unknown }).results;
+    if (Array.isArray(results)) return results;
+  }
+  if (Array.isArray(obj.results)) return obj.results;
+  if (Array.isArray(obj.organic)) return obj.organic;
+  return [];
+}
+
+export function parseWebSearchPayload(payload: unknown): ResearchClaim[] {
+  const results = asResultList(payload);
+  const claims: ResearchClaim[] = [];
+  for (let i = 0; i < results.length && claims.length < 5; i++) {
+    const item = results[i];
+    if (!item || typeof item !== "object") continue;
+    const rec = item as Record<string, unknown>;
+    const title = typeof rec.title === "string" ? rec.title.trim() : "";
+    if (title.length === 0) continue;
+    const description =
+      typeof rec.description === "string"
+        ? rec.description
+        : typeof rec.snippet === "string"
+          ? rec.snippet
+          : typeof rec.content === "string"
+            ? rec.content
+            : "";
+    const url =
+      typeof rec.url === "string"
+        ? rec.url
+        : typeof rec.link === "string"
+          ? rec.link
+          : undefined;
+    let hostname = WEB_SEARCH_SOURCE;
+    if (url) {
+      try {
+        hostname = new URL(url).hostname;
+      } catch {
+        hostname = WEB_SEARCH_SOURCE;
+      }
+    }
+    claims.push({
+      title: description.trim().length > 0 ? `${title} — ${description.trim()}` : title,
+      source: hostname,
+      url,
+      confidence: i === 0 ? "medium" : "low",
+    });
+  }
+  return claims;
+}
+
+/**
+ * Keep only sourced claims that already carry a confidence marker.
+ * Never invent a title or upgrade confidence.
+ */
+export function bindResearchClaims(claims: ResearchClaim[]): ResearchClaim[] {
+  const bound: ResearchClaim[] = [];
+  for (const claim of claims) {
+    if (typeof claim.title !== "string" || claim.title.trim().length === 0) continue;
+    if (!CLAIM_CONFIDENCE.has(claim.confidence)) continue;
+    bound.push({
+      title: claim.title,
+      source: claim.source,
+      ...(claim.url ? { url: claim.url } : {}),
+      confidence: claim.confidence,
+    });
+    if (bound.length >= 5) break;
+  }
+  return bound;
+}
+
+async function searchEncyclopedia(
+  query: string,
+  fetchImpl: ResearchFetch
+): Promise<ResearchClaim[]> {
+  const response = await fetchImpl(buildResearchUrl(query), {
+    method: "GET",
+    headers: defaultHeaders(),
+  });
+  if (!response.ok) return [];
+  return bindResearchClaims(parseOpenSearchPayload(await response.json()));
+}
+
+async function searchWeb(
+  query: string,
+  fetchImpl: ResearchFetch,
+  env: ResearchEnv | NodeJS.ProcessEnv
+): Promise<ResearchClaim[]> {
+  const key = researchSearchKey(env);
+  if (!key) return [];
+  const endpoint = researchSearchEndpoint(env);
+  if (!operatorFetchUrlAllowed(endpoint)) {
+    throw new Error("blocked-search-url");
+  }
+  const response = await fetchImpl(buildWebSearchUrl(query, endpoint), {
+    method: "GET",
+    headers: {
+      ...defaultHeaders(),
+      Authorization: `Bearer ${key}`,
+      "X-Subscription-Token": key,
+    },
+  });
+  if (!response.ok) {
+    throw new Error("web-search-http");
+  }
+  return bindResearchClaims(parseWebSearchPayload(await response.json()));
+}
+
 function defaultHeaders(): HeadersInit {
   return {
     Accept: "application/json",
@@ -304,19 +467,31 @@ export async function runResearch(options: RunResearchOptions): Promise<Research
   }
 
   const fetchImpl = options.fetch ?? fetch;
-  const url = buildResearchUrl(query);
+  const env: ResearchEnv | NodeJS.ProcessEnv = options.env ?? process.env;
+  const provider = resolveResearchProvider(env);
   let claims: ResearchClaim[] = [];
+  let source = PUBLIC_RESEARCH_SOURCE;
   try {
-    const response = await fetchImpl(url, {
-      method: "GET",
-      headers: defaultHeaders(),
-    });
-    if (response.ok) {
-      claims = parseOpenSearchPayload(await response.json());
+    if (provider === "web_search") {
+      try {
+        claims = await searchWeb(query, fetchImpl, env);
+        source = WEB_SEARCH_SOURCE;
+      } catch {
+        try {
+          claims = await searchEncyclopedia(query, fetchImpl);
+          source = PUBLIC_RESEARCH_SOURCE;
+        } catch {
+          return { ok: false, error: "Web search did not respond." };
+        }
+      }
+    } else {
+      claims = await searchEncyclopedia(query, fetchImpl);
     }
   } catch {
     return { ok: false, error: "Public source did not respond." };
   }
+
+  claims = bindResearchClaims(claims);
 
   const result: ResearchResult = {
     personId: options.subject.personId,
@@ -328,7 +503,7 @@ export async function runResearch(options: RunResearchOptions): Promise<Research
     claims,
     verified: claims.length > 0,
     cached: false,
-    source: PUBLIC_RESEARCH_SOURCE,
+    source,
   };
   writeCachedResearch(result, path);
   return { ok: true, result };

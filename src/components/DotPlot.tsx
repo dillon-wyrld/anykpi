@@ -3,6 +3,9 @@
 import { useEffect, useState, useRef, useCallback, type MouseEvent as ReactMouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PersonPanel from "@/components/PersonPanel";
+import ResearchDisclosure, {
+  type ResearchablePerson,
+} from "@/components/ResearchDisclosure";
 import { clampCardPosition, clusterNote, stripDays } from "@/components/user-card";
 import { useFreshness } from "@/components/useFreshness";
 
@@ -280,6 +283,39 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     y: number;
     user: User | null;
   }>({ visible: false, x: 0, y: 0, user: null });
+  const [researchQueue, setResearchQueue] = useState<ResearchablePerson[]>([]);
+  const [researchTotal, setResearchTotal] = useState(0);
+  const hideCardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showUserCard = (user: User, x: number, y: number) => {
+    if (hideCardTimer.current) {
+      clearTimeout(hideCardTimer.current);
+      hideCardTimer.current = null;
+    }
+    setUserCard({ visible: true, x, y, user });
+  };
+
+  const scheduleHideUserCard = () => {
+    if (hideCardTimer.current) clearTimeout(hideCardTimer.current);
+    hideCardTimer.current = setTimeout(() => {
+      setUserCard({ visible: false, x: 0, y: 0, user: null });
+      hideCardTimer.current = null;
+    }, 250);
+  };
+
+  const toResearchable = (user: User): ResearchablePerson => ({
+    personId: user.personId,
+    name: user.name,
+    emoji: user.emoji,
+    country: user.country,
+    platform: user.platform,
+  });
+
+  const openResearch = (...people: User[]) => {
+    const next = people.map(toResearchable);
+    setResearchQueue(next);
+    setResearchTotal(next.length);
+  };
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -777,15 +813,10 @@ export default function DotPlot({ workspace }: DotPlotProps) {
               window.innerWidth,
               window.innerHeight
             );
-            setUserCard({
-              visible: true,
-              x: pos.x,
-              y: pos.y,
-              user,
-            });
+            showUserCard(user, pos.x, pos.y);
           }}
           onMouseLeave={() => {
-            setUserCard({ visible: false, x: 0, y: 0, user: null });
+            scheduleHideUserCard();
           }}
         >
           {user.name}
@@ -1141,7 +1172,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
 
       {/* Filter chips */}
       {viewState.filters.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
           {viewState.filters.map((filter, idx) => (
             <span
               key={idx}
@@ -1156,6 +1187,16 @@ export default function DotPlot({ workspace }: DotPlotProps) {
               </button>
             </span>
           ))}
+          <button
+            type="button"
+            data-testid="dotplot-research-view"
+            aria-label="Research this view"
+            disabled={getFilteredUsers().length === 0}
+            onClick={() => openResearch(...getFilteredUsers())}
+            className="px-3 py-1.5 text-xs font-medium border border-border rounded-lg bg-panel text-sub hover:text-text disabled:opacity-40"
+          >
+            ✨ Research this view
+          </button>
         </div>
       )}
 
@@ -1228,23 +1269,39 @@ export default function DotPlot({ workspace }: DotPlotProps) {
       {hovered && (
         <div
           data-testid="user-hover-card"
-          className="fixed z-[120] w-[250px] bg-panel border border-border rounded-xl p-3 pointer-events-none"
+          className="fixed z-[120] w-[250px] bg-panel border border-border rounded-xl p-3"
           style={{
             left: `${userCard.x}px`,
             top: `${userCard.y}px`,
             boxShadow: "0 8px 30px rgba(0,0,0,.14)",
           }}
+          onMouseEnter={() => {
+            if (hideCardTimer.current) {
+              clearTimeout(hideCardTimer.current);
+              hideCardTimer.current = null;
+            }
+          }}
+          onMouseLeave={() => scheduleHideUserCard()}
         >
           <div className="flex items-center gap-2.5 mb-2">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-accent-soft text-[20px]">
               {hovered.emoji}
             </span>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="text-[14px] font-bold">{hovered.name}</div>
               {hoveredMeta && (
                 <div className="text-[11px] text-sub">{hoveredMeta}</div>
               )}
             </div>
+            <button
+              type="button"
+              aria-label={`Research ${hovered.name}`}
+              data-testid={`dotplot-research-${hovered.personId}`}
+              onClick={() => openResearch(hovered)}
+              className="shrink-0 px-1.5 py-0.5 text-sm border border-border rounded hover:border-accent"
+            >
+              ✨
+            </button>
           </div>
           {hoveredNote && (
             <div className="my-1.5 text-[11.5px] italic text-sub">
@@ -1294,6 +1351,30 @@ export default function DotPlot({ workspace }: DotPlotProps) {
           onClose={closePerson}
         />
       )}
+
+      <ResearchDisclosure
+        workspace={workspace}
+        person={researchQueue[0] ?? null}
+        queueLabel={
+          researchTotal > 1 && researchQueue.length > 0
+            ? `${researchTotal - researchQueue.length + 1} of ${researchTotal}`
+            : undefined
+        }
+        onClose={() => setResearchQueue([])}
+        onComplete={() => {
+          setResearchQueue((current) => {
+            const rest = current.slice(1);
+            if (rest.length === 0) {
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("workspace", workspace);
+              params.set("view", "pmf");
+              params.delete("user");
+              router.replace(`/dashboard?${params.toString()}`);
+            }
+            return rest;
+          });
+        }}
+      />
 
       {/* Legend */}
       <div className="flex flex-wrap gap-4 text-xs text-sub">

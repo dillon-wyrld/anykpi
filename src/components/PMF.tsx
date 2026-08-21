@@ -2,6 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import type { OutreachConversionByCluster, ResearchCandidate } from "@/core/contracts";
+import ResearchDisclosure, {
+  type ResearchablePerson,
+} from "@/components/ResearchDisclosure";
 import {
   generatePmfQueue,
   pmfProgressPct,
@@ -39,10 +42,8 @@ export default function PMF({ workspace }: PMFProps) {
   const [showStandardQuestions, setShowStandardQuestions] = useState<Record<string, boolean>>({});
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
-  const [disclosure, setDisclosure] = useState<ResearchCandidate | null>(null);
-  const [approved, setApproved] = useState<Record<string, boolean>>({});
-  const [researching, setResearching] = useState(false);
-  const [researchError, setResearchError] = useState<string | null>(null);
+  const [researchQueue, setResearchQueue] = useState<ResearchablePerson[]>([]);
+  const [researchTotal, setResearchTotal] = useState(0);
 
   useEffect(() => {
     fetch(`/api/views/pmf?workspace=${encodeURIComponent(workspace)}`)
@@ -67,48 +68,18 @@ export default function PMF({ workspace }: PMFProps) {
   }, [candidates, query]);
 
   const selected = candidates.find((person) => person.personId === selectedId);
+  const researchPerson = researchQueue[0] ?? null;
+  const filterActive = query.trim().length > 0;
 
-  const openDisclosure = (person: ResearchCandidate) => {
-    setResearchError(null);
-    setDisclosure(person);
-    setApproved(
-      Object.fromEntries(person.outgoing.map((field) => [field.field, true]))
-    );
+  const openDisclosure = (...people: ResearchablePerson[]) => {
+    const next = people.filter((person) => person.name.trim().length > 0);
+    setResearchQueue(next);
+    setResearchTotal(next.length);
   };
 
-  const approvedFields = (disclosure?.outgoing ?? []).filter(
-    (field) => approved[field.field]
-  );
-
-  const runApprovedResearch = async () => {
-    if (!disclosure || approvedFields.length === 0) return;
-    setResearching(true);
-    setResearchError(null);
-    try {
-      const response = await fetch("/api/views/pmf", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          workspace,
-          personId: disclosure.personId,
-          approvedFields,
-        }),
-      });
-      const data = (await response.json()) as { run?: PmfRun; error?: string };
-      if (!response.ok || !data.run) {
-        setResearchError(data.error || "Research did not run.");
-        return;
-      }
-      setRuns((current) => [
-        data.run as PmfRun,
-        ...current.filter((run) => run.id !== data.run!.id),
-      ]);
-      setDisclosure(null);
-    } catch {
-      setResearchError("Research did not run.");
-    } finally {
-      setResearching(false);
-    }
+  const recordRun = (run: PmfRun) => {
+    setRuns((current) => [run, ...current.filter((item) => item.id !== run.id)]);
+    setResearchQueue((current) => current.slice(1));
   };
 
   const generateQueue = async (run: PmfRun) => {
@@ -318,80 +289,30 @@ export default function PMF({ workspace }: PMFProps) {
           >
             ✨ Research
           </button>
+          <button
+            type="button"
+            disabled={!filterActive || filtered.length === 0}
+            onClick={() => openDisclosure(...filtered)}
+            data-testid="pmf-research-view"
+            aria-label="Research this view"
+            className="px-3 py-1.5 border border-border rounded-lg text-xs font-medium hover:border-accent disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            ✨ Research this view
+          </button>
         </div>
       </div>
 
-      {disclosure && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-          <button
-            type="button"
-            className="absolute inset-0 bg-text/10 border-0 cursor-default"
-            aria-label="Cancel research"
-            onClick={() => !researching && setDisclosure(null)}
-          />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="research-disclosure-title"
-            data-testid="research-disclosure"
-            className="relative w-full max-w-md bg-panel border border-border rounded-lg shadow-lg p-4 space-y-3"
-          >
-            <h3 id="research-disclosure-title" className="font-semibold">
-              Fields that leave this machine
-            </h3>
-            <p className="text-xs text-sub">
-              Approve exactly these values before any public query is made.
-              Uncheck a row to keep it here.
-            </p>
-            <ul className="space-y-2" data-testid="research-outgoing-fields">
-              {disclosure.outgoing.map((field) => (
-                <li
-                  key={field.field}
-                  className="flex items-start gap-3 p-2 bg-panel-2 rounded text-sm"
-                  data-testid="research-outgoing-field"
-                  data-field={field.field}
-                >
-                  <input
-                    type="checkbox"
-                    className="mt-1"
-                    checked={Boolean(approved[field.field])}
-                    disabled={field.field === "name"}
-                    onChange={(e) =>
-                      setApproved({ ...approved, [field.field]: e.target.checked })
-                    }
-                    aria-label={`Send ${field.field}`}
-                  />
-                  <div className="min-w-0">
-                    <div className="eyebrow">{field.field}</div>
-                    <div className="font-mono text-xs break-all">{field.value}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            {researchError && (
-              <p className="text-xs text-red">{researchError}</p>
-            )}
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                disabled={researching}
-                onClick={() => setDisclosure(null)}
-                className="px-3 py-1.5 border border-border rounded text-xs"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={researching || approvedFields.length === 0}
-                onClick={() => void runApprovedResearch()}
-                className="px-3 py-1.5 bg-accent text-white rounded-lg text-xs font-medium hover:bg-accent/90 disabled:opacity-40"
-              >
-                {researching ? "Searching…" : "Approve and search"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ResearchDisclosure
+        workspace={workspace}
+        person={researchPerson}
+        queueLabel={
+          researchTotal > 1 && researchQueue.length > 0
+            ? `${researchTotal - researchQueue.length + 1} of ${researchTotal}`
+            : undefined
+        }
+        onClose={() => setResearchQueue([])}
+        onComplete={recordRun}
+      />
 
       {conversion.length > 0 && (
         <div
