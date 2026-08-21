@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { POST as postMcp } from "@/app/api/mcp/route";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
+import { decodeViewState } from "@/core/view-state";
 import { handleStdioToolCall } from "./server";
 
 const WS = "stdio-live-views";
@@ -80,13 +81,15 @@ describe("stdio MCP live views", () => {
     );
 
     expect(Array.isArray(cohorts.cohorts)).toBe(true);
-    expect(cohorts.viewUrl).toEqual(expect.stringContaining("view=cohorts"));
+    expect(String(cohorts.viewUrl)).toContain("/dashboard");
     expect(Array.isArray(wbr.metrics)).toBe(true);
-    expect(wbr.viewUrl).toEqual(expect.stringContaining("view=wbr"));
+    const wbrState = new URL(String(wbr.viewUrl)).searchParams.get("state");
+    expect(wbrState ? decodeViewState(wbrState)?.view : null).toBe("wbr");
     expect(calendar.events).toEqual(
       expect.arrayContaining([expect.objectContaining({ title: "Stdio standup" })])
     );
-    expect(calendar.viewUrl).toEqual(expect.stringContaining("view=calendar"));
+    const calState = new URL(String(calendar.viewUrl)).searchParams.get("state");
+    expect(calState ? decodeViewState(calState)?.view : null).toBe("calendar");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
