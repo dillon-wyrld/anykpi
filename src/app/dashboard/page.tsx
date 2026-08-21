@@ -4,10 +4,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Suspense,
   useCallback,
-  useEffect,
+  useLayoutEffect,
   useRef,
   useState,
-  type FormEvent,
+  type KeyboardEvent,
 } from "react";
 import Link from "next/link";
 import DotPlot from "@/components/DotPlot";
@@ -84,16 +84,20 @@ function AskBar({
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [miss, setMiss] = useState(false);
+  const [ready, setReady] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const onKey = (event: globalThis.KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      const isK = event.key.toLowerCase() === "k" || event.code === "KeyK";
+      if ((event.metaKey || event.ctrlKey) && isK) {
         event.preventDefault();
+        event.stopPropagation();
         inputRef.current?.focus();
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, true);
+    setReady(true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, []);
 
   const submit = useCallback(
@@ -113,11 +117,12 @@ function AskBar({
     [onAsk, router, wall, workspace]
   );
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") return;
     event.preventDefault();
-    const value = inputRef.current?.value ?? "";
+    const value = event.currentTarget.value;
     submit(value);
-    if (inputRef.current) inputRef.current.value = "";
+    event.currentTarget.value = "";
   };
 
   return (
@@ -134,12 +139,12 @@ function AskBar({
         }
         .ask-miss { animation: ask-miss-nudge 0.28s ease-out; border-color: var(--red); }
       `}</style>
-      <form
+      <div
         className={`flex-1 flex items-center gap-2.5 border border-border rounded-[9px] px-3 py-[7px] bg-bg focus-within:border-accent ${
           miss ? "ask-miss" : ""
         }`}
         data-testid="ask-anything-bar"
-        onSubmit={onSubmit}
+        data-ask-ready={ready ? "1" : "0"}
         onAnimationEnd={() => setMiss(false)}
       >
         <span className="text-sm leading-none text-sub" aria-hidden>
@@ -153,11 +158,12 @@ function AskBar({
           placeholder='ask anything — "ios users in france", "are we smiling yet?", "who churned this week"'
           autoComplete="off"
           aria-label="Ask anything"
+          onKeyDown={onKeyDown}
         />
         <kbd className="font-sans text-[10.5px] border border-border border-b-2 rounded-[5px] px-1.5 py-px bg-panel text-sub">
           ⌘K
         </kbd>
-      </form>
+      </div>
     </div>
   );
 }

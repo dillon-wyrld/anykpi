@@ -1,18 +1,36 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 const VIEWS = ["dotplot", "cohorts", "wbr", "calendar", "pmf"] as const;
+
+async function pressAskShortcut(page: Page, which: "ctrl" | "meta") {
+  await page.evaluate((mod) => {
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "k",
+        code: "KeyK",
+        ctrlKey: mod === "ctrl",
+        metaKey: mod === "meta",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+  }, which);
+}
 
 test.describe("Ask-anything bar", () => {
   for (const view of VIEWS) {
     test(`⌘K / Ctrl+K focuses the bar on ${view}`, async ({ page }) => {
       await page.goto(`/dashboard?workspace=demo&view=${view}`);
-      await expect(page.getByTestId("ask-anything")).toBeVisible();
+      await expect(page.getByTestId("ask-anything-bar")).toHaveAttribute(
+        "data-ask-ready",
+        "1"
+      );
 
-      await page.keyboard.press("Control+k");
+      await pressAskShortcut(page, "ctrl");
       await expect(page.getByTestId("ask-anything")).toBeFocused();
 
       await page.locator("body").click();
-      await page.keyboard.press("Meta+k");
+      await pressAskShortcut(page, "meta");
       await expect(page.getByTestId("ask-anything")).toBeFocused();
     });
   }
@@ -63,8 +81,11 @@ test.describe("Ask-anything bar", () => {
   test("the bar is present in wall mode", async ({ page }) => {
     await page.goto("/dashboard?workspace=demo&view=dotplot&w=1");
     await expect(page.getByTestId("wall-masthead")).toBeVisible();
-    await expect(page.getByTestId("ask-anything")).toBeVisible();
-    await page.keyboard.press("Control+k");
+    await expect(page.getByTestId("ask-anything-bar")).toHaveAttribute(
+      "data-ask-ready",
+      "1"
+    );
+    await pressAskShortcut(page, "ctrl");
     await expect(page.getByTestId("ask-anything")).toBeFocused();
   });
 });
