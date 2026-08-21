@@ -14,6 +14,7 @@ import {
   WorkspaceSessionProvider,
 } from "@/components/WorkspaceSession";
 import { WorkspaceSwitcher } from "@/components/WorkspaceSwitcher";
+import DayTracker from "@/components/DayTracker";
 
 const WORDMARK_LIGHT_2X = "/brand/wordmark-light@2x.png";
 const WORDMARK_LIGHT_3X = "/brand/wordmark-light@3x.png";
@@ -87,7 +88,7 @@ function DashboardContent() {
             <LogoRow />
           </header>
         ) : (
-          <nav className="w-[200px] bg-panel border-r border-border flex flex-col p-3 flex-shrink-0">
+          <nav className="w-[200px] bg-panel border-r border-border flex flex-col p-3 flex-shrink-0 overflow-y-auto">
             <div className="flex items-center px-2 pt-0.5 pb-3.5 border-b border-rule mb-2">
               <LogoRow href="/" />
             </div>
@@ -107,6 +108,8 @@ function DashboardContent() {
             ))}
 
             <div className="flex-1" />
+
+            <DayTracker workspace={workspace} />
 
             <div className="border-t border-rule pt-3 mt-3">
               <WorkspaceSwitcher workspace={workspace} view={view} />

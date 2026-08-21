@@ -48,6 +48,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- Day of YourCo sidebar module (ANY-55): `#daytrack` at the foot of
+  the dashboard nav — company-day clock, founded line, Week / Online
+  / Next up / Spread rails, and a per-city online strip with the
+  day/night bar. Clock and tallies come from the company profile,
+  `src/core/day.ts`, and `overview.presence`. A once-a-minute tick
+  recomputes the clock and refetches overview (paused on a hidden
+  tab; a signature guard skips no-op paints). Workspaces with no
+  synced data, and the demo workspace, run on the demo cast and are
+  labeled demo. A synced workspace shows real tallies and the
+  freshness chip. Side-by-side still: `docs/assets/daytrack-compare.png`.
 - Presence read model (ANY-54): per-city online counts from real
   activity in the trailing hour, as of the last data — never a
   simulated wake/sleep hour. Past-hour deltas ask the same question

@@ -25,6 +25,7 @@ pnpm readme:assets
 | `wordmark-dark.png` | Wordmark on a dark ground |
 | `icon-light.png` | K-tile tab icon on a light ground |
 | `icon-dark.png` | K-tile tab icon on a dark ground |
+| `daytrack-compare.png` | Side-by-side `#daytrack` — prototype vs dashboard |
 | `tour.gif` | Short tour that clicks through all five views |
 
 ## GIF

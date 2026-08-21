@@ -16,6 +16,7 @@
  *   docs/assets/wordmark-dark.png
  *   docs/assets/icon-light.png
  *   docs/assets/icon-dark.png
+ *   docs/assets/daytrack-compare.png
  *   docs/assets/tour.gif
  *
  * The GIF is encoded with ffmpeg from a Playwright video of the five-view tour.
@@ -27,6 +28,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "fs";
@@ -177,6 +179,50 @@ async function captureBrand(page: Page): Promise<void> {
   await page.setViewportSize(VIEWPORT);
 }
 
+async function captureDaytrackCompare(page: Page): Promise<void> {
+  const dest = join(ASSETS_DIR, "daytrack-compare.png");
+  console.log(`Capturing daytrack side-by-side → ${dest}`);
+
+  const protoHtml = readFileSync(resolve(process.cwd(), "spec/prototype.html"), "utf8");
+  await page.setViewportSize({ width: 240, height: 1100 });
+  await page.setContent(protoHtml, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#daytrack .dphero", { timeout: 30_000 });
+  await page.evaluate(() => document.fonts.ready);
+  await sleep(200);
+  const protoPng = await page.locator("#daytrack").screenshot({ type: "png" });
+
+  await page.setViewportSize(VIEWPORT);
+  await page.goto(`${BASE_URL}/dashboard?workspace=demo&view=dotplot`, {
+    waitUntil: "load",
+  });
+  await page.waitForSelector("[data-testid=daytrack]", { timeout: 30_000 });
+  await page.evaluate(() => document.fonts.ready);
+  await sleep(200);
+  const livePng = await page.locator("[data-testid=daytrack]").screenshot({ type: "png" });
+
+  const protoUri = `data:image/png;base64,${Buffer.from(protoPng).toString("base64")}`;
+  const liveUri = `data:image/png;base64,${Buffer.from(livePng).toString("base64")}`;
+  await page.setViewportSize({ width: 560, height: 1100 });
+  await page.setContent(
+    `<html><body style="margin:0;background:#fff;font:12px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#18181b">
+      <div style="display:flex;gap:28px;padding:20px 24px;align-items:flex-start">
+        <figure style="margin:0">
+          <figcaption style="font:500 10px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:#6b6f76;margin-bottom:8px">Prototype #daytrack</figcaption>
+          <img src="${protoUri}" style="display:block;width:182px;border:1px solid #e4e4e7;border-radius:8px" alt="prototype daytrack" />
+        </figure>
+        <figure style="margin:0">
+          <figcaption style="font:500 10px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:#6b6f76;margin-bottom:8px">ANYKPI dashboard</figcaption>
+          <img src="${liveUri}" style="display:block;width:182px;border:1px solid #e4e4e7;border-radius:8px" alt="dashboard daytrack" />
+        </figure>
+      </div>
+    </body></html>`,
+    { waitUntil: "load" }
+  );
+  await page.locator("img").first().waitFor({ state: "visible" });
+  await sleep(100);
+  await page.screenshot({ path: dest, type: "png", fullPage: true });
+}
+
 async function captureStills(page: Page): Promise<string[]> {
   const paths: string[] = [];
   for (const view of VIEWS) {
@@ -304,6 +350,7 @@ async function main(): Promise<void> {
       const stillPage = await context.newPage();
       stills = await captureStills(stillPage);
       await captureBrand(stillPage);
+      await captureDaytrackCompare(stillPage);
       await stillPage.close();
 
       const tourPage = await context.newPage();

@@ -1,0 +1,297 @@
+/* Prototype #daytrack language — type scale, rails, bars. No glow, no
+   infinite motion, no drop-shadow on data marks. */
+
+.daytrack {
+  border-top: 1px solid var(--border);
+  padding: 10px 9px 2px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+}
+
+.daytrack .dayn-lb {
+  font: 500 9px/1 ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--sub);
+}
+
+.daytrack .dphero {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 5px 0 1px;
+}
+
+.daytrack .dphero b {
+  font-size: 26px;
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.daytrack .dphero > span {
+  font-size: 10.5px;
+  color: var(--sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.daytrack .dpsub {
+  font-size: 9.5px;
+  color: var(--sub);
+}
+
+.daytrack .dpgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px 8px;
+  margin: 11px 0 3px;
+}
+
+.daytrack .dpst {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.daytrack .dpst .v {
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.daytrack .dprail {
+  width: 4px;
+  height: 30px;
+  border-radius: 99px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  position: relative;
+  background: linear-gradient(#ef6f4d, #f4b189 32%, #e2e4ea 52%, #a3c6ef 74%, #eaf2fc);
+}
+
+.daytrack .dprail i {
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--text);
+  top: calc(var(--p, 50%) - 1px);
+}
+
+.daytrack .dptz {
+  border-top: 1px solid var(--border);
+  margin-top: 9px;
+  padding-top: 8px;
+}
+
+.daytrack .tzrow {
+  margin-bottom: 7px;
+}
+
+.daytrack .tzhead {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 10.5px;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.daytrack .tzhead b {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.daytrack .tzhead s {
+  text-decoration: none;
+  color: var(--sub);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.daytrack .udelta {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 0 5px;
+  font-size: 9px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 15px;
+}
+
+.daytrack .udelta b {
+  color: var(--green);
+}
+
+.daytrack .udelta i {
+  color: var(--red);
+  font-style: normal;
+}
+
+.daytrack .udelta.quiet {
+  opacity: 0.42;
+}
+
+.daytrack .tzbar {
+  position: relative;
+  height: 18px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    #c4c7d2,
+    #c4c7d2 21%,
+    #f2b28d 27%,
+    #fcfcfe 35%,
+    #fcfcfe 69%,
+    #eda4b7 78%,
+    #c4c7d2 85%,
+    #c4c7d2
+  );
+}
+
+.daytrack .tzbar u {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: rgba(24, 24, 27, 0.55);
+  left: var(--x, 50%);
+  transform: translateX(-50%);
+}
+
+.daytrack .tzbar em {
+  position: absolute;
+  top: 50%;
+  left: var(--x, 50%);
+  transform: translate(-50%, -50%);
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-shadow: 0 1.4px 0 #fff, 0 -1.4px 0 #fff, 1.4px 0 0 #fff, -1.4px 0 0 #fff,
+    1px 1px 0 #fff, -1px 1px 0 #fff, 1px -1px 0 #fff, -1px -1px 0 #fff;
+}
+
+.daytrack .tzbar em.l {
+  transform: translate(0, -50%);
+  margin-left: 4px;
+}
+
+.daytrack .tzbar em.r {
+  transform: translate(-100%, -50%);
+  margin-left: -4px;
+}
+
+.daytrack .tzrow.asleep .tzhead b,
+.daytrack .tzrow.asleep .tzbar em {
+  opacity: 0.55;
+}
+
+.daytrack .tzax {
+  display: flex;
+  justify-content: space-between;
+  font: 500 8px/1 ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.06em;
+  color: var(--sub);
+  margin-top: -2px;
+}
+
+.daytrack .tzhd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.daytrack .tzgear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--sub);
+  cursor: pointer;
+}
+
+.daytrack .tzgear:hover {
+  border-color: var(--border);
+  color: var(--accent);
+}
+
+.daytrack .tzgear.on {
+  border-color: #d4d8f2;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.daytrack .tzadd {
+  display: none;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.daytrack .tzadd.open {
+  display: flex;
+}
+
+.daytrack .tzadd button {
+  font: inherit;
+  font-size: 9.5px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--sub);
+  border-radius: 99px;
+  padding: 1px 6px;
+  cursor: pointer;
+}
+
+.daytrack .tzadd button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.daytrack .tzadd button.rm {
+  border-style: dashed;
+}
+
+.daytrack .dtchip {
+  font: 500 8.5px/13px ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sub);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.daytrack .dthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
