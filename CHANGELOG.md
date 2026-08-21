@@ -11,6 +11,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and link-local destinations are refused, including redirect hops.
   Residual: operator-chosen RFC1918, localhost, and other private hosts
   stay allowed (self-hosted analytics and internal calendar feeds).
+  Hostnames are not DNS-resolved at fetch time.
 
 ### Security
 - CLI `login` defaults minted keys to `live`. Identify, track, import,

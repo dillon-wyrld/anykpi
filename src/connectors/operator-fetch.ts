@@ -8,17 +8,19 @@
  *
  * Residual: RFC1918, localhost, and other operator-chosen hosts are
  * allowed. Self-hosted PostHog and internal ICS feeds are legitimate.
- * The operator is trusted to point sync at their own network.
+ * The operator is trusted to point sync at their own network. Hostnames
+ * are not resolved at fetch time (a name that later answers as
+ * metadata is residual); literal metadata IPs and well-known metadata
+ * hosts are always refused, including after a redirect.
  */
 
 import { BlockList, isIP } from "node:net";
-import { lookup } from "node:dns/promises";
 
 export const BLOCKED_OPERATOR_FETCH =
   "Blocked operator fetch: cloud-metadata and link-local addresses are not allowed";
 
 export const OPERATOR_FETCH_RESIDUAL =
-  "Private RFC1918, localhost, and other operator-chosen hosts are allowed. Self-hosted analytics and internal calendar feeds are legitimate. Only cloud-metadata and link-local addresses are blocked.";
+  "Private RFC1918, localhost, and other operator-chosen hosts are allowed. Self-hosted analytics and internal calendar feeds are legitimate. Only cloud-metadata and link-local addresses are blocked. Hostnames are not DNS-resolved at fetch time.";
 
 const MAX_REDIRECTS = 5;
 /** Cap DNS so an unresolvable operator host cannot stall a sync tick. */
@@ -120,14 +122,9 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-async function defaultLookup(hostname: string): Promise<string[]> {
-  const results = await lookup(hostname, { all: true, verbatim: true });
-  return results.map((row) => row.address);
-}
-
 export async function assertOperatorFetchUrl(
   raw: string,
-  resolveDns: OperatorLookup = defaultLookup
+  resolveDns?: OperatorLookup
 ): Promise<URL> {
   const parsed = parseOperatorHttpUrl(raw);
   if (!parsed || hostnameLooksLikeMetadata(parsed.hostname)) {
@@ -135,7 +132,7 @@ export async function assertOperatorFetchUrl(
   }
 
   const host = stripBrackets(parsed.hostname);
-  if (isIP(host) !== 0 || decodePackedIpv4(host)) {
+  if (isIP(host) !== 0 || decodePackedIpv4(host) || !resolveDns) {
     return parsed;
   }
 
@@ -168,8 +165,7 @@ export async function operatorFetch(
   opts?: { lookup?: OperatorLookup; fetch?: typeof fetch }
 ): Promise<Response> {
   const doFetch = opts?.fetch ?? fetch;
-  const resolveDns = opts?.lookup ?? defaultLookup;
-  let current = await assertOperatorFetchUrl(input, resolveDns);
+  let current = await assertOperatorFetchUrl(input, opts?.lookup);
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const response = await doFetch(current.toString(), {
@@ -183,7 +179,7 @@ export async function operatorFetch(
 
     const next = redirectUrl(current, response.headers.get("location"));
     if (!next) return response;
-    current = await assertOperatorFetchUrl(next.toString(), resolveDns);
+    current = await assertOperatorFetchUrl(next.toString(), opts?.lookup);
   }
 
   throw new BlockedOperatorUrlError();
