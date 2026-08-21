@@ -143,7 +143,7 @@ anykpi export --format csv --out ./backup
 anykpi outreach --json
 anykpi outreach --id ou_xxx --outcome converted
 
-# Ingest
+# Ingest (defaults to live; demo writes need --workspace demo)
 anykpi identify user123 --name="Jane Doe" --email="jane@example.com"
 anykpi track user123 song_played
 ```

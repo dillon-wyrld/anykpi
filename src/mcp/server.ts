@@ -26,8 +26,11 @@ import { buildViewUrl, queryUsersPayload } from "@/core/view-state";
 import {
   CohortCompareError,
   cohortsDashboardQuery,
+  loadCohortsView,
   parseCohortCompareOptions,
-} from "@/core/views/cohort-math";
+} from "@/core/views/cohorts";
+import { loadWbrView } from "@/core/views/wbr";
+import { loadCalendarView } from "@/core/views/calendar";
 
 const BASE_URL = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -194,11 +197,22 @@ export function createMCPServer() {
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    const write = !isReadOnlyMcpTool(name);
-    const workspace = (args as any)?.workspace || (write ? "live" : "demo");
+    return handleStdioToolCall(name, args as Record<string, unknown> | undefined);
+  });
 
-    try {
-      switch (name) {
+  return server;
+}
+
+export async function handleStdioToolCall(
+  name: string,
+  args: Record<string, unknown> | undefined
+) {
+  const write = !isReadOnlyMcpTool(name);
+  const workspace =
+    (typeof args?.workspace === "string" && args.workspace) || (write ? "live" : "demo");
+
+  try {
+    switch (name) {
         case "get_overview": {
           const users = await db
             .select()
@@ -308,30 +322,15 @@ export function createMCPServer() {
 
         case "get_cohorts": {
           const compare = parseCohortCompareOptions({
-            split: (args as { split?: string })?.split,
-            series: (args as { series?: string | string[] })?.series,
+            split: args?.split as string | undefined,
+            series: args?.series as string | string[] | undefined,
           });
-          const payers = Boolean((args as { payers?: boolean })?.payers);
-          const viewQuery = new URLSearchParams({ workspace });
-          if (payers) viewQuery.set("payers", "1");
-          if (compare.split) viewQuery.set("split", compare.split);
-          if (compare.series.length) viewQuery.set("series", compare.series.join(","));
-
-          const response = await fetch(
-            `${BASE_URL}/api/views/cohorts?${viewQuery.toString()}`
-          );
-          const data = await response.json();
-          if (!response.ok) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify({ error: data.error || "Cohorts request failed" }),
-                },
-              ],
-              isError: true,
-            };
-          }
+          const data = await loadCohortsView(workspace, "week", {
+            payers: Boolean(args?.payers),
+            split: compare.split,
+            series: compare.series,
+          });
+          const smilingCount = data.cohorts.filter((c) => c.smileDetected).length;
 
           return {
             content: [
@@ -340,14 +339,14 @@ export function createMCPServer() {
                 text: JSON.stringify(
                   {
                     cohorts: data.cohorts,
-                    smilingCount: data.cohorts.filter((c: any) => c.smileDetected).length,
-                    pmfForming: data.cohorts.filter((c: any) => c.smileDetected).length >= 3,
-                    payers,
+                    smilingCount,
+                    pmfForming: smilingCount >= 3,
+                    payers: data.payers,
                     split: data.split ?? null,
                     series: data.series ?? [],
                     viewUrl: `${BASE_URL}/dashboard?${cohortsDashboardQuery({
                       workspace,
-                      payers,
+                      payers: data.payers,
                       split: compare.split,
                       series: compare.series.length > 0 ? compare.series : undefined,
                     })}`,
@@ -361,8 +360,7 @@ export function createMCPServer() {
         }
 
         case "get_wbr": {
-          const response = await fetch(`${BASE_URL}/api/views/wbr?workspace=${workspace}`);
-          const data = await response.json();
+          const data = await loadWbrView(workspace);
 
           return {
             content: [
@@ -371,7 +369,7 @@ export function createMCPServer() {
                 text: JSON.stringify(
                   {
                     metrics: data.metrics,
-                    exceptions: data.metrics.filter((m: any) => m.status !== "on"),
+                    exceptions: data.metrics.filter((m) => m.status !== "ok"),
                     viewUrl: buildViewUrl(`${BASE_URL}/dashboard`, {
                       view: "wbr",
                     }),
@@ -385,10 +383,16 @@ export function createMCPServer() {
         }
 
         case "get_calendar": {
-          const response = await fetch(
-            `${BASE_URL}/api/views/calendar?workspace=${workspace}`
-          );
-          const data = await response.json();
+          const data = await loadCalendarView(workspace);
+          const start = args?.startDate ? Date.parse(String(args.startDate)) : Number.NaN;
+          const end = args?.endDate ? Date.parse(String(args.endDate)) : Number.NaN;
+          const events = data.events.filter((event) => {
+            const ts = Date.parse(event.date);
+            if (Number.isNaN(ts)) return true;
+            if (!Number.isNaN(start) && ts < start) return false;
+            if (!Number.isNaN(end) && ts > end) return false;
+            return true;
+          });
 
           return {
             content: [
@@ -396,11 +400,11 @@ export function createMCPServer() {
                 type: "text",
                 text: JSON.stringify(
                   {
-                    events: data.events,
+                    events,
                     viewUrl: buildViewUrl(`${BASE_URL}/dashboard`, {
                       view: "calendar",
-                      startDate: (args as any)?.startDate,
-                      endDate: (args as any)?.endDate,
+                      startDate: args?.startDate ? String(args.startDate) : undefined,
+                      endDate: args?.endDate ? String(args.endDate) : undefined,
                     }),
                   },
                   null,
@@ -554,9 +558,6 @@ export function createMCPServer() {
         isError: true,
       };
     }
-  });
-
-  return server;
 }
 
 if (require.main === module) {

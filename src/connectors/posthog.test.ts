@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/core/db";
 import * as schema from "@/core/schema";
@@ -261,4 +261,53 @@ describe("PostHog connector contract", () => {
     },
     60_000
   );
+
+  it("does not fetch a PostHog host on cloud metadata", async () => {
+    process.env.POSTHOG_API_KEY = "phx_test";
+    process.env.POSTHOG_PROJECT_ID = "proj_fixture";
+    process.env.POSTHOG_HOST = "http://169.254.169.254";
+
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const result = await sync("posthog", WS);
+      expect(result.health).toBe("error");
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("does not follow PostHog pagination or redirects onto metadata", async () => {
+    stubCredentials();
+    const harness = installFixtureFetch([
+      {
+        request: { method: "GET", urlIncludes: "/persons/" },
+        response: {
+          status: 200,
+          body: {
+            results: [],
+            next: "http://169.254.169.254/latest/meta-data",
+          },
+        },
+      },
+      {
+        request: { method: "GET", urlIncludes: "/events/" },
+        response: {
+          status: 302,
+          headers: { location: "http://169.254.169.254/latest/meta-data" },
+          body: "",
+        },
+      },
+    ]);
+    try {
+      const result = await sync("posthog", WS);
+      expect(result.health).toBe("error");
+      expect(harness.calls.every((call) => !call.url.includes("169.254"))).toBe(
+        true
+      );
+    } finally {
+      harness.restore();
+    }
+  });
 });
