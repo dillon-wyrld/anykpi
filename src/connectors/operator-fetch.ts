@@ -14,8 +14,6 @@
  * hosts are always refused, including after a redirect.
  */
 
-import { BlockList, isIP } from "node:net";
-
 export const BLOCKED_OPERATOR_FETCH =
   "Blocked operator fetch: cloud-metadata and link-local addresses are not allowed";
 
@@ -23,14 +21,8 @@ export const OPERATOR_FETCH_RESIDUAL =
   "Private RFC1918, localhost, and other operator-chosen hosts are allowed. Self-hosted analytics and internal calendar feeds are legitimate. Only cloud-metadata and link-local addresses are blocked. Hostnames are not DNS-resolved at fetch time.";
 
 const MAX_REDIRECTS = 5;
-/** Cap DNS so an unresolvable operator host cannot stall a sync tick. */
+/** Cap optional DNS so an injected resolver cannot stall a sync tick. */
 const DNS_LOOKUP_TIMEOUT_MS = 400;
-
-const METADATA_BLOCKLIST = new BlockList();
-METADATA_BLOCKLIST.addSubnet("169.254.0.0", 16, "ipv4");
-METADATA_BLOCKLIST.addSubnet("fe80::", 10, "ipv6");
-METADATA_BLOCKLIST.addAddress("100.100.100.200", "ipv4");
-METADATA_BLOCKLIST.addAddress("fd00:ec2::254", "ipv6");
 
 const METADATA_HOSTS = new Set([
   "metadata",
@@ -65,14 +57,40 @@ function decodePackedIpv4(hostname: string): string | null {
   return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join(".");
 }
 
+function isIpv4Literal(ip: string): boolean {
+  const parts = ip.split(".");
+  if (parts.length !== 4) return false;
+  return parts.every((part) => /^(?:0|[1-9]\d{0,2})$/.test(part) && Number(part) <= 255);
+}
+
+function isIpv6Literal(ip: string): boolean {
+  return ip.includes(":") && /^[0-9a-f:.]+$/i.test(ip);
+}
+
+function compactIpv6(ip: string): string {
+  return ip
+    .toLowerCase()
+    .replace(/(^|:)0+/g, "$1")
+    .replace(/:0+(?=:)/g, ":")
+    .replace(/:{2,}/g, "::");
+}
+
 export function isLinkLocalOrMetadataAddress(address: string): boolean {
   const ip = stripBrackets(address);
   const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(ip);
   if (mapped?.[1]) return isLinkLocalOrMetadataAddress(mapped[1]);
 
-  const kind = isIP(ip);
-  if (kind === 4) return METADATA_BLOCKLIST.check(ip, "ipv4");
-  if (kind === 6) return METADATA_BLOCKLIST.check(ip, "ipv6");
+  if (isIpv4Literal(ip)) {
+    if (ip === "100.100.100.200") return true;
+    const parts = ip.split(".").map(Number);
+    return parts[0] === 169 && parts[1] === 254;
+  }
+
+  if (isIpv6Literal(ip)) {
+    if (compactIpv6(ip) === "fd00:ec2::254") return true;
+    const first = parseInt(ip.split(":")[0] ?? "", 16);
+    return first >= 0xfe80 && first <= 0xfebf;
+  }
 
   const packed = decodePackedIpv4(ip);
   return packed ? isLinkLocalOrMetadataAddress(packed) : false;
@@ -99,7 +117,7 @@ export function parseOperatorHttpUrl(raw: string): URL | null {
   }
 }
 
-/** Sync hostname / literal-IP check. DNS is resolved at fetch time. */
+/** Sync hostname / literal-IP check. Optional DNS is test-only. */
 export function operatorFetchUrlAllowed(raw: string | URL): boolean {
   const parsed = typeof raw === "string" ? parseOperatorHttpUrl(raw) : raw;
   if (!parsed) return false;
@@ -132,7 +150,7 @@ export async function assertOperatorFetchUrl(
   }
 
   const host = stripBrackets(parsed.hostname);
-  if (isIP(host) !== 0 || decodePackedIpv4(host) || !resolveDns) {
+  if (isIpv4Literal(host) || isIpv6Literal(host) || decodePackedIpv4(host) || !resolveDns) {
     return parsed;
   }
 
