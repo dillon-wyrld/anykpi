@@ -7,7 +7,11 @@ import { gate } from '@/core/session-auth';
 import { publicBaseUrl } from '@/core/view-state';
 import { internalError, logServerError } from '@/core/errors';
 import { dayClockFields, workspaceDayClock } from '@/core/day';
-import { loadFoundedAt } from '@/core/milestones';
+import {
+  companyDayMilestone,
+  loadFoundedAt,
+  serializeTodayMilestone,
+} from '@/core/milestones';
 import { loadWorkspacePresence } from '@/core/presence';
 import { loadSyncHealth } from '@/core/sync-health';
 import { loadCohortsView } from '@/core/views/cohorts';
@@ -71,6 +75,14 @@ export async function GET(request: NextRequest) {
     const response = OverviewResponseSchema.parse({
       workspace,
       ...dayClockFields(clock),
+      todayMilestone: serializeTodayMilestone(
+        companyDayMilestone({
+          workspaceId: workspace,
+          dayN: clock.dayN,
+          foundedAt: clock.foundedAt,
+          timeZone: clock.timeZone,
+        })
+      ),
       totalUsers,
       activeToday: activeTodayCount,
       weeklyActive: weeklyActiveCount,

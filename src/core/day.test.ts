@@ -16,7 +16,9 @@ import {
   computeDayClock,
   dayClockFields,
   dayNumber,
+  earnedDayMilestones,
   homeTimezoneConfigKey,
+  isDayMilestone,
   nextMilestoneDay,
   timeLeftToday,
   weekNumber,
@@ -184,6 +186,12 @@ describe("day clock — local civil dates", () => {
     expect(nextMilestoneDay(365)).toBe(500);
     expect(nextMilestoneDay(999)).toBe(1_000);
     expect(nextMilestoneDay(1_000)).toBe(1_100);
+    expect(isDayMilestone(365)).toBe(true);
+    expect(isDayMilestone(1000)).toBe(true);
+    expect(isDayMilestone(364)).toBe(false);
+    expect(isDayMilestone(1100)).toBe(true);
+    expect(earnedDayMilestones(365)).toEqual([100, 200, 300, 365]);
+    expect(earnedDayMilestones(99)).toEqual([]);
   });
 
   it("earns the birthday on the home-timezone anniversary, not UTC midnight", () => {
@@ -224,6 +232,12 @@ describe("MCP, REST, and calendar birthday share one fixture", () => {
       dayN: number;
       weekN: number;
       nextMilestone: number;
+      todayMilestone: {
+        key: string;
+        title: string;
+        source: string;
+        occurredAt: string;
+      } | null;
     }>;
   }
 
@@ -255,6 +269,12 @@ describe("MCP, REST, and calendar birthday share one fixture", () => {
       dayN: number;
       weekN: number;
       nextMilestone: number;
+      todayMilestone: {
+        key: string;
+        title: string;
+        source: string;
+        occurredAt: string;
+      } | null;
     };
   }
 
@@ -276,6 +296,9 @@ describe("MCP, REST, and calendar birthday share one fixture", () => {
     const birthday = calendar.events.find(
       (event) => event.source === "anykpi" && event.title === "Company birthday"
     );
+    const day365 = calendar.events.find(
+      (event) => event.source === "anykpi" && event.title === "Day 365"
+    );
 
     expect(rest.dayN).toBe(expected.dayN);
     expect(mcp.dayN).toBe(expected.dayN);
@@ -284,6 +307,11 @@ describe("MCP, REST, and calendar birthday share one fixture", () => {
     expect(rest.nextMilestone).toBe(expected.nextMilestone);
     expect(mcp.nextMilestone).toBe(expected.nextMilestone);
     expect(birthday?.date).toBe("2026-03-15T00:00:00.000Z");
+    expect(day365?.date).toBe("2026-03-15T00:00:00.000Z");
+    expect(rest.todayMilestone?.title).toBe("Day 365");
+    expect(rest.todayMilestone?.source).toBe("anykpi");
+    expect(rest.todayMilestone?.occurredAt).toBe(day365?.date);
+    expect(mcp.todayMilestone?.key).toBe(rest.todayMilestone?.key);
     expect(anniversaryOnOrBefore(FOUNDED, NOW, "UTC")?.toISOString()).toBe(
       birthday?.date
     );

@@ -17,7 +17,7 @@ import {
   payloadTooLarge,
   readJsonBounded,
 } from "@/core/errors";
-import { gate } from "@/core/session-auth";
+import { gate, gateDisplayPrefs } from "@/core/session-auth";
 
 function requestedWorkspace(request: NextRequest, body?: { workspaceId?: string; workspace?: string }) {
   const { searchParams } = new URL(request.url);
@@ -30,11 +30,28 @@ function requestedWorkspace(request: NextRequest, body?: { workspaceId?: string;
   );
 }
 
+function isPrefsOnlyPatch(data: {
+  companyName?: string;
+  foundedAt?: string | null;
+  homeCity?: { timezone: string; label: string } | null;
+  shownCities?: string[] | null;
+  celebratedMilestoneKeys?: string[];
+}): boolean {
+  const profileTouched =
+    data.companyName !== undefined ||
+    data.foundedAt !== undefined ||
+    data.homeCity !== undefined;
+  const prefsTouched =
+    data.shownCities !== undefined ||
+    data.celebratedMilestoneKeys !== undefined;
+  return prefsTouched && !profileTouched;
+}
+
 /**
  * GET /api/v1/config
  *
- * Company profile for a workspace (name, founded date, home city).
- * Demo stays public-read.
+ * Company profile for a workspace (name, founded date, home city,
+ * shown-city set). Demo stays public-read.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -54,7 +71,9 @@ export async function GET(request: NextRequest) {
  * PATCH /api/v1/config
  *
  * Update company name, founded date, and/or home city. Write-gated.
- * A founded date in the future is refused.
+ * Shown-city and celebration-claim fields are display prefs: a browser
+ * session may save them; anonymous demo may not. A founded date in the
+ * future is refused.
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -72,16 +91,18 @@ export async function PATCH(request: NextRequest) {
       return badRequest(parsed.error.issues[0]?.message ?? "Bad Request");
     }
 
-    const gated = await gate(request, {
-      workspace: requestedWorkspace(request, parsed.data),
-      write: true,
-    });
+    const requested = requestedWorkspace(request, parsed.data);
+    const gated = isPrefsOnlyPatch(parsed.data)
+      ? await gateDisplayPrefs(request, { workspace: requested })
+      : await gate(request, { workspace: requested, write: true });
     if (!gated.ok) return gated.response;
 
     const profile = await saveCompanyProfile(gated.workspace, {
       companyName: parsed.data.companyName,
       foundedAt: parsed.data.foundedAt,
       homeCity: parsed.data.homeCity,
+      shownCities: parsed.data.shownCities,
+      celebratedMilestoneKeys: parsed.data.celebratedMilestoneKeys,
     });
 
     await recordWriteAudit(

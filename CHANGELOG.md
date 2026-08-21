@@ -48,6 +48,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `Authorization: Bearer` and `x-api-key` when a key is configured).
 
 ### Added
+- City preferences and the milestone moment (ANY-56): the Day of
+  YourCo zone picker stores the shown-city set per workspace in
+  config (`shown_cities:<workspace>`). Home stays first and cannot
+  be removed; a workspace with no saved prefs still shows the
+  current ranking. On a ladder day (Day 365, Day 1000, …) the
+  module and calendar cite the same `company_day` milestone from
+  `src/core/day.ts` + `src/core/milestones.ts`. The one-shot
+  celebration is the single sanctioned motion — it fires once
+  (`celebrated_days:<workspace>`) and does nothing under
+  prefers-reduced-motion.
 - Day of YourCo sidebar module (ANY-55): `#daytrack` at the foot of
   the dashboard nav — company-day clock, founded line, Week / Online
   / Next up / Spread rails, and a per-city online strip with the

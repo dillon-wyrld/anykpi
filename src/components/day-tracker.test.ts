@@ -3,11 +3,14 @@ import type { OverviewResponse, Presence } from "@/core/contracts";
 import { computeDayClock, dayClockFields } from "@/core/day";
 import {
   buildDayTrackerSnapshot,
+  cityKey,
   dayTrackerSignature,
+  defaultShownKeys,
   formatFreshnessChip,
   formatLocalClock,
   isNightHour,
   needlePlacement,
+  resolveShownKeys,
   shouldUseDemoCast,
   type DayTrackerProfile,
 } from "@/components/day-tracker";
@@ -41,6 +44,7 @@ function overviewFixture(
     weekN: 1,
     timeLeftToday: "24h 0m",
     nextMilestone: 100,
+    todayMilestone: null,
     totalUsers: 0,
     activeToday: 0,
     weeklyActive: 0,
@@ -366,6 +370,97 @@ describe("hidden tab pauses the tick", () => {
       }).signature
     );
     expect(paints).toBe(1);
+  });
+});
+
+describe("shown-city ranking", () => {
+  it("pins home first and refuses to drop it", () => {
+    const snap = buildDayTrackerSnapshot({
+      workspace: "demo",
+      profile: {
+        ...YOURCO,
+        homeCity: { timezone: "America/Los_Angeles", label: "San Francisco" },
+      },
+      overview: overviewFixture({ workspace: "demo" }),
+      now: new Date("2026-08-20T18:00:00.000Z"),
+    });
+    const home = snap.cities.find((row) => row.home);
+    expect(home).toBeDefined();
+    expect(snap.shownKeys[0]).toBe(home?.key);
+    expect(defaultShownKeys(snap.cities)[0]).toBe(home?.key);
+
+    const tokyo = snap.cities.find((row) => row.short === "Tokyo");
+    expect(tokyo).toBeDefined();
+    const withoutHome = resolveShownKeys(
+      snap.cities.filter((row) => !row.home).map((row) => row.key),
+      snap.cities
+    );
+    expect(withoutHome[0]).toBe(home?.key);
+    expect(withoutHome).toContain(tokyo?.key);
+
+    const empty = resolveShownKeys(undefined, snap.cities);
+    expect(empty).toEqual(defaultShownKeys(snap.cities));
+    expect(empty.length).toBeGreaterThan(0);
+    expect(resolveShownKeys([], snap.cities)[0]).toBe(home?.key);
+  });
+
+  it("keeps a saved subset after a restart-shaped reload", () => {
+    const now = new Date("2026-08-20T18:00:00.000Z");
+    const first = buildDayTrackerSnapshot({
+      workspace: "demo",
+      profile: YOURCO,
+      overview: overviewFixture({ workspace: "demo" }),
+      now,
+    });
+    const tokyo = first.cities.find((row) => row.short === "Tokyo");
+    const home = first.cities.find((row) => row.home);
+    expect(tokyo && home).toBeTruthy();
+    const saved = resolveShownKeys([home!.key, tokyo!.key], first.cities);
+    const reloaded = buildDayTrackerSnapshot({
+      workspace: "demo",
+      profile: YOURCO,
+      overview: overviewFixture({ workspace: "demo" }),
+      now,
+      shownKeys: saved,
+    });
+    expect(reloaded.shownKeys).toEqual(saved);
+    expect(reloaded.shownKeys).toContain(tokyo!.key);
+    expect(cityKey(home!.city, home!.country, home!.timezone)).toBe(home!.key);
+  });
+});
+
+describe("milestone cite on the snapshot", () => {
+  it("paints the same Day 365 identity the calendar uses", () => {
+    const snap = buildDayTrackerSnapshot({
+      workspace: "day-clock-agree",
+      profile: {
+        ...YOURCO,
+        foundedAt: "2025-03-15T00:00:00.000Z",
+      },
+      overview: overviewFixture({
+        workspace: "day-clock-agree",
+        dayN: 365,
+        weekN: 53,
+        nextMilestone: 500,
+        todayMilestone: {
+          key: "day-clock-agree:company_day:365",
+          kind: "company_day",
+          subject: "365",
+          title: "Day 365",
+          source: "anykpi",
+          occurredAt: "2026-03-15T00:00:00.000Z",
+        },
+      }),
+      now: new Date("2026-03-15T12:00:00.000Z"),
+    });
+    expect(snap.milestone).toEqual({
+      key: "day-clock-agree:company_day:365",
+      kind: "company_day",
+      subject: "365",
+      title: "Day 365",
+      source: "anykpi",
+      occurredAt: "2026-03-15T00:00:00.000Z",
+    });
   });
 });
 

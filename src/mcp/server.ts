@@ -16,7 +16,11 @@ import {
   type McpWriteArgs,
 } from "@/core/mcp-write-tools";
 import { dayClockFields, workspaceDayClock } from "@/core/day";
-import { loadFoundedAt } from "@/core/milestones";
+import {
+  companyDayMilestone,
+  loadFoundedAt,
+  serializeTodayMilestone,
+} from "@/core/milestones";
 import { loadWorkspacePresence } from "@/core/presence";
 import { buildViewUrl, queryUsersPayload } from "@/core/view-state";
 import {
@@ -220,6 +224,14 @@ export function createMCPServer() {
                 text: JSON.stringify(
                   {
                     ...dayClockFields(clock),
+                    todayMilestone: serializeTodayMilestone(
+                      companyDayMilestone({
+                        workspaceId: workspace,
+                        dayN: clock.dayN,
+                        foundedAt: clock.foundedAt,
+                        timeZone: clock.timeZone,
+                      })
+                    ),
                     totalUsers: users.length,
                     syncHealth: syncStates.map((s) => ({
                       source: s.source,

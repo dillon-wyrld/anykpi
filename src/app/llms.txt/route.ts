@@ -47,8 +47,8 @@ OpenAPI spec: /api/openapi
 - POST /api/v1/connect — store per-source credentials (encrypted at rest; never returned; csv stores import mapping)
 - POST /api/v1/import — CSV import for users and events (sources store + column-mapping preview; writes keyed)
 - GET /api/v1/export — users, events, and read models as JSON or CSV files (connector read models restore by re-sync)
-- GET /api/v1/config — company profile (name, founded date, home city; dayLabel is Day of <name>)
-- PATCH /api/v1/config — update the company profile (write scope; founded date cannot be in the future)
+- GET /api/v1/config — company profile (name, founded date, home city, shown-city set; dayLabel is Day of <name>)
+- PATCH /api/v1/config — update the company profile (write scope; founded date cannot be in the future). Shown-city and celebration-claim fields are display prefs a browser session may save.
 - GET /api/v1/workspaces — catalog of named workspaces (id, name, archivedAt)
 - POST /api/v1/workspaces — create a live workspace (admin / env key)
 - PATCH /api/v1/workspaces — archive a live workspace (admin / env key; demo cannot be archived)

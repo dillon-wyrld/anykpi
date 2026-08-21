@@ -6,6 +6,35 @@
   padding: 10px 9px 2px;
   margin: 2px 0 0;
   flex-shrink: 0;
+  position: relative;
+}
+
+/* One-shot milestone moment — the single sanctioned motion. Finite. */
+.daytrack .confetti {
+  position: absolute;
+  top: 28px;
+  font-size: 12px;
+  animation: daytrack-confl 1.4s ease-out forwards;
+  pointer-events: none;
+  z-index: 2;
+}
+
+@keyframes daytrack-confl {
+  0% {
+    transform: translateY(0) rotate(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-52px) rotate(230deg);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daytrack .confetti {
+    display: none;
+    animation: none;
+  }
 }
 
 .daytrack .dayn-lb {

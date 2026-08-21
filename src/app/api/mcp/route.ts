@@ -20,7 +20,11 @@ import {
   parseCohortCompareOptions,
 } from "@/core/views/cohorts";
 import { dayClockFields, workspaceDayClock } from "@/core/day";
-import { loadFoundedAt } from "@/core/milestones";
+import {
+  companyDayMilestone,
+  loadFoundedAt,
+  serializeTodayMilestone,
+} from "@/core/milestones";
 import { loadWorkspacePresence } from "@/core/presence";
 import { loadSyncHealth } from "@/core/sync-health";
 import { loadWbrView } from "@/core/views/wbr";
@@ -169,6 +173,14 @@ async function handleMCPRequest(
               type: "text",
               text: JSON.stringify({
                 ...dayClockFields(clock),
+                todayMilestone: serializeTodayMilestone(
+                  companyDayMilestone({
+                    workspaceId: workspace,
+                    dayN: clock.dayN,
+                    foundedAt: clock.foundedAt,
+                    timeZone: clock.timeZone,
+                  })
+                ),
                 totalUsers: users.length,
                 syncHealth: await loadSyncHealth(workspace),
                 presence: await loadWorkspacePresence(workspace),
