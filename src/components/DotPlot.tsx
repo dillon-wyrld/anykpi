@@ -769,13 +769,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
         <text x="2" y={cy + 4.4} fontSize="14">
           {user.emoji}
         </text>
-        <text
-          x="28"
-          y={cy + 4}
-          fontFamily="IBM Plex Sans, sans-serif"
-          fontSize="11.5"
-          fontWeight="500"
-          fill="var(--text)"
+        <g
           tabIndex={0}
           role="button"
           aria-label={`Open ${user.name}`}
@@ -789,7 +783,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
             }
           }}
           onMouseEnter={(e) => {
-            const rect = (e.target as SVGElement).getBoundingClientRect();
+            const rect = (e.currentTarget as SVGElement).getBoundingClientRect();
             const pos = clampCardPosition(
               rect.left + 40,
               rect.bottom + 6,
@@ -807,13 +801,26 @@ export default function DotPlot({ workspace }: DotPlotProps) {
             setUserCard({ visible: false, x: 0, y: 0, user: null });
           }}
         >
-          {user.name}
-        </text>
-        <text
-          x={LBL - 74}
-          y={cy + 4}
-          fontSize="12"
-          tabIndex={0}
+          <rect
+            x="26"
+            y={y + 2}
+            width={LBL - 92}
+            height={viewState.cc.rh - 4}
+            fill="transparent"
+          />
+          <text
+            x="28"
+            y={cy + 4}
+            fontFamily="IBM Plex Sans, sans-serif"
+            fontSize="11.5"
+            fontWeight="500"
+            fill="var(--text)"
+            style={{ pointerEvents: "none" }}
+          >
+            {user.name}
+          </text>
+        </g>
+        <g
           role="button"
           aria-label={`Research ${user.name}`}
           data-testid={`dotplot-research-${user.personId}`}
@@ -822,16 +829,23 @@ export default function DotPlot({ workspace }: DotPlotProps) {
             event.stopPropagation();
             openResearch(user);
           }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault();
-              event.stopPropagation();
-              openResearch(user);
-            }
-          }}
         >
-          ✨
-        </text>
+          <rect
+            x={LBL - 38}
+            y={cy - 8}
+            width="16"
+            height="16"
+            fill="transparent"
+          />
+          <text
+            x={LBL - 36}
+            y={cy + 4}
+            fontSize="11"
+            style={{ pointerEvents: "none" }}
+          >
+            ✨
+          </text>
+        </g>
         <text
           x={LBL - 56}
           y={cy + 3.4}

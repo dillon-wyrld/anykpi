@@ -5,7 +5,7 @@ test.describe("PMF+ research entry points", () => {
     await page.goto("/dashboard?workspace=demo&view=dotplot");
     await page.waitForSelector('svg[role="img"]', { timeout: 10000 });
 
-    await page.getByRole("button", { name: "Research Dave" }).click();
+    await page.getByTestId("dotplot-research-p1").click();
     const disclosure = page.getByTestId("research-disclosure");
     await expect(disclosure).toBeVisible();
     await expect(disclosure.getByText("Fields that leave this machine")).toBeVisible();
@@ -13,12 +13,10 @@ test.describe("PMF+ research entry points", () => {
   });
 
   test("✨ on the person panel starts research", async ({ page }) => {
-    await page.goto("/dashboard?workspace=demo&view=dotplot");
-    await page.waitForSelector('svg[role="img"]', { timeout: 10000 });
-
-    await page.getByRole("button", { name: "Open Dave" }).click();
+    await page.goto("/dashboard?workspace=demo&view=dotplot&user=p1");
     const panel = page.getByTestId("person-panel");
     await expect(panel).toBeVisible();
+    await expect(panel.getByRole("heading", { name: "Dave" })).toBeVisible();
 
     await panel.getByTestId("person-research").click();
     const disclosure = page.getByTestId("research-disclosure");
