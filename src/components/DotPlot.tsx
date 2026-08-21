@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, type MouseEvent as ReactMouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PersonPanel from "@/components/PersonPanel";
+import { clampCardPosition, clusterNote, stripDays } from "@/components/user-card";
 import { useFreshness } from "@/components/useFreshness";
 
 interface User {
@@ -12,7 +13,7 @@ interface User {
   avatar: string | null;
   emoji: string;
   platform: string;
-  country: string;
+  country: string | null;
   cluster: string | null;
   accountId: string | null;
   workspaceId: string;
@@ -218,6 +219,20 @@ function decodeViewState(searchParams: URLSearchParams): Partial<ViewState> {
   return vs;
 }
 
+function userCardMeta(user: User): string | null {
+  const parts: string[] = [];
+  if (user.platform) parts.push(user.platform);
+  if (user.country) {
+    const flag = FLAGS[user.country];
+    parts.push(flag ? `${flag} ${user.country}` : user.country);
+  }
+  if (user.incomeBand) {
+    const band = user.incomeBand.replace(/^\$/, "");
+    parts.push(`$${band}/yr`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 export default function DotPlot({ workspace }: DotPlotProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -258,13 +273,6 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     ...urlState,
     cc: { ...defaultViewState.cc, ...(urlState.cc || {}) },
   });
-
-  const [tooltip, setTooltip] = useState<{
-    visible: boolean;
-    x: number;
-    y: number;
-    content: string;
-  }>({ visible: false, x: 0, y: 0, content: "" });
 
   const [userCard, setUserCard] = useState<{
     visible: boolean;
@@ -536,7 +544,7 @@ export default function DotPlot({ workspace }: DotPlotProps) {
     if (users.length === 0) return [];
     
     const platforms = Array.from(new Set(users.map(u => u.platform)));
-    const countries = Array.from(new Set(users.map(u => u.country)));
+    const countries = Array.from(new Set(users.map(u => u.country).filter((c): c is string => Boolean(c))));
     const clusters = Array.from(new Set(users.map(u => u.cluster).filter(Boolean)));
     
     const filters: Array<{label: string; filter: Filter}> = [];
@@ -763,10 +771,16 @@ export default function DotPlot({ workspace }: DotPlotProps) {
           }}
           onMouseEnter={(e) => {
             const rect = (e.target as SVGElement).getBoundingClientRect();
+            const pos = clampCardPosition(
+              rect.left + 40,
+              rect.bottom + 6,
+              window.innerWidth,
+              window.innerHeight
+            );
             setUserCard({
               visible: true,
-              x: rect.left + 40,
-              y: rect.bottom + 6,
+              x: pos.x,
+              y: pos.y,
               user,
             });
           }}
@@ -924,6 +938,10 @@ export default function DotPlot({ workspace }: DotPlotProps) {
   });
 
   const totalHeight = TOP + rowIndex * viewState.cc.rh + 8;
+  const hovered = userCard.visible ? userCard.user : null;
+  const hoveredMeta = hovered ? userCardMeta(hovered) : null;
+  const hoveredNote = hovered ? clusterNote(hovered.cluster) : null;
+  const hoveredDays = hovered ? stripDays(hovered.activity) : [];
 
   return (
     <div className="space-y-4">
@@ -1206,31 +1224,65 @@ export default function DotPlot({ workspace }: DotPlotProps) {
         </svg>
       </div>
 
-      {/* User card tooltip */}
-      {userCard.visible && userCard.user && (
+      {/* User hover card — spec/prototype.html `.ucard` */}
+      {hovered && (
         <div
-          className="fixed z-50 bg-panel border border-border rounded-lg shadow-lg p-3 min-w-[200px]"
+          data-testid="user-hover-card"
+          className="fixed z-[120] w-[250px] bg-panel border border-border rounded-xl p-3 pointer-events-none"
           style={{
             left: `${userCard.x}px`,
             top: `${userCard.y}px`,
+            boxShadow: "0 8px 30px rgba(0,0,0,.14)",
           }}
         >
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">{userCard.user.emoji}</span>
+          <div className="flex items-center gap-2.5 mb-2">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-accent-soft text-[20px]">
+              {hovered.emoji}
+            </span>
             <div>
-              <div className="font-semibold text-sm">{userCard.user.name}</div>
-              <div className="text-xs text-sub">
-                {userCard.user.platform} · {FLAGS[userCard.user.country] || ""}{" "}
-                {userCard.user.country}
-              </div>
+              <div className="text-[14px] font-bold">{hovered.name}</div>
+              {hoveredMeta && (
+                <div className="text-[11px] text-sub">{hoveredMeta}</div>
+              )}
             </div>
           </div>
-          <div className="text-xs text-sub space-y-1">
-            <div>🔥 streak {userCard.user.streak}</div>
-            <div>📅 {userCard.user.activeCount} active days</div>
-            {userCard.user.paid && <div>💸 paid</div>}
-            {userCard.user.isNew && <div>🐣 new</div>}
-            {userCard.user.churned && <div>👻 churned</div>}
+          {hoveredNote && (
+            <div className="my-1.5 text-[11.5px] italic text-sub">
+              &ldquo;{hoveredNote}&rdquo;
+            </div>
+          )}
+          {hoveredDays.length > 0 && (
+            <div className="mt-1.5 flex gap-[1.5px]">
+              {hoveredDays.map((active, i) => (
+                <i
+                  key={i}
+                  className={`h-[14px] w-[5px] rounded-[2px] bg-accent ${
+                    active ? "opacity-[0.85]" : "opacity-15"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+          <div className="mt-2 flex flex-wrap gap-[5px] text-[10px]">
+            <span className="rounded-[5px] bg-hover px-[7px] py-0.5">
+              🔥 streak {hovered.streak}
+            </span>
+            <span className="rounded-[5px] bg-hover px-[7px] py-0.5">
+              📅 {hovered.activeCount} active days
+            </span>
+            <span className="rounded-[5px] bg-hover px-[7px] py-0.5">
+              {hovered.paid ? "💸 paid" : "🆓 free"}
+            </span>
+            {hovered.isNew && (
+              <span className="rounded-[5px] bg-hover px-[7px] py-0.5">
+                🐣 new
+              </span>
+            )}
+            {hovered.churned && (
+              <span className="rounded-[5px] bg-hover px-[7px] py-0.5">
+                👻 churned
+              </span>
+            )}
           </div>
         </div>
       )}

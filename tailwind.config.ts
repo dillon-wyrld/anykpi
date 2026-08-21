@@ -18,6 +18,7 @@ const config: Config = {
         text: "var(--text)",
         sub: "var(--sub)",
         faint: "var(--faint)",
+        hover: "var(--hover)",
         accent: "var(--accent)",
         "accent-soft": "var(--accent-soft)",
         "accent-line": "var(--accent-line)",
