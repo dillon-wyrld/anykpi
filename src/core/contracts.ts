@@ -63,6 +63,9 @@ export const WBRMetricSchema = z.object({
   statusReason: z.string().optional(),
   source: z.string(),
   syncAge: z.string(),
+  lifecycle: z.enum(['proposal', 'active', 'retired']).optional(),
+  goodDir: z.number().optional(),
+  sourceKind: z.enum(['event_count', 'revenue', 'manual', 'read_model']).optional(),
 });
 
 export const CalendarEventSchema = z.object({
@@ -317,6 +320,7 @@ export const CohortsResponseSchema = z.object({
 
 export const WBRResponseSchema = z.object({
   metrics: z.array(WBRMetricSchema),
+  proposals: z.array(WBRMetricSchema).optional(),
   sections: z.array(z.string()),
   exceptionsCount: z.number(),
   workspace: z.string(),
@@ -428,6 +432,211 @@ export const MCP_GET_SYNC_STATUS_TOOL: McpToolDefinition = {
 };
 
 /**
+ * Event-count / revenue / manual source for a WBR metric.
+ * Status is computed — it is not part of the source.
+ */
+export const MetricSourceSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("event_count"),
+    measure: z.enum(["signups", "actives", "retention", "events"]).optional(),
+    eventName: z.string().min(1).max(200).optional(),
+    filters: z
+      .object({
+        platform: z.string().min(1).max(40).optional(),
+        country: z.string().min(1).max(8).optional(),
+        eventClass: z.enum(["core", "search", "share", "pay"]).optional(),
+      })
+      .optional(),
+  }),
+  z.object({
+    kind: z.literal("revenue"),
+    series: z.enum(["mrr", "new", "churned", "arpu", "runway"]),
+  }),
+  z.object({
+    kind: z.literal("manual"),
+  }),
+]);
+
+export const MetricPointInputSchema = z.object({
+  timestamp: z.string().datetime(),
+  value: z.number(),
+  grain: z.enum(["week", "month"]).default("week"),
+});
+
+/**
+ * Create or update a WBR metric. Same body for REST and MCP `define_metric`.
+ * Status is computed from the series — write paths refuse it.
+ */
+export const DefineMetricRequestSchema = z
+  .object({
+    id: z.string().min(1).max(80).optional(),
+    name: z.string().min(1).max(80),
+    section: z.enum(["fin", "acq", "act", "eng", "qua"]),
+    type: z.enum(["input", "output"]),
+    unit: z.string().max(8).optional(),
+    target: z.number().optional(),
+    goodDir: z.enum(["up", "down"]).optional(),
+    owner: z.string().min(1).max(16).optional(),
+    source: MetricSourceSchema,
+    points: z.array(MetricPointInputSchema).max(200).optional(),
+    workspace: z.string().optional(),
+    workspaceId: z.string().optional(),
+  })
+  .strict();
+
+export const DefineMetricResponseSchema = z.object({
+  metric: z.object({
+    id: z.string(),
+    name: z.string(),
+    section: z.string(),
+    sectionOrder: z.string(),
+    owner: z.string(),
+    type: z.enum(["input", "output"]),
+    unit: z.string(),
+    target: z.number(),
+    goodDir: z.enum(["up", "down"]),
+    source: MetricSourceSchema,
+    lifecycle: z.enum(["proposal", "active", "retired"]),
+  }),
+  workspace: z.string(),
+  view_url: z.string().optional(),
+  viewUrl: z.string().optional(),
+});
+
+export const MetricDefinePatchSchema = DefineMetricRequestSchema.extend({
+  action: z.literal("define"),
+});
+
+export const MetricAcceptRequestSchema = z
+  .object({
+    action: z.literal("accept"),
+    ids: z.array(z.string().min(1).max(80)).max(32).optional(),
+    workspace: z.string().optional(),
+    workspaceId: z.string().optional(),
+  })
+  .strict();
+
+export const MetricRetireRequestSchema = z
+  .object({
+    action: z.literal("retire"),
+    id: z.string().min(1).max(80),
+    workspace: z.string().optional(),
+    workspaceId: z.string().optional(),
+  })
+  .strict();
+
+export const MetricReorderRequestSchema = z
+  .object({
+    action: z.literal("reorder"),
+    order: z.array(z.string().min(1).max(80)).min(1).max(64),
+    workspace: z.string().optional(),
+    workspaceId: z.string().optional(),
+  })
+  .strict();
+
+export const MetricEditRequestSchema = z
+  .object({
+    action: z.literal("edit"),
+    id: z.string().min(1).max(80),
+    name: z.string().min(1).max(80).optional(),
+    section: z.enum(["fin", "acq", "act", "eng", "qua"]).optional(),
+    type: z.enum(["input", "output"]).optional(),
+    unit: z.string().max(8).optional(),
+    target: z.number().optional(),
+    goodDir: z.enum(["up", "down"]).optional(),
+    owner: z.string().min(1).max(16).optional(),
+    source: MetricSourceSchema.optional(),
+    workspace: z.string().optional(),
+    workspaceId: z.string().optional(),
+  })
+  .strict();
+
+export const MetricImportRequestSchema = z
+  .object({
+    action: z.literal("import"),
+    id: z.string().min(1).max(80),
+    csv: z.string().min(1).max(200_000),
+    workspace: z.string().optional(),
+    workspaceId: z.string().optional(),
+  })
+  .strict();
+
+export const MetricPatchRequestSchema = z.discriminatedUnion("action", [
+  MetricDefinePatchSchema,
+  MetricAcceptRequestSchema,
+  MetricRetireRequestSchema,
+  MetricReorderRequestSchema,
+  MetricEditRequestSchema,
+  MetricImportRequestSchema,
+]);
+
+export const MetricMutationResponseSchema = z.object({
+  ok: z.literal(true),
+  workspace: z.string(),
+  ids: z.array(z.string()).optional(),
+  imported: z.number().int().nonnegative().optional(),
+  updated: z.number().int().nonnegative().optional(),
+  view_url: z.string().optional(),
+  viewUrl: z.string().optional(),
+});
+
+export const MCP_DEFINE_METRIC_TOOL: McpToolDefinition = {
+  name: "define_metric",
+  description:
+    "Create or update a WBR metric (name, section, input/output, unit, target, direction, source). Status is computed and cannot be written. Requires a write-scoped API key. Returns the metric plus view_url.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      workspace: {
+        type: "string",
+        description: "Workspace ID (default: live)",
+      },
+      id: {
+        type: "string",
+        description: "Metric id. Generated from the name when omitted.",
+      },
+      name: {
+        type: "string",
+        description: "Display name",
+      },
+      section: {
+        type: "string",
+        description: "Deck section: fin, acq, act, eng, or qua",
+      },
+      type: {
+        type: "string",
+        description: "input or output",
+      },
+      unit: {
+        type: "string",
+        description: "Display unit ($ , %, or empty)",
+      },
+      target: {
+        type: "number",
+        description: "Target value. Changing it does not rewrite history.",
+      },
+      goodDir: {
+        type: "string",
+        description: "up or down",
+      },
+      owner: {
+        type: "string",
+        description: "Short owner mark on the card",
+      },
+      source: {
+        type: "object",
+        description:
+          "event_count (optional event name + filters), revenue series, or manual/CSV",
+      },
+      points: {
+        type: "array",
+        description: "Optional manual points (timestamp, value, grain)",
+      },
+    },
+  },
+};
+
+/**
  * Floor of the v1 MCP surface. tools/list may grow; a missing name is drift.
  * Shared read/write tools that both HTTP and stdio advertise.
  */
@@ -442,6 +651,7 @@ export const PINNED_MCP_TOOLS = [
   "connect_source",
   "trigger_sync",
   "import_csv",
+  "define_metric",
 ] as const;
 
 /** Stdio also advertises SDK install and value-event mapping. */
@@ -978,6 +1188,11 @@ export type ActivityMatrixUser = z.infer<typeof ActivityMatrixUserSchema>;
 export type ActivityResponse = z.infer<typeof ActivityResponseSchema>;
 export type SyncStatusResponse = z.infer<typeof SyncStatusResponseSchema>;
 export type PinnedMcpTool = (typeof PINNED_MCP_TOOLS)[number];
+export type MetricSource = z.infer<typeof MetricSourceSchema>;
+export type DefineMetricRequest = z.infer<typeof DefineMetricRequestSchema>;
+export type DefineMetricResponse = z.infer<typeof DefineMetricResponseSchema>;
+export type MetricPatchRequest = z.infer<typeof MetricPatchRequestSchema>;
+export type MetricMutationResponse = z.infer<typeof MetricMutationResponseSchema>;
 export type SyncTriggerRequest = z.infer<typeof SyncTriggerRequestSchema>;
 export type SyncTriggerResult = z.infer<typeof SyncTriggerResultSchema>;
 export type SyncTriggerResponse = z.infer<typeof SyncTriggerResponseSchema>;

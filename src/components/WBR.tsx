@@ -37,6 +37,8 @@ interface Metric {
   prevMonths: number[];
   drivers?: string[];
   note?: { w: number; text: string };
+  lifecycle?: "proposal" | "active" | "retired";
+  sourceKind?: "event_count" | "revenue" | "manual" | "read_model";
 }
 
 interface ViewState {
@@ -93,6 +95,22 @@ export default function WBR({ workspace }: WBRProps) {
   });
 
   const [metrics, setMetrics] = useState<Metric[]>([]);
+  const [proposals, setProposals] = useState<Metric[]>([]);
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    section: "acq",
+    type: "input" as "input" | "output",
+    unit: "",
+    target: "",
+    goodDir: "up" as "up" | "down",
+    sourceKind: "event_count" as "event_count" | "revenue" | "manual",
+    eventName: "",
+    measure: "actives" as "signups" | "actives" | "retention" | "events",
+    series: "mrr" as "mrr" | "new" | "churned" | "arpu" | "runway",
+    csv: "",
+  });
   const [exceptionRules, setExceptionRules] = useState<WbrExceptionRules>(
     DEFAULT_WBR_EXCEPTION_RULES
   );
@@ -106,6 +124,7 @@ export default function WBR({ workspace }: WBRProps) {
       .then((res) => res.json())
       .then((data) => {
         setMetrics(data.metrics || []);
+        setProposals(data.proposals || []);
         if (data.exceptionRules) setExceptionRules(data.exceptionRules);
         if (!refresh) setLoading(false);
       })
@@ -113,6 +132,87 @@ export default function WBR({ workspace }: WBRProps) {
         if (!refresh) setLoading(false);
       });
   }, [workspace]);
+
+  const mutateDeck = useCallback(
+    async (method: "POST" | "PATCH", body: Record<string, unknown>) => {
+      setBusy(true);
+      try {
+        const res = await fetch(`/api/v1/metrics?workspace=${encodeURIComponent(workspace)}`, {
+          method,
+          credentials: "include",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...body, workspace }),
+        });
+        if (!res.ok) return;
+        loadWbr(true);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [workspace, loadWbr]
+  );
+
+  const acceptStarter = useCallback(() => {
+    return mutateDeck("PATCH", { action: "accept" });
+  }, [mutateDeck]);
+
+  const saveNewMetric = useCallback(() => {
+    if (!form.name.trim()) return;
+    const source =
+      form.sourceKind === "revenue"
+        ? { kind: "revenue", series: form.series }
+        : form.sourceKind === "manual"
+          ? { kind: "manual" }
+          : {
+              kind: "event_count",
+              measure: form.eventName.trim() ? "events" : form.measure,
+              ...(form.eventName.trim() ? { eventName: form.eventName.trim() } : {}),
+            };
+    return mutateDeck("PATCH", {
+      action: "define",
+      name: form.name.trim(),
+      section: form.section,
+      type: form.type,
+      unit: form.unit,
+      target: form.target === "" ? 0 : Number(form.target),
+      goodDir: form.goodDir,
+      source,
+    });
+  }, [form, mutateDeck]);
+
+  const saveTarget = useCallback(
+    (id: string, target: number) => {
+      return mutateDeck("PATCH", { action: "edit", id, target });
+    },
+    [mutateDeck]
+  );
+
+  const retire = useCallback(
+    (id: string) => mutateDeck("PATCH", { action: "retire", id }),
+    [mutateDeck]
+  );
+
+  const moveMetric = useCallback(
+    (id: string, dir: -1 | 1) => {
+      const order = metrics.map((m) => m.id);
+      const i = order.indexOf(id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= order.length) return;
+      const next = [...order];
+      const [item] = next.splice(i, 1);
+      next.splice(j, 0, item);
+      return mutateDeck("PATCH", { action: "reorder", order: next });
+    },
+    [metrics, mutateDeck]
+  );
+
+  const importCsv = useCallback(
+    (id: string) => {
+      if (!form.csv.trim()) return;
+      return mutateDeck("PATCH", { action: "import", id, csv: form.csv });
+    },
+    [form.csv, mutateDeck]
+  );
 
   useEffect(() => {
     loadWbr(false);
@@ -933,6 +1033,16 @@ export default function WBR({ workspace }: WBRProps) {
         )}
         <span style={{ flex: 1 }} />
 
+        <button
+          type="button"
+          onClick={() => setBuilderOpen(!builderOpen)}
+          className={`px-3 py-1.5 text-xs font-medium border border-border rounded-lg ${
+            builderOpen ? "bg-accent text-white" : "bg-panel text-sub hover:text-text"
+          }`}
+        >
+          Edit deck
+        </button>
+
         <div className="flex gap-1 border border-border rounded-lg overflow-hidden">
           <button
             onClick={() => setViewState({ mode: "deck", focusIndex: 0 })}
@@ -969,6 +1079,263 @@ export default function WBR({ workspace }: WBRProps) {
           deck
         </div>
       </div>
+
+      {proposals.length > 0 && (
+        <div
+          className="bg-panel border border-border rounded-lg p-3 space-y-2"
+          data-testid="wbr-starter"
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-sm">Starter deck</span>
+            <span className="text-xs text-sub">
+              Proposed from what is connected. You own the final list.
+            </span>
+            <span style={{ flex: 1 }} />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={acceptStarter}
+              className="px-3 py-1.5 text-xs font-medium bg-accent text-white rounded-lg disabled:opacity-50"
+              data-testid="wbr-accept-starter"
+            >
+              Accept starter
+            </button>
+          </div>
+          <ul className="text-sm space-y-1">
+            {proposals.map((p) => (
+              <li key={p.id} className="flex items-center gap-2">
+                <span>{p.owner}</span>
+                <strong>{p.name}</strong>
+                <span className="text-xs text-sub">{p.sourceKind ?? "proposal"}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {builderOpen && (
+        <div className="bg-panel border border-border rounded-lg p-3 space-y-3" data-testid="wbr-builder">
+          <div className="text-sm font-semibold">Add a metric</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+            <label className="space-y-1">
+              <span className="text-sub">Name</span>
+              <input
+                className="w-full border border-border rounded px-2 py-1 bg-panel-2"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                data-testid="wbr-metric-name"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-sub">Section</span>
+              <select
+                className="w-full border border-border rounded px-2 py-1 bg-panel-2"
+                value={form.section}
+                onChange={(e) => setForm({ ...form, section: e.target.value })}
+              >
+                {SECTIONS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="space-y-1">
+              <span className="text-sub">Type</span>
+              <select
+                className="w-full border border-border rounded px-2 py-1 bg-panel-2"
+                value={form.type}
+                onChange={(e) =>
+                  setForm({ ...form, type: e.target.value as "input" | "output" })
+                }
+              >
+                <option value="input">input</option>
+                <option value="output">output</option>
+              </select>
+            </label>
+            <label className="space-y-1">
+              <span className="text-sub">Unit</span>
+              <input
+                className="w-full border border-border rounded px-2 py-1 bg-panel-2"
+                value={form.unit}
+                onChange={(e) => setForm({ ...form, unit: e.target.value })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-sub">Target</span>
+              <input
+                className="w-full border border-border rounded px-2 py-1 bg-panel-2"
+                value={form.target}
+                onChange={(e) => setForm({ ...form, target: e.target.value })}
+                inputMode="decimal"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-sub">Good direction</span>
+              <select
+                className="w-full border border-border rounded px-2 py-1 bg-panel-2"
+                value={form.goodDir}
+                onChange={(e) =>
+                  setForm({ ...form, goodDir: e.target.value as "up" | "down" })
+                }
+              >
+                <option value="up">up</option>
+                <option value="down">down</option>
+              </select>
+            </label>
+            <label className="space-y-1">
+              <span className="text-sub">Source</span>
+              <select
+                className="w-full border border-border rounded px-2 py-1 bg-panel-2"
+                value={form.sourceKind}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    sourceKind: e.target.value as "event_count" | "revenue" | "manual",
+                  })
+                }
+              >
+                <option value="event_count">event count</option>
+                <option value="revenue">revenue series</option>
+                <option value="manual">manual / CSV</option>
+              </select>
+            </label>
+            {form.sourceKind === "event_count" && (
+              <>
+                <label className="space-y-1">
+                  <span className="text-sub">Measure</span>
+                  <select
+                    className="w-full border border-border rounded px-2 py-1 bg-panel-2"
+                    value={form.measure}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        measure: e.target.value as typeof form.measure,
+                      })
+                    }
+                  >
+                    <option value="signups">signups</option>
+                    <option value="actives">actives</option>
+                    <option value="retention">retention</option>
+                    <option value="events">named event</option>
+                  </select>
+                </label>
+                <label className="space-y-1">
+                  <span className="text-sub">Event name</span>
+                  <input
+                    className="w-full border border-border rounded px-2 py-1 bg-panel-2"
+                    value={form.eventName}
+                    onChange={(e) => setForm({ ...form, eventName: e.target.value })}
+                  />
+                </label>
+              </>
+            )}
+            {form.sourceKind === "revenue" && (
+              <label className="space-y-1">
+                <span className="text-sub">Series</span>
+                <select
+                  className="w-full border border-border rounded px-2 py-1 bg-panel-2"
+                  value={form.series}
+                  onChange={(e) =>
+                    setForm({ ...form, series: e.target.value as typeof form.series })
+                  }
+                >
+                  <option value="mrr">MRR</option>
+                  <option value="new">New subscriptions</option>
+                  <option value="churned">Churned subscriptions</option>
+                  <option value="arpu">ARPU</option>
+                  <option value="runway">Runway</option>
+                </select>
+              </label>
+            )}
+          </div>
+          <button
+            type="button"
+            disabled={busy || !form.name.trim()}
+            onClick={saveNewMetric}
+            className="px-3 py-1.5 text-xs font-medium bg-accent text-white rounded-lg disabled:opacity-50"
+            data-testid="wbr-add-metric"
+          >
+            Add metric
+          </button>
+
+          {metrics.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-sm font-semibold">Deck order</div>
+              <ul className="space-y-1">
+                {metrics.map((m, i) => (
+                  <li
+                    key={m.id}
+                    className="flex items-center gap-2 text-xs border border-border rounded px-2 py-1"
+                    data-testid={`wbr-row-${m.id}`}
+                  >
+                    <span className="text-faint w-6">#{i + 1}</span>
+                    <span className="flex-1 font-medium">{m.name}</span>
+                    <label className="flex items-center gap-1">
+                      <span className="text-faint">target</span>
+                      <input
+                        className="w-16 border border-border rounded px-1 py-0.5 bg-panel-2 tabular-nums"
+                        defaultValue={m.target}
+                        onBlur={(e) => {
+                          const next = Number(e.target.value);
+                          if (Number.isFinite(next) && next !== m.target) {
+                            saveTarget(m.id, next);
+                          }
+                        }}
+                        data-testid={`wbr-target-${m.id}`}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={i === 0 || busy}
+                      onClick={() => moveMetric(m.id, -1)}
+                      className="px-1.5 py-0.5 border border-border rounded disabled:opacity-40"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      disabled={i === metrics.length - 1 || busy}
+                      onClick={() => moveMetric(m.id, 1)}
+                      className="px-1.5 py-0.5 border border-border rounded disabled:opacity-40"
+                    >
+                      ↓
+                    </button>
+                    {m.sourceKind === "manual" && (
+                      <button
+                        type="button"
+                        disabled={busy || !form.csv.trim()}
+                        onClick={() => importCsv(m.id)}
+                        className="px-1.5 py-0.5 border border-border rounded disabled:opacity-40"
+                      >
+                        Import CSV
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => retire(m.id)}
+                      className="px-1.5 py-0.5 border border-border rounded text-red disabled:opacity-40"
+                    >
+                      Retire
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <label className="block space-y-1 text-xs">
+                <span className="text-sub">Manual / CSV points (timestamp,value,grain)</span>
+                <textarea
+                  className="w-full border border-border rounded px-2 py-1 bg-panel-2 font-mono"
+                  rows={3}
+                  value={form.csv}
+                  onChange={(e) => setForm({ ...form, csv: e.target.value })}
+                  data-testid="wbr-manual-csv"
+                />
+              </label>
+            </div>
+          )}
+        </div>
+      )}
 
       {viewState.mode === "deck" && renderDeck()}
       {viewState.mode === "focus" && renderFocus()}

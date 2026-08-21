@@ -33,6 +33,9 @@ afterEach(async () => {
   await db.delete(schema.sources).where(eq(schema.sources.workspaceId, WS));
   await db.delete(schema.syncState).where(eq(schema.syncState.workspaceId, WS));
   await db.delete(schema.apiKeys).where(eq(schema.apiKeys.workspaceId, WS));
+  await db.delete(schema.metricDefs).where(eq(schema.metricDefs.workspaceId, WS));
+  await db.delete(schema.metricPoints).where(eq(schema.metricPoints.workspaceId, WS));
+  await db.delete(schema.config).where(eq(schema.config.workspaceId, WS));
 });
 
 function asBearer(
@@ -123,6 +126,13 @@ const CALLS: Record<
     workspace: WS,
     kind: "users",
     csv: "person_id,name\nmcp_write_ada,Ada\n",
+  },
+  define_metric: {
+    workspace: WS,
+    name: "Weekly actives",
+    section: "eng",
+    type: "input",
+    source: { kind: "event_count", measure: "actives" },
   },
 };
 
@@ -240,6 +250,48 @@ describe("MCP write tools return view_url and land in the audit log", () => {
           actor: id,
           action: AUDIT_ACTIONS.mcpCall,
           subject: "import_csv",
+        }),
+      ])
+    );
+  });
+
+  it("define_metric writes a metric_defs row, points at WBR, and audits", async () => {
+    const { id, key } = await mintKey("write");
+    const response = await postMcp(mcpCall("define_metric", CALLS.define_metric, key));
+    expect(response.status).toBe(200);
+    const { isError, payload } = await parseTool(response);
+    expect(isError).toBe(false);
+    expect(payload).toEqual(
+      expect.objectContaining({
+        workspace: WS,
+        metric: expect.objectContaining({
+          id: "weekly_actives",
+          name: "Weekly actives",
+          section: "eng",
+          type: "input",
+          source: { kind: "event_count", measure: "actives" },
+        }),
+      })
+    );
+    expect(String(payload.viewUrl)).toContain("view=wbr");
+    expect(String(payload.view_url)).toContain(`workspace=${WS}`);
+
+    const defs = await db
+      .select()
+      .from(schema.metricDefs)
+      .where(eq(schema.metricDefs.workspaceId, WS))
+      .all();
+    expect(defs).toHaveLength(1);
+    expect(defs[0]?.name).toBe("Weekly actives");
+    expect(defs[0]?.status).toBe("ok");
+
+    const listed = await queryAudit();
+    expect(listed.entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          actor: id,
+          action: AUDIT_ACTIONS.mcpCall,
+          subject: "define_metric",
         }),
       ])
     );

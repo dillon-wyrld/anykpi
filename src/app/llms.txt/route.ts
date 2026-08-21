@@ -34,7 +34,9 @@ OpenAPI spec: /api/openapi
 - GET /api/v1/users — query users (cluster, platform, signup dates, limit, offset; total + hasMore + nextOffset)
 - DELETE /api/v1/users/{id} — purge a person, cascade read models, and write a tombstone so re-sync cannot resurrect them (key-only; a browser session is 403)
 - GET /api/v1/cohorts — retention curves with smile detection; optional split by platform, country, or cluster (max 3 series)
-- GET /api/v1/wbr — Weekly Business Review (6 weeks, 12 months YOY, exceptions)
+- GET /api/v1/wbr — Weekly Business Review (starter proposals on a fresh live workspace)
+- POST /api/v1/metrics — define a WBR metric (write scope; status is computed)
+- PATCH /api/v1/metrics — accept / edit / reorder / retire / import points
 - GET /api/v1/calendar — multi-source event timeline
 - GET /api/v1/sync — connector sync status (includes syncIntervalMinutes)
 - GET /api/v1/freshness — last ingest + per-source last-sync stamps (views poll this)
@@ -52,7 +54,7 @@ OpenAPI spec: /api/openapi
 - GET /api/v1/workspaces — catalog of named workspaces (id, name, archivedAt)
 - POST /api/v1/workspaces — create a live workspace (admin / env key)
 - PATCH /api/v1/workspaces — archive a live workspace (admin / env key; demo cannot be archived)
-- DELETE /api/v1/workspaces — typed-name-confirmed delete (write/admin key or browser session; that workspace only; no MCP tool). Demo can be re-seeded after wipe.
+- DELETE /api/v1/workspaces — typed-name-confirmed delete (write/admin or session; that workspace only; no MCP tool)
 - GET /api/v1/keys — list key metadata (scope, lastUsedAt, legacy; raw keys never returned)
 - POST /api/v1/keys — mint a key (defaults to read; requires an existing operator or hashed key; raw key returned once)
 - POST /api/v1/keys/downgrade — convert legacy write keys to read (\`anykpi keys downgrade\`)
@@ -78,13 +80,14 @@ Tools:
 - \`connect_source\` — store per-source credentials encrypted at rest (requires write scope)
 - \`trigger_sync\` — run a connector sync for one source or all (requires write scope)
 - \`import_csv\` — import users or events from CSV (requires write scope)
+- \`define_metric\` — create or update a WBR metric (write scope; status is computed)
 - \`queue_outreach\` — persist a waiting draft (write scope)
 - \`approve_outreach\` — approve a persisted draft (session or admin only)
 - \`send_outreach\` — deliver an approved draft; unapproved drafts are refused
 - \`install_sdk\` — SDK snippet for a web app (stdio MCP)
 - \`configure_value_events\` — map event names to classes core/search/share/pay (stdio MCP; requires write scope)
 
-stdio server: src/mcp/server.ts. HTTP tools/list advertises the five read tools, the three ANY-28 write tools, and outreach queue/approve/send.
+stdio: src/mcp/server.ts. HTTP tools/list includes define_metric.
 
 ## CLI
 

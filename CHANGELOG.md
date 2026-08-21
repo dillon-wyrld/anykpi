@@ -7,6 +7,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- WBR builder: a fresh live workspace proposes a starter deck from
+  connected data (signups, actives, retention; revenue when money
+  lands). Accept, edit, reorder, or retire in the WBR view. Agents
+  use `define_metric` (MCP + `POST /api/v1/metrics`) — same
+  validation, write-scoped and audited. Status is computed, never
+  written. Manual/CSV points dedup; a target edit does not rewrite
+  history.
 - PMF+ research providers (ANY-66): a BYO web-search key
   (`ANYKPI_RESEARCH_SEARCH_KEY`) is used when set; the public
   encyclopedia stays the fallback. ✨ on a dot-plot row, the person

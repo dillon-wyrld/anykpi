@@ -27,6 +27,7 @@ import {
   POST as createWorkspaceRoute,
 } from "@/app/api/v1/workspaces/route";
 import { PATCH as patchConfig } from "@/app/api/v1/config/route";
+import { POST as postMetric } from "@/app/api/v1/metrics/route";
 import {
   AUDIT_ACTIONS,
   WRITE_HTTP_ROUTES,
@@ -74,6 +75,8 @@ afterEach(async () => {
   await db.delete(schema.subscriptionEvents).where(eq(schema.subscriptionEvents.workspaceId, WS));
   await db.delete(schema.tombstones).where(eq(schema.tombstones.workspaceId, WS));
   await db.delete(schema.workspaces).where(eq(schema.workspaces.id, WS));
+  await db.delete(schema.metricDefs).where(eq(schema.metricDefs.workspaceId, WS));
+  await db.delete(schema.metricPoints).where(eq(schema.metricPoints.workspaceId, WS));
 });
 
 function asAdmin(url: string, method: string, body?: unknown) {
@@ -462,6 +465,19 @@ const drivers: Record<(typeof WRITE_HTTP_ROUTES)[number]["action"], Driver> = {
     );
     expect(res.status).toBe(200);
     return { actor: AUDIT_ACTOR_ENV, subject: "company_profile" };
+  },
+  [AUDIT_ACTIONS.metricDefine]: async () => {
+    const res = await postMetric(
+      asAdmin("http://localhost:3000/api/v1/metrics", "POST", {
+        workspace: WS,
+        name: "Weekly actives",
+        section: "eng",
+        type: "input",
+        source: { kind: "event_count", measure: "actives" },
+      })
+    );
+    expect(res.status).toBe(201);
+    return { actor: AUDIT_ACTOR_ENV, subject: "weekly_actives" };
   },
 };
 

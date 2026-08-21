@@ -9,9 +9,17 @@ import { eq } from "drizzle-orm";
 import { getConnector, resolveSources, sync } from "@/connectors";
 import {
   ConnectSourceRequestSchema,
+  DefineMetricRequestSchema,
   ImportRequestSchema,
+  MCP_DEFINE_METRIC_TOOL,
   SyncTriggerRequestSchema,
 } from "./contracts";
+import {
+  WbrBuilderError,
+  deckViewUrl,
+  defineMetric,
+  definedMetricPayload,
+} from "./wbr-builder";
 import {
   CSV_SOURCE,
   csvSourceConfig,
@@ -27,6 +35,7 @@ export const MCP_WRITE_TOOL_NAMES = [
   "connect_source",
   "trigger_sync",
   "import_csv",
+  "define_metric",
 ] as const;
 
 export type McpWriteToolName = (typeof MCP_WRITE_TOOL_NAMES)[number];
@@ -83,48 +92,58 @@ export const MCP_WRITE_TOOLS: McpToolDefinition[] = [
       },
     },
   },
-  {
-    name: "import_csv",
-    description:
-      "Import users or events from CSV. Requires a write-scoped API key. Optional preview returns column mapping without writing. Returns import counts and view_url.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        workspace: {
-          type: "string",
-          description: "Workspace ID (default: live)",
-        },
-        csv: {
-          type: "string",
-          description: "CSV text (header row required)",
-        },
-        kind: {
-          type: "string",
-          enum: ["users", "events"],
-          description: "File kind. Detected from columns when omitted.",
-        },
-        mapping: {
-          type: "object",
-          description:
-            "Column to field mapping. Reuses the csv source mapping when omitted.",
-        },
-        preview: {
-          type: "boolean",
-          description: "When true, return column mapping without writing.",
+    {
+      name: "import_csv",
+      description:
+        "Import users or events from CSV. Requires a write-scoped API key. Optional preview returns column mapping without writing. Returns import counts and view_url.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          workspace: {
+            type: "string",
+            description: "Workspace ID (default: live)",
+          },
+          csv: {
+            type: "string",
+            description: "CSV text (header row required)",
+          },
+          kind: {
+            type: "string",
+            enum: ["users", "events"],
+            description: "File kind. Detected from columns when omitted.",
+          },
+          mapping: {
+            type: "object",
+            description:
+              "Column to field mapping. Reuses the csv source mapping when omitted.",
+          },
+          preview: {
+            type: "boolean",
+            description: "When true, return column mapping without writing.",
+          },
         },
       },
     },
-  },
-];
+    MCP_DEFINE_METRIC_TOOL,
+  ];
 
 export type McpWriteArgs = {
   workspace?: string;
-  source?: string;
+  source?: string | Record<string, unknown>;
   credentials?: Record<string, unknown>;
   csv?: string;
   kind?: string;
   mapping?: Record<string, unknown>;
   preview?: boolean;
+  id?: string;
+  name?: string;
+  section?: string;
+  type?: string;
+  unit?: string;
+  target?: number;
+  goodDir?: string;
+  owner?: string;
+  points?: unknown;
 };
 
 export type McpWriteResult =
@@ -186,6 +205,10 @@ export async function runConnectSource(
     return { ok: false, error: "Bad Request" };
   }
 
+  if (typeof args.source !== "string") {
+    return { ok: false, error: "Bad Request" };
+  }
+
   const parsed = ConnectSourceRequestSchema.safeParse({
     source: args.source,
     credentials,
@@ -231,7 +254,7 @@ export async function runTriggerSync(
   baseUrl: string
 ): Promise<McpWriteResult> {
   const parsed = SyncTriggerRequestSchema.safeParse({
-    source: args.source,
+    source: typeof args.source === "string" ? args.source : undefined,
     workspace,
   });
   if (!parsed.success) {
@@ -332,6 +355,50 @@ export async function runImportCsv(
   };
 }
 
+export async function runDefineMetric(
+  args: McpWriteArgs,
+  workspace: string,
+  baseUrl: string
+): Promise<McpWriteResult> {
+  if ("status" in args || "statusReason" in args) {
+    return { ok: false, error: "status is computed and cannot be written" };
+  }
+  const parsed = DefineMetricRequestSchema.safeParse({
+    id: args.id,
+    name: args.name,
+    section: args.section,
+    type: args.type,
+    unit: args.unit,
+    target: args.target,
+    goodDir: args.goodDir,
+    owner: args.owner,
+    source: args.source,
+    points: args.points,
+    workspace,
+  });
+  if (!parsed.success) {
+    return { ok: false, error: "Bad Request" };
+  }
+  try {
+    const row = await defineMetric(workspace, parsed.data);
+    const viewUrl = deckViewUrl(baseUrl, workspace);
+    return {
+      ok: true,
+      payload: {
+        metric: definedMetricPayload(row),
+        workspace,
+        viewUrl,
+        view_url: viewUrl,
+      },
+    };
+  } catch (error) {
+    if (error instanceof WbrBuilderError) {
+      return { ok: false, error: error.message };
+    }
+    throw error;
+  }
+}
+
 export async function runMcpWriteTool(
   name: string,
   args: McpWriteArgs,
@@ -345,6 +412,8 @@ export async function runMcpWriteTool(
       return runTriggerSync(args, workspace, baseUrl);
     case "import_csv":
       return runImportCsv(args, workspace, baseUrl);
+    case "define_metric":
+      return runDefineMetric(args, workspace, baseUrl);
     default:
       return null;
   }

@@ -344,6 +344,7 @@ async function handleMCPRequest(
               type: "text",
               text: JSON.stringify({
                 metrics: data.metrics,
+                proposals: data.proposals,
                 exceptions: data.metrics.filter((m) => m.status !== "ok"),
                 viewUrl: buildViewUrl(`${baseUrl}/dashboard`, { view: "wbr" }),
               }),

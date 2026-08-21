@@ -7,6 +7,10 @@ import {
   DeleteUserResponseSchema,
   CohortsResponseSchema,
   WBRResponseSchema,
+  DefineMetricRequestSchema,
+  DefineMetricResponseSchema,
+  MetricPatchRequestSchema,
+  MetricMutationResponseSchema,
   CalendarResponseSchema,
   SyncResponseSchema,
   SyncTriggerRequestSchema,
@@ -295,6 +299,56 @@ export async function GET(request: NextRequest) {
               content: {
                 'application/json': {
                   schema: zodToJsonSchema(WBRResponseSchema)
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/v1/metrics': {
+        post: {
+          tags: ['WBR'],
+          summary: 'Define a WBR metric',
+          description:
+            'Create or update a Weekly Business Review metric. Same body as MCP define_metric. Write-scoped. Status is computed and cannot be written.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(DefineMetricRequestSchema)
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: 'Metric defined',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(DefineMetricResponseSchema)
+                }
+              }
+            }
+          }
+        },
+        patch: {
+          tags: ['WBR'],
+          summary: 'Edit the WBR deck',
+          description:
+            'Accept a starter proposal, edit, reorder, retire, or import manual/CSV points. A browser session may save the deck; status cannot be written.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: zodToJsonSchema(MetricPatchRequestSchema)
+              }
+            }
+          },
+          responses: {
+            200: {
+              description: 'Deck updated',
+              content: {
+                'application/json': {
+                  schema: zodToJsonSchema(MetricMutationResponseSchema)
                 }
               }
             }
