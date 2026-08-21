@@ -25,6 +25,10 @@ const HAPPY_PATH: Record<
     args: { workspace: "demo", limit: 10 },
     fields: ["users", "viewUrl", "view_url"],
   },
+  get_activity: {
+    args: { workspace: "demo" },
+    fields: ["users", "days", "baseDate", "viewUrl", "view_url"],
+  },
   get_cohorts: {
     args: { workspace: "demo" },
     fields: ["cohorts", "smilingCount", "pmfForming", "payers", "viewUrl"],
@@ -33,6 +37,10 @@ const HAPPY_PATH: Record<
   get_calendar: {
     args: { workspace: "demo" },
     fields: ["events", "viewUrl"],
+  },
+  get_sync_status: {
+    args: { workspace: "demo" },
+    fields: ["lastIngest", "sources", "states", "syncIntervalMinutes", "viewUrl", "view_url"],
   },
   connect_source: {
     args: {

@@ -7,9 +7,11 @@ export const LIVE_WORKSPACE = "live";
 export const MCP_READ_ONLY_TOOLS = new Set([
   "get_overview",
   "query_users",
+  "get_activity",
   "get_cohorts",
   "get_wbr",
   "get_calendar",
+  "get_sync_status",
   "install_sdk",
 ]);
 

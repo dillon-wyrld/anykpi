@@ -350,6 +350,124 @@ export const FreshnessResponseSchema = z.object({
   sources: z.array(FreshnessSourceSchema),
 });
 
+/**
+ * User×day matrix row — the same derived fields `buildDotPlotUsers`
+ * puts on each person the dashboard reads.
+ */
+export const ActivityMatrixUserSchema = z
+  .object({
+    personId: z.string(),
+    activity: z.array(z.boolean()),
+    signupOffset: z.number().int(),
+    cohortMonth: z.number().int(),
+    activeCount: z.number().int().nonnegative(),
+    streak: z.number().int().nonnegative(),
+    lastSeen: z.number().int(),
+    isNew: z.boolean(),
+    paid: z.boolean(),
+    churned: z.boolean(),
+  })
+  .passthrough();
+
+/** MCP `get_activity` — same matrix as `/api/views/dotplot`. */
+export const ActivityResponseSchema = z.object({
+  users: z.array(ActivityMatrixUserSchema),
+  days: z.number().int().positive(),
+  baseDate: z.string().datetime(),
+  workspace: z.string().optional(),
+  viewUrl: z.string().optional(),
+  view_url: z.string().optional(),
+});
+
+/**
+ * MCP `get_sync_status` — freshness stamps plus GET /api/v1/sync state.
+ */
+export const SyncStatusResponseSchema = FreshnessResponseSchema.merge(
+  SyncResponseSchema
+).extend({
+  viewUrl: z.string().optional(),
+  view_url: z.string().optional(),
+});
+
+export type McpToolDefinition = {
+  name: string;
+  description: string;
+  inputSchema: {
+    type: "object";
+    properties: Record<string, Record<string, unknown>>;
+    enum?: string[];
+  };
+};
+
+const workspaceInput = {
+  workspace: {
+    type: "string",
+    description: "Workspace ID (default: demo)",
+  },
+} as const;
+
+/** Shared tool ads for stdio and HTTP MCP. */
+export const MCP_GET_ACTIVITY_TOOL: McpToolDefinition = {
+  name: "get_activity",
+  description:
+    "Get the user×day activity matrix the dashboard reads. Returns users with per-day activity plus view_url",
+  inputSchema: {
+    type: "object",
+    properties: { ...workspaceInput },
+  },
+};
+
+export const MCP_GET_SYNC_STATUS_TOOL: McpToolDefinition = {
+  name: "get_sync_status",
+  description:
+    "Get connector freshness and sync state (last ingest, per-source last-sync, interval). Returns the same stamps as GET /api/v1/freshness and GET /api/v1/sync plus view_url",
+  inputSchema: {
+    type: "object",
+    properties: { ...workspaceInput },
+  },
+};
+
+/**
+ * Floor of the v1 MCP surface. tools/list may grow; a missing name is drift.
+ * Shared read/write tools that both HTTP and stdio advertise.
+ */
+export const PINNED_MCP_TOOLS = [
+  "get_overview",
+  "query_users",
+  "get_activity",
+  "get_cohorts",
+  "get_wbr",
+  "get_calendar",
+  "get_sync_status",
+  "connect_source",
+  "trigger_sync",
+  "import_csv",
+] as const;
+
+/** Stdio also advertises SDK install and value-event mapping. */
+export const PINNED_STDIO_MCP_TOOLS = [
+  ...PINNED_MCP_TOOLS,
+  "install_sdk",
+  "configure_value_events",
+] as const;
+
+/** HTTP also advertises outreach queue / approve / send. */
+export const PINNED_HTTP_MCP_TOOLS = [
+  ...PINNED_MCP_TOOLS,
+  "queue_outreach",
+  "approve_outreach",
+  "send_outreach",
+] as const;
+
+/** Names in `pinned` that are absent from `listed`. Empty means no shrink. */
+export function missingPinnedMcpTools(
+  listed: readonly string[],
+  pinned: readonly string[]
+): string[] {
+  const have = new Set(listed);
+  return pinned.filter((name) => !have.has(name));
+}
+
 export const SyncTriggerRequestSchema = z.object({
   source: z.string().optional(),
   workspace: z.string().optional(),
@@ -846,6 +964,10 @@ export type CalendarResponse = z.infer<typeof CalendarResponseSchema>;
 export type SyncResponse = z.infer<typeof SyncResponseSchema>;
 export type FreshnessSource = z.infer<typeof FreshnessSourceSchema>;
 export type FreshnessResponse = z.infer<typeof FreshnessResponseSchema>;
+export type ActivityMatrixUser = z.infer<typeof ActivityMatrixUserSchema>;
+export type ActivityResponse = z.infer<typeof ActivityResponseSchema>;
+export type SyncStatusResponse = z.infer<typeof SyncStatusResponseSchema>;
+export type PinnedMcpTool = (typeof PINNED_MCP_TOOLS)[number];
 export type SyncTriggerRequest = z.infer<typeof SyncTriggerRequestSchema>;
 export type SyncTriggerResult = z.infer<typeof SyncTriggerResultSchema>;
 export type SyncTriggerResponse = z.infer<typeof SyncTriggerResponseSchema>;

@@ -29,6 +29,14 @@ import { loadWorkspacePresence } from "@/core/presence";
 import { loadSyncHealth } from "@/core/sync-health";
 import { loadWbrView } from "@/core/views/wbr";
 import { loadCalendarView } from "@/core/views/calendar";
+import { activityWindow, buildDotPlotUsers } from "@/core/views/dotplot";
+import { ensureWorkspaceClusters } from "@/core/clustering";
+import { loadFreshness } from "@/core/freshness";
+import { parseSyncIntervalMinutes } from "@/core/scheduler-env";
+import {
+  MCP_GET_ACTIVITY_TOOL,
+  MCP_GET_SYNC_STATUS_TOOL,
+} from "@/core/contracts";
 import {
   callOutreachMcpTool,
   isOutreachMcpTool,
@@ -96,6 +104,7 @@ async function handleMCPRequest(
             },
           },
         },
+        MCP_GET_ACTIVITY_TOOL,
         {
           name: "get_cohorts",
           description:
@@ -143,6 +152,7 @@ async function handleMCPRequest(
             },
           },
         },
+        MCP_GET_SYNC_STATUS_TOOL,
         ...MCP_WRITE_TOOLS,
         ...OUTREACH_MCP_TOOLS,
       ],
@@ -214,6 +224,76 @@ async function handleMCPRequest(
               text: JSON.stringify({
                 ...queryUsersPayload(users, baseUrl, workspace),
                 viewUrl: buildViewUrl(`${baseUrl}/dashboard`, { view: "dotplot" }),
+              }),
+            },
+          ],
+        };
+      }
+
+      case "get_activity": {
+        await ensureWorkspaceClusters(workspace);
+
+        const users = await db
+          .select()
+          .from(schema.users)
+          .where(eq(schema.users.workspaceId, workspace))
+          .all();
+
+        const allActivities = await db
+          .select()
+          .from(schema.activity)
+          .where(eq(schema.activity.workspaceId, workspace))
+          .all();
+
+        const { baseDate } = activityWindow([
+          ...users.map((user) => user.signupDate),
+          ...allActivities.map((row) => row.timestamp),
+        ]);
+        const matrix = buildDotPlotUsers(users, allActivities);
+        const viewUrl = `${baseUrl}/dashboard?workspace=${encodeURIComponent(workspace)}&view=dotplot`;
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                users: matrix,
+                days: 28,
+                baseDate: baseDate.toISOString(),
+                workspace,
+                viewUrl,
+                view_url: viewUrl,
+              }),
+            },
+          ],
+        };
+      }
+
+      case "get_sync_status": {
+        const freshness = await loadFreshness(workspace);
+        const syncStates = await db
+          .select()
+          .from(schema.syncState)
+          .where(eq(schema.syncState.workspaceId, workspace))
+          .all();
+        const viewUrl = `${baseUrl}/dashboard?workspace=${encodeURIComponent(workspace)}&view=dotplot`;
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                ...freshness,
+                states: syncStates.map((row) => ({
+                  source: row.source,
+                  sourceName: row.sourceName,
+                  lastSync: row.lastSync?.toISOString(),
+                  status: row.status as "success" | "error" | "pending",
+                  error: row.error || undefined,
+                })),
+                syncIntervalMinutes: parseSyncIntervalMinutes(),
+                viewUrl,
+                view_url: viewUrl,
               }),
             },
           ],
