@@ -9,8 +9,8 @@ import {
   writeBannerDismissed,
 } from "@/core/setup-flow";
 
-type Freshness = {
-  sources?: Array<{ source: string; lastSync?: string | null }>;
+type SyncBody = {
+  states?: Array<{ source: string; lastSync?: string | null; status?: string }>;
 };
 
 export function DemoBanner({ workspace }: { workspace: string }) {
@@ -21,11 +21,11 @@ export function DemoBanner({ workspace }: { workspace: string }) {
     const dismissed = readBannerDismissed(workspace);
     const labeledDemo = workspace === "demo" || readLabeledDemo(workspace);
 
-    void fetch(`/api/v1/freshness?workspace=${encodeURIComponent(workspace)}`)
+    void fetch(`/api/v1/sync?workspace=${encodeURIComponent(workspace)}`)
       .then((response) => (response.ok ? response.json() : null))
-      .then((data: Freshness | null) => {
+      .then((data: SyncBody | null) => {
         if (cancelled) return;
-        const real = hasRealSync(workspace, data?.sources ?? []);
+        const real = hasRealSync(workspace, data?.states ?? []);
         setVisible(
           shouldShowDemoBanner({
             workspaceId: workspace,

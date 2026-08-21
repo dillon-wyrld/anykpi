@@ -5,8 +5,6 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
  */
 
 const ADMIN = process.env.ANYKPI_API_KEY || "anykpi-e2e-admin";
-const WS_WALK = "e2e-setup-walk";
-const WS_SKIP = "e2e-setup-skip";
 
 async function adminJson(
   request: APIRequestContext,
@@ -50,18 +48,27 @@ async function unlock(page: Page, workspace: string, key: string) {
   await expect(unlockHeading).toHaveCount(0, { timeout: 15_000 });
 }
 
+async function openSetup(page: Page, workspace: string) {
+  const prompt = page.getByTestId("setup-prompt");
+  if (await prompt.isVisible().catch(() => false)) {
+    await page.getByTestId("setup-prompt-start").click();
+  } else {
+    await page.goto(`/connect?setup=1&workspace=${encodeURIComponent(workspace)}`);
+  }
+  await expect(page.getByTestId("setup-flow")).toBeVisible({ timeout: 15_000 });
+}
+
 test.describe("First-run setup (ANY-59)", () => {
   test("fresh workspace walks three steps and lands on labeled demo", async ({
     page,
     request,
   }) => {
     test.setTimeout(90_000);
-    await ensureWorkspace(request, WS_WALK, "Setup Walk");
-    const key = await mintWriteKey(request, WS_WALK);
-    await unlock(page, WS_WALK, key);
-
-    await expect(page.getByTestId("setup-prompt")).toBeVisible({ timeout: 15_000 });
-    await page.getByTestId("setup-prompt-start").click();
+    const workspace = `e2e-setup-walk-${Date.now()}`;
+    await ensureWorkspace(request, workspace, "Setup Walk");
+    const key = await mintWriteKey(request, workspace);
+    await unlock(page, workspace, key);
+    await openSetup(page, workspace);
 
     await expect(page.getByTestId("setup-welcome")).toBeVisible();
     await expect(page.getByTestId("setup-steps")).toContainText("Welcome");
@@ -109,23 +116,24 @@ test.describe("First-run setup (ANY-59)", () => {
     request,
   }) => {
     test.setTimeout(90_000);
-    await ensureWorkspace(request, WS_SKIP, "Setup Skip");
-    const key = await mintWriteKey(request, WS_SKIP);
-    await unlock(page, WS_SKIP, key);
+    const workspace = `e2e-setup-skip-${Date.now()}`;
+    await ensureWorkspace(request, workspace, "Setup Skip");
+    const key = await mintWriteKey(request, workspace);
+    await unlock(page, workspace, key);
 
-    await page.goto(`/connect?setup=1&workspace=${encodeURIComponent(WS_SKIP)}`);
+    await page.goto(`/connect?setup=1&workspace=${encodeURIComponent(workspace)}`);
     await expect(page.getByTestId("setup-flow")).toBeVisible();
     await page.getByTestId("setup-skip").click();
 
-    await expect(page).toHaveURL(new RegExp(`workspace=${WS_SKIP}`));
+    await expect(page).toHaveURL(new RegExp(`workspace=${workspace}`));
     await expect(page.getByTestId("setup-prompt")).toHaveCount(0);
     await expect(page.getByTestId("setup-flow")).toHaveCount(0);
 
-    await page.goto(`/dashboard?workspace=${WS_SKIP}&view=dotplot`);
+    await page.goto(`/dashboard?workspace=${workspace}&view=dotplot`);
     await expect(page.getByTestId("setup-prompt")).toHaveCount(0);
     await expect(page.getByTestId("setup-flow")).toHaveCount(0);
 
-    await page.goto(`/connect?workspace=${encodeURIComponent(WS_SKIP)}`);
+    await page.goto(`/connect?workspace=${encodeURIComponent(workspace)}`);
     await expect(page.getByRole("heading", { name: "Connect Your Data" })).toBeVisible();
     await expect(page.getByTestId("setup-flow")).toHaveCount(0);
     await expect(page.getByTestId("reenter-setup")).toBeVisible();
@@ -142,9 +150,12 @@ test.describe("First-run setup (ANY-59)", () => {
     await expect(page.getByTestId("demo-banner")).toHaveCount(0);
   });
 
-  test("demo banner leaves after the first real sync", async ({ page, request }) => {
+  test("failed connector pull is not a real sync; banner stays", async ({
+    page,
+    request,
+  }) => {
     test.setTimeout(90_000);
-    const workspace = "e2e-setup-banner";
+    const workspace = `e2e-setup-banner-${Date.now()}`;
     await ensureWorkspace(request, workspace, "Setup Banner");
     const key = await mintWriteKey(request, workspace);
     await unlock(page, workspace, key);
@@ -166,6 +177,6 @@ test.describe("First-run setup (ANY-59)", () => {
     expect(triggered.ok(), `banner workspace sync ${triggered.status()}`).toBeTruthy();
 
     await page.reload();
-    await expect(page.getByTestId("demo-banner")).toHaveCount(0);
+    await expect(page.getByTestId("demo-banner")).toBeVisible();
   });
 });

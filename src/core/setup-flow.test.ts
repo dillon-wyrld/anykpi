@@ -120,9 +120,20 @@ describe("demo banner vs demo seed sync_state", () => {
     expect(
       hasRealSync("demo", [
         ...seed,
-        { source: "mixpanel", lastSync: "2026-08-21T00:00:00.000Z" },
+        { source: "mixpanel", lastSync: "2026-08-21T00:00:00.000Z", status: "error" },
+      ])
+    ).toBe(false);
+    expect(
+      hasRealSync("demo", [
+        ...seed,
+        { source: "mixpanel", lastSync: "2026-08-21T00:00:00.000Z", status: "success" },
       ])
     ).toBe(true);
+    expect(
+      hasRealSync("demo", [
+        { source: "mixpanel", lastSync: "2026-08-21T00:00:00.000Z" },
+      ])
+    ).toBe(false);
   });
 
   it("shows until first real sync, then leaves; dismiss sticks", () => {

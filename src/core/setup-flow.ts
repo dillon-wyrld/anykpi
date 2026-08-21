@@ -82,9 +82,9 @@ export function hasConnectedSources(sourceIds: string[]): boolean {
 }
 
 /**
- * Real sync: a shipped connector has a last-sync stamp. Demo seed
- * last-sync for `stripe` (and the other stand-ins) is ignored so the
- * banner stays honest until an operator-triggered pull.
+ * Real sync: a shipped connector finished successfully. Demo seed
+ * last-sync for `stripe` (and the other stand-ins) is ignored. A failed
+ * or pending pull (CLI smoke / missing credentials) is not real data.
  */
 export function hasRealSync(
   workspaceId: string,
@@ -92,6 +92,7 @@ export function hasRealSync(
 ): boolean {
   return sources.some((row) => {
     if (!SHIPPED.has(row.source) || !row.lastSync) return false;
+    if (row.status !== "success") return false;
     if (workspaceId === DEMO_WORKSPACE && DEMO_SEED_SYNC_SOURCES.has(row.source)) {
       return false;
     }
