@@ -3,6 +3,7 @@ import { startFakeSmtp } from "./helpers/fake-smtp";
 import {
   ADMIN_KEY,
   adminJson,
+  archiveWorkspace,
   createEmptyWorkspace,
   dashboardViewsFromContract,
   expectAuditContains,
@@ -10,9 +11,11 @@ import {
   expectNoDemoPeople,
   expectUserVisibleViaRestAndMcp,
   expectWorkspaceEmpty,
+  fetchViewJson,
   ingestViaPublicSnippet,
   listMcpTools,
   mintWriteKey,
+  neutralizeIcsSource,
   parseMcpPayload,
   personIdFor,
   startFakeIcs,
@@ -88,8 +91,11 @@ async function expectViewShowsIngested(
     `add VIEW_HEADINGS for contract view ${view}`
   ).toBeTruthy();
 
-  const api = await page.request.get(
-    `/api/views/${view}?workspace=${ctx.workspace}`
+  const api = await fetchViewJson(
+    page.request,
+    view,
+    ctx.workspace,
+    ctx.writeKey
   );
   expect(api.ok(), `GET /api/views/${view} ${api.status()}`).toBeTruthy();
 
@@ -114,10 +120,19 @@ async function expectViewShowsIngested(
   }
 
   if (view === "cohorts") {
-    await expect(page.getByText(/1 users/)).toBeVisible();
-    const body = (await api.json()) as { users?: { name?: string }[] };
-    const names = (body.users ?? []).map((user) => user.name);
-    expect(names).toContain(ctx.userName);
+    const body = (await api.json()) as {
+      users?: { name?: string }[];
+      cohorts?: { size?: number }[];
+    };
+    expect((body.users ?? []).map((user) => user.name)).toContain(ctx.userName);
+    const total = (body.cohorts ?? []).reduce(
+      (sum, row) => sum + (row.size ?? 0),
+      0
+    );
+    expect(total, "cohorts view has no ingested people").toBeGreaterThan(0);
+    await expect(
+      page.getByText(/\d+\s+\w+\s+cohorts\s+·\s+\d+\s+users/)
+    ).toBeVisible({ timeout: 20_000 });
     return;
   }
 
@@ -155,6 +170,47 @@ test.describe("ANY-67 real-workspace gate", () => {
     calendarTitle: "Rwg Launch",
     importPersonId: "rwg_import",
   };
+  const createdWorkspaces: string[] = [];
+
+  test.afterAll(async () => {
+    for (const id of createdWorkspaces) {
+      try {
+        const headers = {
+          authorization: `Bearer ${ctx.writeKey || ADMIN_KEY}`,
+          "content-type": "application/json",
+        };
+        if (ctx.writeKey) {
+          await fetch("http://localhost:3000/api/mcp", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "tools/call",
+              params: {
+                name: "connect_source",
+                arguments: {
+                  workspace: id,
+                  source: "ics",
+                  credentials: { icsUrl: "https://example.com/calendar.ics" },
+                },
+              },
+            }),
+          });
+        }
+        await fetch("http://localhost:3000/api/v1/workspaces", {
+          method: "PATCH",
+          headers: {
+            authorization: `Bearer ${ADMIN_KEY}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ id }),
+        });
+      } catch {
+        // Best-effort: later specs must not inherit a hanging local ICS.
+      }
+    }
+  });
 
   test("boots an empty non-demo workspace and ingests via the public snippet", async ({
     page,
@@ -170,10 +226,11 @@ test.describe("ANY-67 real-workspace gate", () => {
     expect(ctx.workspace).not.toBe("demo");
 
     await createEmptyWorkspace(request, ctx.workspace, "Real workspace gate");
+    createdWorkspaces.push(ctx.workspace);
     ctx.writeKey = await mintWriteKey(request, ctx.workspace);
     await expectWorkspaceEmpty(request, ctx.workspace, ctx.writeKey);
 
-    await ingestViaPublicSnippet(page, {
+    await ingestViaPublicSnippet(page, request, {
       workspace: ctx.workspace,
       key: ctx.writeKey,
       userId: ctx.userId,
@@ -226,9 +283,11 @@ test.describe("ANY-67 real-workspace gate", () => {
     const walkers = new Set([
       "get_overview",
       "query_users",
+      "get_activity",
       "get_cohorts",
       "get_wbr",
       "get_calendar",
+      "get_sync_status",
       ...WRITE_TOOLS,
     ]);
     const missing = advertised.filter((name) => !walkers.has(name));
@@ -413,6 +472,41 @@ test.describe("ANY-67 real-workspace gate", () => {
           continue;
         }
 
+        if (name === "get_activity") {
+          const payload = await callTool(
+            request,
+            name,
+            { workspace: ctx.workspace },
+            ctx.writeKey
+          );
+          const users = payload.users as {
+            personId?: string;
+            activity?: boolean[];
+          }[];
+          expect(users.map((user) => user.personId)).toContain(ctx.personId);
+          const row = users.find((user) => user.personId === ctx.personId);
+          expect(Array.isArray(row?.activity)).toBeTruthy();
+          expect(payload.days).toEqual(expect.any(Number));
+          expect(String(payload.baseDate)).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+          continue;
+        }
+
+        if (name === "get_sync_status") {
+          const payload = await callTool(
+            request,
+            name,
+            { workspace: ctx.workspace },
+            ctx.writeKey
+          );
+          expect(payload.workspace).toBe(ctx.workspace);
+          expect(payload).toHaveProperty("lastIngest");
+          expect(payload.lastIngest).toBeTruthy();
+          expect(Array.isArray(payload.sources)).toBeTruthy();
+          expect(Array.isArray(payload.states)).toBeTruthy();
+          expect(payload.syncIntervalMinutes).toEqual(expect.any(Number));
+          continue;
+        }
+
         if (name === "get_cohorts") {
           const payload = await callTool(
             request,
@@ -456,6 +550,7 @@ test.describe("ANY-67 real-workspace gate", () => {
         timeout: 20_000,
       });
       await expect(page.getByText(ctx.calendarTitle)).toBeVisible();
+      await neutralizeIcsSource(request, ctx.workspace, ctx.writeKey);
     } finally {
       await smtp.close();
       await ics.close();
@@ -471,5 +566,7 @@ test.describe("ANY-67 real-workspace gate", () => {
     const ids = body.workspaces.map((row) => row.id);
     expect(ids).toContain(ctx.workspace);
     expect(ids).toContain("demo");
+    await neutralizeIcsSource(request, ctx.workspace, ctx.writeKey);
+    await archiveWorkspace(request, ctx.workspace);
   });
 });

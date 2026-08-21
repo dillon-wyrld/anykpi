@@ -59,19 +59,66 @@ export async function adminJson(
   });
 }
 
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function createEmptyWorkspace(
   request: APIRequestContext,
   id: string,
   name: string
 ): Promise<void> {
-  const created = await adminJson(request, "POST", "/api/v1/workspaces", {
+  let lastStatus = 0;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const created = await adminJson(request, "POST", "/api/v1/workspaces", {
+      id,
+      name,
+    });
+    lastStatus = created.status();
+    if (lastStatus === 201) return;
+    if (lastStatus === 400) {
+      const body = (await created.json().catch(() => ({}))) as { error?: string };
+      if ((body.error ?? "").toLowerCase().includes("already exists")) return;
+    }
+    await sleep(400 * (attempt + 1));
+  }
+  expect(lastStatus, `POST /api/v1/workspaces ${lastStatus}`).toBe(201);
+}
+
+/** Archive so later e2e specs do not inherit this workspace's connectors. */
+export async function archiveWorkspace(
+  request: APIRequestContext,
+  id: string
+): Promise<void> {
+  const archived = await adminJson(request, "PATCH", "/api/v1/workspaces", {
     id,
-    name,
   });
   expect(
-    created.status(),
-    `POST /api/v1/workspaces ${created.status()}`
-  ).toBe(201);
+    archived.ok(),
+    `PATCH /api/v1/workspaces ${archived.status()}`
+  ).toBeTruthy();
+}
+
+/**
+ * Point ICS at a non-local URL so a later sync cannot hang on a closed
+ * fixture port.
+ */
+export async function neutralizeIcsSource(
+  request: APIRequestContext,
+  workspace: string,
+  key: string
+): Promise<void> {
+  const { response } = await callMcpTool(
+    request,
+    "connect_source",
+    {
+      workspace,
+      source: "ics",
+      credentials: { icsUrl: "https://example.com/calendar.ics" },
+    },
+    { Authorization: `Bearer ${key}` }
+  );
+  expect(response.ok(), `neutralize ICS ${response.status()}`).toBeTruthy();
 }
 
 export async function mintWriteKey(
@@ -105,6 +152,7 @@ export async function expectWorkspaceEmpty(
 
 export async function ingestViaPublicSnippet(
   page: Page,
+  request: APIRequestContext,
   input: {
     workspace: string;
     key: string;
@@ -137,27 +185,52 @@ export async function ingestViaPublicSnippet(
   </body>
 </html>`;
 
-  const fixture = await page.context().newPage();
-  try {
-    await fixture.goto("http://localhost:3000/connect");
-    const identify = fixture.waitForResponse(
-      (res) =>
-        res.url().includes("/api/ingest/identify") &&
-        res.request().method() === "POST" &&
-        res.ok()
-    );
-    const event = fixture.waitForResponse(
-      (res) =>
-        (res.url().includes("/api/ingest/event") ||
-          res.url().includes("/api/ingest/batch")) &&
-        res.request().method() === "POST" &&
-        res.ok()
-    );
-    await fixture.setContent(html, { waitUntil: "domcontentloaded" });
-    await Promise.all([identify, event]);
-  } finally {
-    await fixture.close();
+  const deadline = Date.now() + 45_000;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    const fixture = await page.context().newPage();
+    try {
+      await fixture.goto("http://localhost:3000/connect");
+      await fixture.setContent(html, { waitUntil: "domcontentloaded" });
+      await sleep(400);
+    } finally {
+      await fixture.close();
+    }
+    try {
+      await expectUserVisibleViaRestAndMcp(request, {
+        userId: input.userId,
+        platform: input.platform,
+        workspace: input.workspace,
+        apiKey: input.key,
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+      await sleep(1_000);
+    }
   }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("public snippet ingest did not land");
+}
+
+/** GET /api/views/:view with retries — postgres e2e can 500 once under load. */
+export async function fetchViewJson(
+  request: APIRequestContext,
+  view: string,
+  workspace: string,
+  key: string
+) {
+  let last = await request.get(`/api/views/${view}?workspace=${workspace}`, {
+    headers: { authorization: `Bearer ${key}` },
+  });
+  for (let attempt = 0; attempt < 5 && !last.ok(); attempt += 1) {
+    await sleep(800);
+    last = await request.get(`/api/views/${view}?workspace=${workspace}`, {
+      headers: { authorization: `Bearer ${key}` },
+    });
+  }
+  return last;
 }
 
 export async function unlockWorkspace(
