@@ -21,6 +21,7 @@ import {
 } from "@/core/views/cohorts";
 import { dayClockFields, workspaceDayClock } from "@/core/day";
 import { loadFoundedAt } from "@/core/milestones";
+import { loadWorkspacePresence } from "@/core/presence";
 import { loadSyncHealth } from "@/core/sync-health";
 import { loadWbrView } from "@/core/views/wbr";
 import { loadCalendarView } from "@/core/views/calendar";
@@ -170,6 +171,7 @@ async function handleMCPRequest(
                 ...dayClockFields(clock),
                 totalUsers: users.length,
                 syncHealth: await loadSyncHealth(workspace),
+                presence: await loadWorkspacePresence(workspace),
                 viewUrl: buildViewUrl(`${baseUrl}/dashboard`, { view: "dotplot" }),
               }),
             },

@@ -98,6 +98,32 @@ export const SyncHealthSchema = z.object({
 });
 
 /**
+ * Per-city online tallies. Summaries only — never a person id or
+ * per-person online flag. Online is real activity in the trailing
+ * hour as of `asOf` (last data), not a simulated presence.
+ */
+export const PresenceCitySchema = z.object({
+  city: z.string(),
+  country: z.string(),
+  timezone: z.string(),
+  users: z.number().int().nonnegative(),
+  online: z.number().int().nonnegative(),
+  cameOnline: z.number().int().nonnegative(),
+  droppedOff: z.number().int().nonnegative(),
+  home: z.boolean(),
+});
+
+export const PresenceSchema = z.object({
+  asOf: z.string().datetime().nullable(),
+  online: z.number().int().nonnegative(),
+  cameOnline: z.number().int().nonnegative(),
+  droppedOff: z.number().int().nonnegative(),
+  unplaced: z.number().int().nonnegative(),
+  unplacedOnline: z.number().int().nonnegative(),
+  cities: z.array(PresenceCitySchema),
+});
+
+/**
  * One connector sync attempt. Cursor and health rules are documented on
  * `Connector` in `src/connectors/index.ts` (incremental / scheduled sync).
  */
@@ -245,6 +271,7 @@ export const OverviewResponseSchema = z.object({
   exceptionsCount: z.number(),
   upcomingEvents: z.number(),
   syncHealth: z.array(SyncHealthSchema),
+  presence: PresenceSchema,
   view_url: z.string().optional(),
 });
 
@@ -782,6 +809,8 @@ export type WBRMetric = z.infer<typeof WBRMetricSchema>;
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>;
 export type SyncState = z.infer<typeof SyncStateSchema>;
 export type SyncHealth = z.infer<typeof SyncHealthSchema>;
+export type PresenceCity = z.infer<typeof PresenceCitySchema>;
+export type Presence = z.infer<typeof PresenceSchema>;
 export type ConnectorHealth = z.infer<typeof ConnectorHealthSchema>;
 export type SyncResult = z.infer<typeof SyncResultSchema>;
 export type Account = z.infer<typeof AccountSchema>;
