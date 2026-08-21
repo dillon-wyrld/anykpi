@@ -22,8 +22,11 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'pnpm dev',
-    url: 'http://localhost:3000',
+    // CI already `pnpm build`s. `next start` keeps one Postgres pool.
+    // `next dev` re-evaluates `src/core/db.ts` per compile and exhausts
+    // max_connections (too many clients) late in the e2e suite.
+    command: process.env.CI ? "pnpm start" : "pnpm dev",
+    url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120000, // Give Next.js 2 minutes to start
     env: {
