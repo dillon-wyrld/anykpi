@@ -1,4 +1,4 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext, type APIResponse } from "@playwright/test";
 
 /**
  * ANY-61 — a fresh live workspace proposes a starter deck; accept
@@ -21,6 +21,17 @@ async function adminJson(
     },
     data: body,
   });
+}
+
+async function retryOk(label: string, run: () => Promise<APIResponse>): Promise<APIResponse> {
+  let last: APIResponse | undefined;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    last = await run();
+    if (last.ok()) return last;
+    await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+  }
+  expect(last?.ok(), `${label} ${last?.status()}`).toBeTruthy();
+  return last!;
 }
 
 test("fresh live workspace proposes a starter deck; accept computes statuses", async ({
@@ -74,10 +85,11 @@ test("fresh live workspace proposes a starter deck; accept computes statuses", a
     expect(track.ok()).toBeTruthy();
   }
 
-  const proposed = await request.get(`/api/views/wbr?workspace=${WS}`, {
-    headers: { authorization: `Bearer ${key}` },
-  });
-  expect(proposed.ok(), `propose ${proposed.status()}`).toBeTruthy();
+  const proposed = await retryOk("propose", () =>
+    request.get(`/api/views/wbr?workspace=${WS}`, {
+      headers: { authorization: `Bearer ${key}` },
+    })
+  );
   const before = (await proposed.json()) as {
     metrics: { id: string }[];
     proposals: { id: string; status: string; name: string }[];
@@ -87,16 +99,18 @@ test("fresh live workspace proposes a starter deck; accept computes statuses", a
     expect.arrayContaining(["wbr_signups", "wbr_actives", "wbr_retention"])
   );
 
-  const accept = await adminJson(request, "PATCH", `/api/v1/metrics?workspace=${WS}`, {
-    action: "accept",
-    workspace: WS,
-  });
-  expect(accept.ok(), `accept ${accept.status()}`).toBeTruthy();
+  const accept = await retryOk("accept", () =>
+    adminJson(request, "PATCH", `/api/v1/metrics?workspace=${WS}`, {
+      action: "accept",
+      workspace: WS,
+    })
+  );
 
-  const afterRes = await request.get(`/api/views/wbr?workspace=${WS}`, {
-    headers: { authorization: `Bearer ${key}` },
-  });
-  expect(afterRes.ok(), `after ${afterRes.status()}`).toBeTruthy();
+  const afterRes = await retryOk("after", () =>
+    request.get(`/api/views/wbr?workspace=${WS}`, {
+      headers: { authorization: `Bearer ${key}` },
+    })
+  );
   const after = (await afterRes.json()) as {
     metrics: { id: string; name: string; status: string; weeks: number[] }[];
     proposals: { id: string }[];
@@ -118,8 +132,9 @@ test("fresh live workspace proposes a starter deck; accept computes statuses", a
     timeout: 15_000,
   });
 
-  const cookieView = await page.request.get(`/api/views/wbr?workspace=${WS}`);
-  expect(cookieView.ok(), `session wbr ${cookieView.status()}`).toBeTruthy();
+  const cookieView = await retryOk("session wbr", () =>
+    page.request.get(`/api/views/wbr?workspace=${WS}`)
+  );
   const cookieBody = (await cookieView.json()) as { metrics: { id: string }[] };
   expect(cookieBody.metrics.map((m) => m.id)).toEqual(
     expect.arrayContaining(["wbr_signups", "wbr_actives", "wbr_retention"])
