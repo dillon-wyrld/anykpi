@@ -14,6 +14,7 @@ import {
   tooManyRequests,
 } from "@/core/errors";
 import { rateLimit, clientKeyFrom } from "@/core/rate-limit";
+import { geographyFromProperties } from "@/core/geography";
 import { isTombstoned } from "@/core/tombstones";
 import { ensureWorkspace } from "@/core/workspaces";
 
@@ -68,13 +69,16 @@ export async function POST(request: NextRequest) {
       )
       .get();
 
+    const geo = geographyFromProperties(properties);
+
     if (existing) {
       const updates: Record<string, string> = {};
       if (properties?.name) updates.name = properties.name;
       if (properties?.email) updates.email = properties.email;
       if (properties?.platform) updates.platform = properties.platform;
       if (properties?.emoji) updates.emoji = properties.emoji;
-      if (properties?.country) updates.country = properties.country;
+      if (geo.country) updates.country = geo.country;
+      if (geo.timezone) updates.timezone = geo.timezone;
 
       if (Object.keys(updates).length > 0) {
         await db
@@ -94,7 +98,8 @@ export async function POST(request: NextRequest) {
         email: properties?.email || null,
         emoji: properties?.emoji || null,
         platform: properties?.platform || "web",
-        country: properties?.country || null,
+        country: geo.country,
+        timezone: geo.timezone,
         signupDate: new Date(),
         cluster: null,
         accountId: null,

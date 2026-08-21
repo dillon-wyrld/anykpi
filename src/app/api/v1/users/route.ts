@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
         emoji: u.emoji || undefined,
         platform: u.platform || undefined,
         country: u.country || undefined,
+        timezone: u.timezone || undefined,
         signupDate: u.signupDate?.toISOString(),
         cluster: u.cluster || undefined,
         accountId: u.accountId || undefined,

@@ -14,6 +14,7 @@ import {
   tooManyRequests,
 } from "@/core/errors";
 import { rateLimit, clientKeyFrom } from "@/core/rate-limit";
+import { geographyFromProperties } from "@/core/geography";
 import { isTombstoned } from "@/core/tombstones";
 
 /**
@@ -92,13 +93,15 @@ export async function POST(request: NextRequest) {
       .get();
 
     if (!existingUser) {
+      const geo = geographyFromProperties(properties);
       await db.insert(schema.users).values({
         personId,
         name: properties?.name || `User ${userId}`,
         email: properties?.email || null,
         emoji: properties?.emoji || null,
         platform: properties?.platform || "web",
-        country: properties?.country || null,
+        country: geo.country,
+        timezone: geo.timezone,
         signupDate: eventDate,
         cluster: null,
         accountId: null,

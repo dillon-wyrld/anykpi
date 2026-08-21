@@ -71,6 +71,13 @@
       "when": 1787211038916,
       "tag": "0009_workspaces",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1787263716957,
+      "tag": "0010_user_timezone",
+      "breakpoints": true
     }
   ]
 }

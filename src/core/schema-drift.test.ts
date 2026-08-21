@@ -44,6 +44,7 @@ describe("schema drift (sqlite-core vs pg-core)", () => {
       "0007_outreach",
       "0008_tombstones",
       "0009_workspaces",
+      "0010_user_timezone",
     ]);
     expect(existsSync(resolve(root, "drizzle/meta/_journal.json"))).toBe(false);
   });

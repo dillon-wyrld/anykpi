@@ -22,6 +22,9 @@ export interface UserProperties {
   email?: string;
   platform?: string;
   country?: string;
+  timezone?: string;
+  /** IANA zone from the device clock. Server prefers explicit `timezone`. */
+  deviceTimezone?: string;
   [key: string]: JsonPrimitive | undefined;
 }
 

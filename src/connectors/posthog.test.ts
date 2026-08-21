@@ -134,6 +134,8 @@ describe("PostHog connector contract", () => {
         .all();
       expect(users).toHaveLength(1);
       expect(users[0]?.name).toBe("Ada");
+      expect(users[0]?.country).toBe("US");
+      expect(users[0]?.timezone).toBe("America/Los_Angeles");
       expect(users[0]?.workspaceId).toBe(WS);
 
       const events = await db

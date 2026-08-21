@@ -46,6 +46,7 @@ export async function insertUserIfAbsent(row: {
   emoji: string | null;
   platform: string | null;
   country: string | null;
+  timezone?: string | null;
   signupDate: Date;
   workspaceId: string;
 }): Promise<number> {
@@ -61,6 +62,7 @@ export async function insertUserIfAbsent(row: {
       emoji: row.emoji,
       platform: row.platform,
       country: row.country,
+      timezone: row.timezone ?? null,
       signupDate: row.signupDate,
       cluster: null,
       accountId: null,

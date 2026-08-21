@@ -4,6 +4,7 @@ import { db } from "./db";
 import { excluded, writeInTransaction } from "./query-compat";
 import * as schema from "./schema";
 import type { SourceConfig } from "./sources";
+import { resolveGeography } from "./geography";
 import { loadTombstoneSet, matchesTombstone } from "./tombstones";
 import {
   applyMapping,
@@ -203,6 +204,7 @@ type UserRow = {
   emoji: string | null;
   platform: string | null;
   country: string | null;
+  timezone: string | null;
   signupDate: Date;
   cluster: string | null;
   accountId: string | null;
@@ -248,13 +250,18 @@ function validateUsers(
       }
       signupDate = parsed;
     }
+    const geo = resolveGeography({
+      country: fields.country || null,
+      timezone: fields.timezone || null,
+    });
     rows.push({
       personId,
       name: (fields.name || personId).trim(),
       email: fields.email || null,
       emoji: fields.emoji || null,
       platform: fields.platform || null,
-      country: fields.country || null,
+      country: geo.country,
+      timezone: geo.timezone,
       signupDate,
       cluster: fields.cluster || null,
       accountId: fields.accountId || null,
@@ -389,6 +396,7 @@ export async function runCsvImport(input: CsvImportInput): Promise<CsvImportOutc
         emoji: excluded("emoji"),
         platform: excluded("platform"),
         country: excluded("country"),
+        timezone: excluded("timezone"),
         signupDate: excluded("signup_date"),
         cluster: excluded("cluster"),
         accountId: excluded("account_id"),
@@ -449,6 +457,7 @@ export async function runCsvImport(input: CsvImportInput): Promise<CsvImportOutc
       emoji: null,
       platform: row.platform,
       country: null,
+      timezone: null,
       signupDate: row.timestamp,
       cluster: null,
       accountId: null,

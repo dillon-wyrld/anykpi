@@ -30,6 +30,7 @@ export type ExportUserRow = {
   email: string | null;
   platform: string | null;
   country: string | null;
+  timezone: string | null;
   emoji: string | null;
   signupDate: string | null;
   cluster: string | null;
@@ -208,6 +209,7 @@ export async function exportWorkspace(workspaceId: string): Promise<WorkspaceExp
       email: row.email ?? null,
       platform: row.platform ?? null,
       country: row.country ?? null,
+      timezone: row.timezone ?? null,
       emoji: row.emoji ?? null,
       signupDate: iso(row.signupDate),
       cluster: row.cluster ?? null,

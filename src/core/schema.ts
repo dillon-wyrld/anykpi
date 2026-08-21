@@ -27,6 +27,8 @@ export const users = sqliteTable("users", {
   emoji: text("emoji"),
   platform: text("platform"),
   country: text("country"),
+  /** IANA timezone, e.g. America/Los_Angeles. Filled from real sources only. */
+  timezone: text("timezone"),
   incomeBand: text("income_band"),
   traits: text("traits"),
   signupDate: integer("signup_date", { mode: "timestamp" }),
