@@ -3,6 +3,10 @@ import { resolve } from "path";
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { POST as postMcp } from "@/app/api/mcp/route";
+import {
+  PINNED_HTTP_MCP_TOOLS,
+  missingPinnedMcpTools,
+} from "@/core/contracts";
 
 const SNAPSHOT_PATH = resolve(__dirname, "../../tests/snapshots/mcp-tools-list.json");
 
@@ -47,6 +51,14 @@ describe("MCP tools/list schema snapshot", () => {
       listed,
       `MCP tools/list drifted from ${SNAPSHOT_PATH}. Updating that snapshot is part of any tool-adding ticket.`
     ).toEqual(snapshot.tools);
+  });
+
+  it("keeps every previously listed HTTP tool (the list may grow)", async () => {
+    const listed = (await listTools()).map((tool) => tool.name);
+    expect(
+      missingPinnedMcpTools(listed, PINNED_HTTP_MCP_TOOLS),
+      "HTTP tools/list silently dropped a pinned MCP tool"
+    ).toEqual([]);
   });
 
   it("advertises a name and inputSchema.properties for every tool", async () => {
@@ -119,5 +131,26 @@ describe("MCP tool output fields (empty fixture DB)", () => {
     for (const user of payload.users as { personId: string; view_url?: string }[]) {
       expect(user.view_url).toContain(`user=${user.personId}`);
     }
+  });
+
+  it("get_activity returns the activity matrix and view_url", async () => {
+    const payload = await callTool("get_activity", { workspace: "demo" });
+    expect(Array.isArray(payload.users)).toBe(true);
+    expect(payload.days).toEqual(expect.any(Number));
+    expect(String(payload.baseDate)).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(payload.viewUrl).toEqual(expect.stringContaining("/dashboard"));
+    expect(payload.view_url).toEqual(expect.stringContaining("view=dotplot"));
+    expect(String(payload.view_url)).toContain("workspace=demo");
+  });
+
+  it("get_sync_status returns freshness, sync states, and view_url", async () => {
+    const payload = await callTool("get_sync_status", { workspace: "demo" });
+    expect(payload.workspace).toBe("demo");
+    expect(payload).toHaveProperty("lastIngest");
+    expect(Array.isArray(payload.sources)).toBe(true);
+    expect(Array.isArray(payload.states)).toBe(true);
+    expect(payload.syncIntervalMinutes).toEqual(expect.any(Number));
+    expect(payload.viewUrl).toEqual(expect.stringContaining("/dashboard"));
+    expect(payload.view_url).toEqual(expect.stringContaining("workspace=demo"));
   });
 });
