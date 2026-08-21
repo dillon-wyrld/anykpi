@@ -31,6 +31,9 @@ import {
  * snippet, then walks every dashboard view (from ViewStateSchema) and
  * every HTTP MCP tool (from tools/list). A new surface without a walker
  * fails this file. That is the "fully functional" definition.
+ *
+ * Filename is zz- so Playwright runs this suite last. The gate is heavy
+ * on a shared postgres; earlier specs must not inherit its connections.
  */
 
 const WRITE_TOOLS = new Set([

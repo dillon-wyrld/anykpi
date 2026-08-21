@@ -21,7 +21,7 @@ A change is fully functional when the real-workspace gate is green — not when
 the seeded demo still looks right.
 
 ```bash
-pnpm exec playwright test tests/real-workspace-gate.spec.ts
+pnpm exec playwright test tests/zz-real-workspace-gate.spec.ts
 ```
 
 That suite (ANY-67) boots a fresh empty non-demo workspace, pushes events
