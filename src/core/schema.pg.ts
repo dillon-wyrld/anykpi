@@ -244,6 +244,8 @@ export const sources = pgTable("sources", {
   config: text("config").notNull(),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
+  /** Set when the operator pauses scheduling. Credentials stay. */
+  pausedAt: integer("paused_at"),
 }, (table) => ({
   workspaceIdx: index("sources_workspace_idx").on(table.workspaceId),
   workspaceSourceUidx: uniqueIndex("sources_workspace_source_uidx").on(

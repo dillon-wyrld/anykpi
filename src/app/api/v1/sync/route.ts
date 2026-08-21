@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/core/db';
-import * as schema from '@/core/schema';
-import { eq } from 'drizzle-orm';
 import {
   SyncResponseSchema,
   SyncTriggerRequestSchema,
@@ -19,21 +16,10 @@ import {
 } from '@/core/errors';
 import { getConnector, resolveSources, sync } from '@/connectors';
 import { parseSyncIntervalMinutes } from '@/core/scheduler-env';
+import { loadWorkspaceSyncStates } from '@/core/sync-health';
 
 async function loadStates(workspace: string) {
-  const syncStates = await db
-    .select()
-    .from(schema.syncState)
-    .where(eq(schema.syncState.workspaceId, workspace))
-    .all();
-
-  return syncStates.map((s) => ({
-    source: s.source,
-    sourceName: s.sourceName,
-    lastSync: s.lastSync?.toISOString(),
-    status: s.status as 'success' | 'error' | 'pending',
-    error: s.error || undefined,
-  }));
+  return loadWorkspaceSyncStates(workspace);
 }
 
 /**

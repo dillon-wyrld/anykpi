@@ -76,6 +76,11 @@ const HAPPY_PATH: Record<
     fields: ["metric", "workspace", "viewUrl", "view_url"],
     write: true,
   },
+  disconnect_source: {
+    args: { workspace: "e2e-mcp-write", source: "ics" },
+    fields: ["disconnected", "source", "workspaceId", "viewUrl", "view_url"],
+    write: true,
+  },
   queue_outreach: {
     args: {
       workspace: "demo",

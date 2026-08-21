@@ -1,17 +1,19 @@
 /**
- * MCP write tools — connect_source, trigger_sync, import_csv.
+ * MCP write tools — connect_source, trigger_sync, import_csv,
+ * define_metric, disconnect_source.
  *
  * HTTP and stdio advertise the same schemas. Callers gate write scope.
  * Successful payloads include a dashboard view_url that proves the result.
  */
 
-import { eq } from "drizzle-orm";
 import { getConnector, resolveSources, sync } from "@/connectors";
 import {
   ConnectSourceRequestSchema,
   DefineMetricRequestSchema,
+  DisconnectSourceRequestSchema,
   ImportRequestSchema,
   MCP_DEFINE_METRIC_TOOL,
+  MCP_DISCONNECT_SOURCE_TOOL,
   SyncTriggerRequestSchema,
 } from "./contracts";
 import {
@@ -27,15 +29,20 @@ import {
   parseCsvSourceConfig,
   runCsvImport,
 } from "./csv-import";
-import { db } from "./db";
-import * as schema from "./schema";
-import { hasInstanceSecret, loadSourceConfig, saveSourceConfig } from "./sources";
+import {
+  disconnectSource,
+  hasInstanceSecret,
+  loadSourceConfig,
+  saveSourceConfig,
+} from "./sources";
+import { loadWorkspaceSyncStates } from "./sync-health";
 
 export const MCP_WRITE_TOOL_NAMES = [
   "connect_source",
   "trigger_sync",
   "import_csv",
   "define_metric",
+  "disconnect_source",
 ] as const;
 
 export type McpWriteToolName = (typeof MCP_WRITE_TOOL_NAMES)[number];
@@ -125,6 +132,7 @@ export const MCP_WRITE_TOOLS: McpToolDefinition[] = [
       },
     },
     MCP_DEFINE_METRIC_TOOL,
+    MCP_DISCONNECT_SOURCE_TOOL,
   ];
 
 export type McpWriteArgs = {
@@ -170,19 +178,7 @@ function withViewUrl(
 }
 
 async function loadStates(workspace: string) {
-  const syncStates = await db
-    .select()
-    .from(schema.syncState)
-    .where(eq(schema.syncState.workspaceId, workspace))
-    .all();
-
-  return syncStates.map((row) => ({
-    source: row.source,
-    sourceName: row.sourceName,
-    lastSync: row.lastSync?.toISOString(),
-    status: row.status as "success" | "error" | "pending",
-    error: row.error || undefined,
-  }));
+  return loadWorkspaceSyncStates(workspace);
 }
 
 function asStringRecord(value: unknown): Record<string, string> | null {
@@ -399,6 +395,42 @@ export async function runDefineMetric(
   }
 }
 
+export async function runDisconnectSource(
+  args: McpWriteArgs,
+  workspace: string,
+  baseUrl: string
+): Promise<McpWriteResult> {
+  if (typeof args.source !== "string") {
+    return { ok: false, error: "Bad Request" };
+  }
+
+  const parsed = DisconnectSourceRequestSchema.safeParse({
+    source: args.source,
+    workspaceId: workspace,
+  });
+  if (!parsed.success) {
+    return { ok: false, error: "Bad Request" };
+  }
+
+  const { disconnected } = await disconnectSource(workspace, parsed.data.source);
+  if (!disconnected) {
+    return { ok: false, error: "Not Found" };
+  }
+
+  return {
+    ok: true,
+    payload: withViewUrl(
+      {
+        source: parsed.data.source,
+        workspaceId: workspace,
+        disconnected: true,
+      },
+      baseUrl,
+      workspace
+    ),
+  };
+}
+
 export async function runMcpWriteTool(
   name: string,
   args: McpWriteArgs,
@@ -414,6 +446,8 @@ export async function runMcpWriteTool(
       return runImportCsv(args, workspace, baseUrl);
     case "define_metric":
       return runDefineMetric(args, workspace, baseUrl);
+    case "disconnect_source":
+      return runDisconnectSource(args, workspace, baseUrl);
     default:
       return null;
   }

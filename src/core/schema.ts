@@ -267,6 +267,8 @@ export const sources = sqliteTable("sources", {
   config: text("config").notNull(),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  /** Set when the operator pauses scheduling. Credentials stay. */
+  pausedAt: integer("paused_at", { mode: "timestamp" }),
 }, (table) => ({
   workspaceIdx: index("sources_workspace_idx").on(table.workspaceId),
   workspaceSourceUidx: uniqueIndex("sources_workspace_source_uidx").on(

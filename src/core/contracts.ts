@@ -89,6 +89,7 @@ export const SyncStateSchema = z.object({
   lastSync: z.string().datetime().optional(),
   status: z.enum(['success', 'error', 'pending']),
   error: z.string().optional(),
+  paused: z.boolean().optional(),
 });
 
 /** Connector health on get_overview / GET /api/v1/overview. */
@@ -98,6 +99,7 @@ export const SyncHealthSchema = z.object({
   status: z.enum(['success', 'error', 'pending']),
   lastSynced: z.string().datetime().optional(),
   error: z.string().optional(),
+  paused: z.boolean().optional(),
 });
 
 /**
@@ -652,6 +654,7 @@ export const PINNED_MCP_TOOLS = [
   "trigger_sync",
   "import_csv",
   "define_metric",
+  "disconnect_source",
 ] as const;
 
 /** Stdio also advertises SDK install and value-event mapping. */
@@ -809,6 +812,58 @@ export const ConnectSourceResponseSchema = z.object({
   connected: z.literal(true),
   rotated: z.boolean(),
 });
+
+/** Disconnect a stored source. Synced rows stay with provenance. */
+export const DisconnectSourceRequestSchema = z.object({
+  source: SourceSlugSchema,
+  workspaceId: z.string().default('live'),
+});
+
+export const DisconnectSourceResponseSchema = z.object({
+  source: SourceSlugSchema,
+  workspaceId: z.string(),
+  disconnected: z.literal(true),
+});
+
+export const SourceLifecycleActionSchema = z.enum([
+  'pause',
+  'resume',
+  'clear-error',
+]);
+
+/** Pause, resume, or acknowledge an error on a stored source. */
+export const SourceLifecycleRequestSchema = z.object({
+  source: SourceSlugSchema,
+  workspaceId: z.string().default('live'),
+  action: SourceLifecycleActionSchema,
+});
+
+export const SourceLifecycleResponseSchema = z.object({
+  source: SourceSlugSchema,
+  workspaceId: z.string(),
+  action: SourceLifecycleActionSchema,
+  paused: z.boolean().optional(),
+  cleared: z.boolean().optional(),
+});
+
+export const MCP_DISCONNECT_SOURCE_TOOL: McpToolDefinition = {
+  name: "disconnect_source",
+  description:
+    "Disconnect a source: delete stored credentials and sync state. Synced data stays, still tagged with this source. Requires a write-scoped API key. Returns disconnected + view_url.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      workspace: {
+        type: "string",
+        description: "Workspace ID (default: live)",
+      },
+      source: {
+        type: "string",
+        description: "Source id (ics, csv, or a connector slug)",
+      },
+    },
+  },
+};
 
 /** One field the founder must see verbatim before any PMF+ query leaves the machine. */
 export const ResearchOutgoingFieldSchema = z.object({

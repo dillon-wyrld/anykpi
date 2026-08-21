@@ -36,6 +36,7 @@ afterEach(async () => {
   await db.delete(schema.metricDefs).where(eq(schema.metricDefs.workspaceId, WS));
   await db.delete(schema.metricPoints).where(eq(schema.metricPoints.workspaceId, WS));
   await db.delete(schema.config).where(eq(schema.config.workspaceId, WS));
+  await db.delete(schema.calEvents).where(eq(schema.calEvents.workspaceId, WS));
 });
 
 function asBearer(
@@ -133,6 +134,10 @@ const CALLS: Record<
     section: "eng",
     type: "input",
     source: { kind: "event_count", measure: "actives" },
+  },
+  disconnect_source: {
+    workspace: WS,
+    source: "ics",
   },
 };
 
@@ -292,6 +297,77 @@ describe("MCP write tools return view_url and land in the audit log", () => {
           actor: id,
           action: AUDIT_ACTIONS.mcpCall,
           subject: "define_metric",
+        }),
+      ])
+    );
+  });
+
+  it("disconnect_source drops credentials and sync state, keeps data, and audits", async () => {
+    const { id, key } = await mintKey("write");
+    const connected = await postMcp(mcpCall("connect_source", CALLS.connect_source, key));
+    expect(connected.status).toBe(200);
+    expect((await parseTool(connected)).isError).toBe(false);
+
+    await db.insert(schema.syncState).values({
+      source: "ics",
+      sourceName: "Calendar",
+      lastSync: new Date("2026-08-20T06:00:00.000Z"),
+      status: "success",
+      workspaceId: WS,
+    });
+    await db.insert(schema.calEvents).values({
+      source: "ics",
+      sourceName: "Calendar",
+      sourceColor: "#2563eb",
+      type: "comms",
+      emoji: "📅",
+      title: "Kept after disconnect",
+      badge: "all day",
+      eventDate: new Date("2026-08-21T00:00:00.000Z"),
+      isFuture: false,
+      workspaceId: WS,
+    });
+
+    const response = await postMcp(mcpCall("disconnect_source", CALLS.disconnect_source, key));
+    expect(response.status).toBe(200);
+    const { isError, payload } = await parseTool(response);
+    expect(isError).toBe(false);
+    expect(payload).toEqual(
+      expect.objectContaining({
+        source: "ics",
+        workspaceId: WS,
+        disconnected: true,
+      })
+    );
+    expect(String(payload.viewUrl)).toContain("/dashboard");
+    expect(payload.view_url).toBe(payload.viewUrl);
+
+    expect(await loadSourceCiphertext(WS, "ics")).toBeNull();
+    const states = await db
+      .select()
+      .from(schema.syncState)
+      .where(eq(schema.syncState.workspaceId, WS))
+      .all();
+    expect(states).toEqual([]);
+    const events = await db
+      .select()
+      .from(schema.calEvents)
+      .where(eq(schema.calEvents.workspaceId, WS))
+      .all();
+    expect(events).toEqual([
+      expect.objectContaining({
+        source: "ics",
+        title: "Kept after disconnect",
+      }),
+    ]);
+
+    const listed = await queryAudit();
+    expect(listed.entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          actor: id,
+          action: AUDIT_ACTIONS.mcpCall,
+          subject: "disconnect_source",
         }),
       ])
     );

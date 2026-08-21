@@ -14,7 +14,10 @@ type SyncStateRow = {
   lastSync?: string;
   status: SyncHealth["status"];
   error?: string;
+  paused?: boolean;
 };
+
+export type SourceLifecycleAction = "pause" | "resume" | "clear-error" | "disconnect";
 
 /**
  * Presentational list so tests can render an errored fixture without fetch.
@@ -23,10 +26,14 @@ export function ConnectorHealthList({
   rows,
   syncing,
   onSync,
+  acting,
+  onLifecycle,
 }: {
   rows: ConnectorHealthRow[];
   syncing: string | null;
   onSync: (source: string) => void;
+  acting?: string | null;
+  onLifecycle?: (source: string, action: SourceLifecycleAction) => void;
 }) {
   if (rows.length === 0) {
     return (
@@ -47,11 +54,13 @@ export function ConnectorHealthList({
             <div>
               <h3 className="font-semibold text-base">{row.sourceName}</h3>
               <p className="text-xs font-mono uppercase tracking-wider text-faint">
-                {row.status === "error"
-                  ? "Needs attention"
-                  : row.status === "pending"
-                    ? "Syncing"
-                    : "Healthy"}
+                {row.paused
+                  ? "Paused"
+                  : row.status === "error"
+                    ? "Needs attention"
+                    : row.status === "pending"
+                      ? "Syncing"
+                      : "Healthy"}
               </p>
             </div>
             <button
@@ -107,6 +116,39 @@ export function ConnectorHealthList({
               <p className="text-sub">{row.nextStep}</p>
             </div>
           ) : null}
+
+          {onLifecycle ? (
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  onLifecycle(row.source, row.paused ? "resume" : "pause")
+                }
+                disabled={acting === row.source}
+                className="px-3 py-1.5 border border-border text-sm rounded hover:bg-panel-2 disabled:opacity-60"
+              >
+                {row.paused ? "Resume" : "Pause"}
+              </button>
+              {row.status === "error" && !row.paused ? (
+                <button
+                  type="button"
+                  onClick={() => onLifecycle(row.source, "clear-error")}
+                  disabled={acting === row.source}
+                  className="px-3 py-1.5 border border-border text-sm rounded hover:bg-panel-2 disabled:opacity-60"
+                >
+                  Clear error
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => onLifecycle(row.source, "disconnect")}
+                disabled={acting === row.source}
+                className="px-3 py-1.5 border border-border text-sm rounded hover:bg-panel-2 disabled:opacity-60"
+              >
+                Disconnect
+              </button>
+            </div>
+          ) : null}
         </article>
       ))}
     </div>
@@ -129,6 +171,7 @@ export function ConnectorHealthPanel({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState<string | null>(null);
+  const [acting, setActing] = useState<string | null>(null);
   const [rowsSynced, setRowsSynced] = useState<Record<string, number>>({});
 
   const rows = useMemo(
@@ -175,10 +218,22 @@ export function ConnectorHealthPanel({
           })
         : { states: [], syncIntervalMinutes: 15 };
 
-      const nextHealth =
+      const pausedBySource = new Map(
+        (syncBody.states ?? []).map((state) => [state.source, Boolean(state.paused)])
+      );
+      const baseHealth =
         overviewBody.syncHealth && overviewBody.syncHealth.length > 0
           ? overviewBody.syncHealth
           : syncStatesToHealth(syncBody.states ?? []);
+      const nextHealth: SyncHealth[] = baseHealth.map((item) => ({
+        ...item,
+        paused: pausedBySource.get(item.source) ?? item.paused,
+      }));
+      for (const state of syncBody.states ?? []) {
+        if (!nextHealth.some((item) => item.source === state.source)) {
+          nextHealth.push(...syncStatesToHealth([state]));
+        }
+      }
 
       setIntervalMinutes(syncBody.syncIntervalMinutes ?? 15);
       setHealth(nextHealth);
@@ -235,6 +290,43 @@ export function ConnectorHealthPanel({
     }
   };
 
+  const runLifecycle = async (source: string, action: SourceLifecycleAction) => {
+    if (!apiKey) {
+      setError("Writes need an API key. Paste it above, then try again.");
+      return;
+    }
+    setActing(source);
+    setError(null);
+    try {
+      const response = await fetch("/api/v1/connect", {
+        method: action === "disconnect" ? "DELETE" : "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(
+          action === "disconnect"
+            ? { source, workspaceId: workspace }
+            : { source, workspaceId: workspace, action }
+        ),
+      });
+      const data = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setError(
+          data.error && !/^\d{3}$/.test(data.error)
+            ? data.error
+            : "Could not update this source. Check the API key and try again."
+        );
+        return;
+      }
+      await load();
+    } catch {
+      setError("Could not update this source. Check the API key and try again.");
+    } finally {
+      setActing(null);
+    }
+  };
+
   return (
     <section
       id="health"
@@ -246,7 +338,8 @@ export function ConnectorHealthPanel({
           <h2 className="font-display text-lg font-semibold">Connector health</h2>
           <p className="text-sm text-sub">
             Last sync, rows pulled, next scheduled run, and what to do when a
-            pull fails. Query{" "}
+            pull fails. Pause skips the scheduler. Disconnect removes the
+            stored key; synced rows stay. Query{" "}
             <code className="font-mono text-xs">GET /api/v1/overview</code>{" "}
             <code className="font-mono text-xs">syncHealth</code> and{" "}
             <code className="font-mono text-xs">GET /api/v1/sync</code>.
@@ -266,7 +359,9 @@ export function ConnectorHealthPanel({
         <ConnectorHealthList
           rows={rows}
           syncing={syncing}
+          acting={acting}
           onSync={(source) => void syncNow(source)}
+          onLifecycle={(source, action) => void runLifecycle(source, action)}
         />
       )}
     </section>

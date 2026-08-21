@@ -35,6 +35,12 @@ describe("MCP tool-list drift gate", () => {
     expect(PINNED_HTTP_MCP_TOOLS).toContain("define_metric");
   });
 
+  it("pins disconnect_source on every v1 surface", () => {
+    expect(PINNED_MCP_TOOLS).toContain("disconnect_source");
+    expect(PINNED_STDIO_MCP_TOOLS).toContain("disconnect_source");
+    expect(PINNED_HTTP_MCP_TOOLS).toContain("disconnect_source");
+  });
+
   it("advertises get_activity and get_sync_status with object input schemas", () => {
     expect(MCP_GET_ACTIVITY_TOOL.name).toBe("get_activity");
     expect(MCP_GET_SYNC_STATUS_TOOL.name).toBe("get_sync_status");
