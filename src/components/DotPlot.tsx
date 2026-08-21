@@ -809,32 +809,25 @@ export default function DotPlot({ workspace }: DotPlotProps) {
         >
           {user.name}
         </text>
-        <g
-          role="button"
-          aria-label={`Research ${user.name}`}
-          data-testid={`dotplot-research-${user.personId}`}
-          style={{ cursor: "pointer" }}
-          onClick={(event) => {
-            event.stopPropagation();
-            openResearch(user);
-          }}
+        <foreignObject
+          x={LBL - 20}
+          y={y + 4}
+          width="18"
+          height="18"
         >
-          <rect
-            x={LBL - 38}
-            y={cy - 8}
-            width="16"
-            height="16"
-            fill="transparent"
-          />
-          <text
-            x={LBL - 36}
-            y={cy + 4}
-            fontSize="11"
-            style={{ pointerEvents: "none" }}
+          <button
+            type="button"
+            aria-label={`Research ${user.name}`}
+            data-testid={`dotplot-research-${user.personId}`}
+            className="block h-full w-full border-0 bg-transparent p-0 text-[11px] leading-none cursor-pointer"
+            onClick={(event) => {
+              event.stopPropagation();
+              openResearch(user);
+            }}
           >
             ✨
-          </text>
-        </g>
+          </button>
+        </foreignObject>
         <text
           x={LBL - 56}
           y={cy + 3.4}

@@ -7,7 +7,7 @@ test.describe("Person drill-down", () => {
     await page.goto("/dashboard?workspace=demo&view=dotplot");
     await page.waitForSelector('svg[role="img"]', { timeout: 10000 });
 
-    await page.getByRole("button", { name: "Open Dave" }).click();
+    await page.getByTestId("person-name-p1").click();
 
     const panel = page.getByTestId("person-panel");
     await expect(panel).toBeVisible();
@@ -35,7 +35,7 @@ test.describe("Person drill-down", () => {
     await page.goto("/dashboard?workspace=demo&view=dotplot");
     await page.waitForSelector('svg[role="img"]', { timeout: 10000 });
 
-    const name = page.getByRole("button", { name: "Open Dave" });
+    const name = page.getByTestId("person-name-p1");
     await name.focus();
     await expect(name).toBeFocused();
     await name.press("Enter");
