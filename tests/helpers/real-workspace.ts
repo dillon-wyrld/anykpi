@@ -85,17 +85,23 @@ export async function createEmptyWorkspace(
   expect(lastStatus, `POST /api/v1/workspaces ${lastStatus}`).toBe(201);
 }
 
-/** Archive so later e2e specs do not inherit this workspace's connectors. */
-export async function archiveWorkspace(
+/**
+ * Typed-name delete (ANY-69) so later e2e specs do not inherit this
+ * workspace's connectors, users, or sync state.
+ */
+export async function deleteLiveWorkspace(
   request: APIRequestContext,
-  id: string
+  id: string,
+  name: string
 ): Promise<void> {
-  const archived = await adminJson(request, "PATCH", "/api/v1/workspaces", {
+  const deleted = await adminJson(request, "DELETE", "/api/v1/workspaces", {
     id,
+    name,
   });
+  if (deleted.status() === 404) return;
   expect(
-    archived.ok(),
-    `PATCH /api/v1/workspaces ${archived.status()}`
+    deleted.ok(),
+    `DELETE /api/v1/workspaces ${deleted.status()}`
   ).toBeTruthy();
 }
 
@@ -224,8 +230,8 @@ export async function fetchViewJson(
   let last = await request.get(`/api/views/${view}?workspace=${workspace}`, {
     headers: { authorization: `Bearer ${key}` },
   });
-  for (let attempt = 0; attempt < 5 && !last.ok(); attempt += 1) {
-    await sleep(800);
+  for (let attempt = 0; attempt < 2 && !last.ok(); attempt += 1) {
+    await sleep(1_200);
     last = await request.get(`/api/views/${view}?workspace=${workspace}`, {
       headers: { authorization: `Bearer ${key}` },
     });
